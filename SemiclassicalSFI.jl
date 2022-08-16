@@ -130,8 +130,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     end
     finish!(prog1); finish!(prog2);
     if simu_phaseMethod != :CTMC
-                            ionProbFinal .^= 2
-        rydberg_collect &&  rydProbFinal .^= 2
+        ionProbFinal .^= 2
+        if rydberg_collect
+            rydProbFinal .^= 2
+        end
     end
     #* save as HDF5.
     if isfile(save_fileName)
@@ -146,10 +148,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         h5write(save_fileName, "ionProb", ionProbFinal)
     end
     h5write(save_fileName, "ionProb_xy", reshape(sum(ionProbFinal, dims=3),size(ionProbFinal)[1:2]))
-    rydberg_collect && h5write(save_fileName, "rydProb", rydProbFinal)
     h5write(save_fileName, "classicalIonRate",              classicalRates[:ion])
     h5write(save_fileName, "classicalIonRateUncollected",   classicalRates[:ion_uncollected])
     if rydberg_collect
+        h5write(save_fileName, "rydProb", rydProbFinal)
         h5write(save_fileName, "classicalRydRate",            classicalRates[:ryd])
         h5write(save_fileName, "classicalRydRateUncollected", classicalRates[:ryd_uncollected])
     end
