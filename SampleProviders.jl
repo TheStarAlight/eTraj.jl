@@ -50,7 +50,7 @@ begin :ADK
             Ip = target.IonPotential
             γ0 = LaserAngFreq(laser) * sqrt(2Ip) / F0
             # check phase method support.
-            if ! (simu_phaseMethod in [:CTMC])
+            if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
                 error("Undefined phase method [$simu_phaseMethod].")
                 return
             end
