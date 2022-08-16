@@ -130,9 +130,9 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     end
     finish!(prog1); finish!(prog2);
     if simu_phaseMethod != :CTMC
-        ionProbFinal .^= 2
+        ionProbFinal = abs2.(ionProbFinal)
         if rydberg_collect
-            rydProbFinal .^= 2
+            rydProbFinal = abs2.(rydProbFinal)
         end
     end
     #* save as HDF5.
