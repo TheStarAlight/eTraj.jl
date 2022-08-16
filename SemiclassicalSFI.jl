@@ -110,7 +110,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                 zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1, nthreads())
             end
         else
-            nothing
+            nothing, nothing
         end
     # classical rates
     classicalRates = Dict{Symbol,Float64}()
@@ -119,7 +119,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         classicalRates[:ryd]                = 0.
         classicalRates[:ryd_uncollected]    = 0.
     #   * launch electrons and collect
-    prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collect...", color = :cyan, spinner = true)
+    prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
     prog2 = Progress(batchNum(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
     for batchId in 1:batchNum(sp)
         init = generateElectronBatch(sp, batchId)
@@ -145,8 +145,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     rydberg_collect && h5write(save_fileName, "rydProb", rydProbFinal)
     h5write(save_fileName, "classicalIonRate",              classicalRates[:ion])
     h5write(save_fileName, "classicalIonRateUncollected",   classicalRates[:ion_uncollected])
-    rydberg_collect && h5write(save_fileName, "classicalRydRate",            classicalRates[:ryd])
-    rydberg_collect && h5write(save_fileName, "classicalRydRateUncollected", classicalRates[:ryd_uncollected])
+    if rydberg_collect
+        h5write(save_fileName, "classicalRydRate",            classicalRates[:ryd])
+        h5write(save_fileName, "classicalRydRateUncollected", classicalRates[:ryd_uncollected])
+    end
 end
 
 
@@ -287,8 +289,10 @@ function launchAndCollect!( init,
         end
     end
     for i in 1:threadid()
-                            ionProbFinal .+= ionProbCollect[:,:,:,i]
-        rydberg_collect &&  rydProbFinal .+= rydProbCollect[:,:,:,i]
+        ionProbFinal .+= ionProbCollect[:,:,:,i]
+        if rydberg_collect
+            rydProbFinal .+= rydProbCollect[:,:,:,i]
+        end
     end
     classicalRates[:ion]                += sum(classRates_ion)
     classicalRates[:ion_uncollected]    += sum(classRates_ion_uncollected)
