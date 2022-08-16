@@ -44,7 +44,8 @@ Performs a semiclassical simulation with given parameters.
 - `sample_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
 
 ## Optional params. for all methods:
-- `save_fileName`   : Output HDF5 file name.
+- `save_fileName`                   : Output HDF5 file name.
+- `save_3D_momentumSpec = false`    : Determines whether 3D momentum spectrum is saved.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                      : Relative error tolerance when solving classical trajectories.
 - `simu_nondipole = false`                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
@@ -73,6 +74,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     sample_pzNum        ::Int  = 0 ,
                         #* opt. params. for all methods
                     save_fileName       ::String = defaultFileName(),
+                    save_3D_momentumSpec::Bool   = false,
                     simu_phaseMethod    ::Symbol = :CTMC,
                     simu_relTol         ::Real   = 1e-6,
                     simu_nondipole      ::Bool   = false,
@@ -139,8 +141,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #TODO: add support to save simulation abstract.
     h5write(save_fileName, "px", collect(range(-finalMomentum_pMax[1],finalMomentum_pMax[1], length=finalMomentum_pNum[1])))
     h5write(save_fileName, "py", collect(range(-finalMomentum_pMax[2],finalMomentum_pMax[2], length=finalMomentum_pNum[2])))
-    # h5write(save_fileName, "pz", collect(range(-finalMomentum_pMax[3],finalMomentum_pMax[3], length=finalMomentum_pNum[3])))
-    # h5write(save_fileName, "ionProb", ionProbFinal)
+    if save_3D_momentumSpec
+        h5write(save_fileName, "pz", collect(range(-finalMomentum_pMax[3],finalMomentum_pMax[3], length=finalMomentum_pNum[3])))
+        h5write(save_fileName, "ionProb", ionProbFinal)
+    end
     h5write(save_fileName, "ionProb_xy", reshape(sum(ionProbFinal, dims=3),size(ionProbFinal)[1:2]))
     rydberg_collect && h5write(save_fileName, "rydProb", rydProbFinal)
     h5write(save_fileName, "classicalIonRate",              classicalRates[:ion])
