@@ -15,7 +15,7 @@ using ProgressMeter
 
 include("Lasers.jl")
 include("Targets.jl")
-include("SampleProviders.jl")
+include("SampleProviders_Base.jl")
 using .Lasers
 using .Targets
 using .SampleProviders
@@ -28,27 +28,32 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all methods:
-- `ionRateMethod = <:ADK|:CCSFA|:CCSFA_AE>`     : Method of determining ionization rate.
+- `ionRateMethod = <:ADK|:CCSFA|:CCSFA_AE>`     : Method of determining ionization rate. Currently only supports ADK.
 - `laser::Laser`                                : Parameters of the laser field.
 - `target::Target`                              : Parameters of the target.
 - `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.
+- `sample_tSampleNum`                           : Number of time samples.
 - `simu_tFinal`                                 : Time when every trajectory simulation ends.
 - `finalMomentum_pMax = (pxMax,pyMax,pzMax)`    : Boundaries of final momentum spectrum collecting in three dimensions.
 - `finalMomentum_pNum = (pxNum,pyNum,pzNum)`    : Numbers of final momentum spectrum collecting in three dimensions.
 
 ## Required params. for step-sampling methods:
-- `sample_tNum`     : Number of time samples.
-- `sample_pdMax`    : Boundary of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `sample_pdNum`    : Number of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `sample_pzMax`    : Boundary of pz (momentum's component along propagation direction (z ax.)) samples.
-- `sample_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_pdMax`    : Boundary of pd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_pdNum`    : Number of pd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_pzMax`    : Boundary of pz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
+
+## Required params. for Monte-Carlo-sampling methods:
+- `mc_tBatchSize`   : Number of electron samples in a single time sample.
+- `mc_ptMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Optional params. for all methods:
-- `save_fileName`                   : Output HDF5 file name.
-- `save_3D_momentumSpec = false`    : Determines whether 3D momentum spectrum is saved.
+- `save_fileName`                           : Output HDF5 file name.
+- `save_3D_momentumSpec = false`            : Determines whether 3D momentum spectrum is saved.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                      : Relative error tolerance when solving classical trajectories.
 - `simu_nondipole = false`                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
+- `rate_monteCarlo = false`                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
 - `rate_ionRatePrefix = <:ExpRate>`         : Prefix of the exponential term in the ionization rate.
 - `rydberg_collect = false`                 : Determines whether rydberg final states are collected.
 - `rydberg_prinQNMax`                       : Maximum principle quantum number n to be collected.
@@ -63,21 +68,25 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     laser               ::Laser,
                     target              ::Target,
                     sample_tSpan        ::Tuple{<:Real,<:Real},
+                    sample_tSampleNum   ::Int,
                     simu_tFinal         ::Real,
                     finalMomentum_pMax  ::Tuple{<:Real,<:Real,<:Real},
                     finalMomentum_pNum  ::Tuple{<:Int,<:Int,<:Int},
-                        #* req. params. for step-sampling methods
-                    sample_tNum         ::Int  = 0,
-                    sample_pdMax        ::Real = 0.,
-                    sample_pdNum        ::Int  = 0 ,
-                    sample_pzMax        ::Real = 0.,
-                    sample_pzNum        ::Int  = 0 ,
+                        #* req. params. for step-sampling (ss) methods
+                    ss_pdMax            ::Real = 0.,
+                    ss_pdNum            ::Int  = 0 ,
+                    ss_pzMax            ::Real = 0.,
+                    ss_pzNum            ::Int  = 0 ,
+                        #* req. params. for Monte-Carlo (mc) methods
+                    mc_tBatchSize       ::Int  = 0 ,
+                    mc_ptMax            ::Real = 0.,
                         #* opt. params. for all methods
                     save_fileName       ::String = defaultFileName(),
                     save_3D_momentumSpec::Bool   = false,
                     simu_phaseMethod    ::Symbol = :CTMC,
                     simu_relTol         ::Real   = 1e-6,
                     simu_nondipole      ::Bool   = false,
+                    rate_monteCarlo     ::Bool   = false,
                     rate_ionRatePrefix  ::Symbol = :ExpRate,
                     rydberg_collect     ::Bool   = false,
                     rydberg_prinQNMax   ::Int    = 0,
@@ -86,9 +95,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     )
     #* pack up all parameters.
     kwargs = Dict{Symbol,Any}()
-    @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
-                    sample_tNum, sample_pdMax, sample_pdNum, sample_pzMax, sample_pzNum,
-                    simu_phaseMethod, simu_relTol, simu_nondipole, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
+    @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, sample_tSampleNum, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
+                    ss_pdMax, ss_pdNum, ss_pzMax, ss_pzNum,
+                    mc_tBatchSize, mc_ptMax,
+                    simu_phaseMethod, simu_relTol, simu_nondipole, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     adk_ADKTunExit)
     #* initialize sample provider.
     sp::ElectronSampleProvider = initSampleProvider(;kwargs...)
