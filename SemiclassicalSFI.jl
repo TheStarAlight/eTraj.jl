@@ -32,16 +32,20 @@ Performs a semiclassical simulation with given parameters.
 - `laser::Laser`                                : Parameters of the laser field.
 - `target::Target`                              : Parameters of the target.
 - `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.
+- `sample_tSampleNum`                           : Number of time samples.
 - `simu_tFinal`                                 : Time when every trajectory simulation ends.
 - `finalMomentum_pMax = (pxMax,pyMax,pzMax)`    : Boundaries of final momentum spectrum collecting in three dimensions.
 - `finalMomentum_pNum = (pxNum,pyNum,pzNum)`    : Numbers of final momentum spectrum collecting in three dimensions.
 
 ## Required params. for step-sampling methods:
-- `ss_tNum`     : Number of time samples.
 - `ss_pdMax`    : Boundary of pd (momentum's component along transverse direction (in xy plane)) samples.
 - `ss_pdNum`    : Number of pd (momentum's component along transverse direction (in xy plane)) samples.
 - `ss_pzMax`    : Boundary of pz (momentum's component along propagation direction (z ax.)) samples.
 - `ss_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
+
+## Required params. for Monte-Carlo-sampling methods:
+- `mc_tBatchSize`   : Number of electron samples in a single time sample.
+- `mc_ptMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Optional params. for all methods:
 - `save_fileName`                           : Output HDF5 file name.
