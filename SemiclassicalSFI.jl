@@ -15,7 +15,7 @@ using ProgressMeter
 
 include("Lasers.jl")
 include("Targets.jl")
-include("SampleProviders.jl")
+include("SampleProviders_Base.jl")
 using .Lasers
 using .Targets
 using .SampleProviders
