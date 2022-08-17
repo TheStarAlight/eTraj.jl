@@ -28,11 +28,9 @@ begin :ADK
         laser           ::Laser;
         target          ::SAEAtom;          # ADK only supports [SAEAtom].
         monteCarlo      ::Bool;
-        ss_tSamples     ::AbstractRange;
-        ss_pdSamples    ::AbstractRange;
-        ss_pzSamples    ::AbstractRange;
-        mc_tSampleSpan  ::Tuple{<:Real,<:Real};
-        mc_tNum         ::Int;
+        tSamples        ::AbstractVector;
+        ss_pdSamples    ::AbstractVector;
+        ss_pzSamples    ::AbstractVector;
         mc_tBatchSize   ::Int;
         mc_ptMax        ::Real;
         phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
@@ -41,18 +39,17 @@ begin :ADK
         function ADKSampleProvider(;laser               ::Laser,
                                     target              ::SAEAtom,
                                     sample_tSpan        ::Tuple{<:Real,<:Real},
+                                    sample_tSampleNum   ::Int,
                                     rate_monteCarlo     ::Bool,
                                     simu_phaseMethod    ::Symbol,
                                     rate_ionRatePrefix  ::Symbol,
                                     adk_ADKTunExit      ::Symbol,
                                         #* for step-sampling (!rate_monteCarlo)
-                                    ss_tNum             ::Int,
                                     ss_pdMax            ::Real,
                                     ss_pdNum            ::Int,
                                     ss_pzMax            ::Real,
                                     ss_pzNum            ::Int,
                                         #* for Monte-Carlo-sampling (rate_monteCarlo)
-                                    mc_tNum             ::Int,
                                     mc_tBatchSize       ::Int,
                                     mc_ptMax            ::Real,
                                     kwargs...   # kwargs are surplus params.
@@ -90,45 +87,38 @@ begin :ADK
                 @warn "Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
             end
             # check sampling parameters.
+            @assert (sample_tSampleNum>0) "Invalid time sample number $sample_tSampleNum."
             if ! rate_monteCarlo    # check SS sampling parameters.
-                @assert (ss_tNum>0) "Invalid time sample number $ss_tNum."
                 @assert (ss_pdNum>0 && ss_pzNum>0) "Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
             else                    # check MC sampling parameters.
                 @assert (sample_tSpan[1] < sample_tSpan[2]) "Invalid sampling time span $sample_tSpan."
-                @assert (mc_tNum>0 && mc_tBatchSize>0) "Invalid batch size $mc_tNum×$mc_tBatchSize."
+                @assert (mc_tBatchSize>0) "Invalid batch size $mc_tBatchSize."
                 @assert (mc_ptMax>0) "Invalid sampling ptmax $mc_ptMax."
             end
             # finish initialization.
             return if ! rate_monteCarlo
                 new(laser,target,rate_monteCarlo,
-                    range(sample_tSpan[1],sample_tSpan[2];length=ss_tNum),
-                    range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum),
-                    range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
-                    (0,0),0,0,0,    # for MC params. pass meaningless values
+                    range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
+                    range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum), range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
+                    0,0,    # for MC params. pass meaningless values
                     simu_phaseMethod,rate_ionRatePrefix,adk_ADKTunExit)
             else
+                tSamples = rand(sample_tSampleNum) .* (sample_tSpan[2]-sample_tSpan[1]) .+ sample_tSpan[1]
                 new(laser,target,rate_monteCarlo,
-                    0:0,0:0,0:0,    # for SS params. pass meaningless values
-                    sample_tSpan, mc_tNum, mc_tBatchSize, mc_ptMax,
+                    tSamples,
+                    0:0,0:0,    # for SS params. pass meaningless values
+                    mc_tBatchSize, mc_ptMax,
                     simu_phaseMethod,rate_ionRatePrefix,adk_ADKTunExit)
             end
         end
     end
     "Gets the total number of batches."
     function batchNum(sp::ADKSampleProvider)
-        return if ! sp.monteCarlo
-            length(sp.ss_tSamples)
-        else
-            sp.mc_tNum
-        end
+        return length(sp.tSamples)
     end
     "Generates a batch of electrons of `batchId` from `sp` using ADK method."
     function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
-        t = if ! sp.monteCarlo
-                sp.ss_tSamples[batchId]
-            else
-                rand()*(sp.mc_tSampleSpan[2]-sp.mc_tSampleSpan[1]) + sp.mc_tSampleSpan[1]
-            end
+        t = sp.tSamples[batchId]
         Fxt::Function = LaserFx(sp.laser)
         Fyt::Function = LaserFy(sp.laser)
         Fx = Fxt(t)

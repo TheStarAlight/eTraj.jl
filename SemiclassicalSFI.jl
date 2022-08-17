@@ -64,17 +64,16 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     laser               ::Laser,
                     target              ::Target,
                     sample_tSpan        ::Tuple{<:Real,<:Real},
+                    sample_tSampleNum   ::Int,
                     simu_tFinal         ::Real,
                     finalMomentum_pMax  ::Tuple{<:Real,<:Real,<:Real},
                     finalMomentum_pNum  ::Tuple{<:Int,<:Int,<:Int},
                         #* req. params. for step-sampling (ss) methods
-                    ss_tNum             ::Int  = 0,
                     ss_pdMax            ::Real = 0.,
                     ss_pdNum            ::Int  = 0 ,
                     ss_pzMax            ::Real = 0.,
                     ss_pzNum            ::Int  = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
-                    mc_tNum             ::Int  = 0 ,
                     mc_tBatchSize       ::Int  = 0 ,
                     mc_ptMax            ::Real = 0.,
                         #* opt. params. for all methods
@@ -92,9 +91,9 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     )
     #* pack up all parameters.
     kwargs = Dict{Symbol,Any}()
-    @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
-                    ss_tNum, ss_pdMax, ss_pdNum, ss_pzMax, ss_pzNum,
-                    mc_tNum, mc_tBatchSize, mc_ptMax,
+    @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, sample_tSampleNum, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
+                    ss_pdMax, ss_pdNum, ss_pzMax, ss_pzNum,
+                    mc_tBatchSize, mc_ptMax,
                     simu_phaseMethod, simu_relTol, simu_nondipole, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     adk_ADKTunExit)
     #* initialize sample provider.
