@@ -203,12 +203,12 @@ function launchAndCollect!( init,
                             finalMomentum_pNum  ::Tuple{<:Int,<:Int,<:Int},
                             kwargs...   # kwargs are surplus params.
                             )
-    Ip                  = target.IonPotential
+    Ip                  = IonPotential(target)
     Fx::Function        = LaserFx(laser)
     Fy::Function        = LaserFy(laser)
     targetF::Function   = TargetForce(target)
     targetP::Function   = TargetPotential(target)
-    NuclCharge          = target.NuclCharge
+    NuclCharge          = AsympNuclCharge(target)
     # including external function call is infeasible in GPU, thus the external targetF & targetP are replaced by pure Coulomb ones.
     traj::Function =
         if ! simu_nondipole
@@ -288,7 +288,7 @@ function launchAndCollect!( init,
         if simu_phaseMethod == :SCTS # asymptotic Coulomb phase correction term in SCTS
             sqrtb = (2Ip)^(-0.25)
             g = sqrt(1+2Ip*((y*pz-z*py)^2+(z*px-x*pz)^2+(x*py-y*px)^2))
-            phase -= px0*x0+py0*y0+pz0*z0 + target.NuclCharge*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
+            phase -= px0*x0+py0*y0+pz0*z0 + AsympNuclCharge(target)*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
         end
         E_inf = (px^2+py^2+pz^2)/2 + targetP(x,y,z)
         r_vec = [x, y, z ]
@@ -298,7 +298,7 @@ function launchAndCollect!( init,
         if E_inf ≥ 0    # finally ionized.
             classRates_ion[threadid()] += init[8,i]
             p_inf = sqrt(2E_inf)
-            a_vec = p_vec × L_vec - target.NuclCharge * r_vec ./ norm(r_vec)
+            a_vec = p_vec × L_vec - AsympNuclCharge(target) * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
             pxIdx = round(Int, (p_inf_vec[1]+finalMomentum_pMax[1])/(finalMomentum_pMax[1]/finalMomentum_pNum[1]*2))
             pyIdx = round(Int, (p_inf_vec[2]+finalMomentum_pMax[2])/(finalMomentum_pMax[2]/finalMomentum_pNum[2]*2))
@@ -315,7 +315,7 @@ function launchAndCollect!( init,
         else            # finally become rydberg.
             classRates_ryd[threadid()] += init[8,i]
             if rydberg_collect
-                n = round(Int, target.NuclCharge / sqrt(-2E_inf))
+                n = round(Int, AsympNuclCharge(target) / sqrt(-2E_inf))
                 l = round(Int, (sqrt(1.0+4L2)-1.0)/2)
                 m = round(Int, L_vec[3])
                 nIdx = n
