@@ -5,6 +5,7 @@ Implementation of semiclassical methods in strong field ionization.
 module SemiclassicalSFI
 
 using OrdinaryDiffEq
+using DiffEqGPU, CUDA
 using LinearAlgebra
 using StaticArrays
 using Parameters
@@ -12,6 +13,7 @@ using Base.Threads
 using HDF5
 using Dates
 using ProgressMeter
+using Pkg
 
 include("Lasers.jl")
 include("Targets.jl")
@@ -53,6 +55,7 @@ Performs a semiclassical simulation with given parameters.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                      : Relative error tolerance when solving classical trajectories.
 - `simu_nondipole = false`                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
+- `simu_GPU = false`                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.18. (Note: CPU participates in calculation as well.)
 - `rate_monteCarlo = false`                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
 - `rate_ionRatePrefix = <:ExpRate>`         : Prefix of the exponential term in the ionization rate.
 - `rydberg_collect = false`                 : Determines whether rydberg final states are collected.
@@ -86,6 +89,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     simu_phaseMethod    ::Symbol = :CTMC,
                     simu_relTol         ::Real   = 1e-6,
                     simu_nondipole      ::Bool   = false,
+                    simu_GPU            ::Bool   = false,
                     rate_monteCarlo     ::Bool   = false,
                     rate_ionRatePrefix  ::Symbol = :ExpRate,
                     rydberg_collect     ::Bool   = false,
@@ -98,8 +102,20 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, sample_tSampleNum, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
                     ss_pdMax, ss_pdNum, ss_pzMax, ss_pzNum,
                     mc_tBatchSize, mc_ptMax,
-                    simu_phaseMethod, simu_relTol, simu_nondipole, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
+                    simu_phaseMethod, simu_relTol, simu_nondipole, simu_GPU, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     adk_ADKTunExit)
+    #* compatibility check
+    # GPU acceleration requires [DiffEqGPU] up to v1.18
+    if simu_GPU
+        dep = Pkg.dependencies()
+        for (k,v::Pkg.API.PackageInfo) in dep
+            if v.name == "DiffEqGPU"
+                if v.version < VersionNumber("1.18")
+                    error("Package [DiffEqGPU]'s version is lower than required version [v1.18].")
+                end
+            end
+        end
+    end
     #* initialize sample provider.
     sp::ElectronSampleProvider = initSampleProvider(;kwargs...)
     #* launch electrons and summarize.
@@ -180,6 +196,7 @@ function launchAndCollect!( init,
                             simu_phaseMethod    ::Symbol,
                             simu_relTol         ::Real,
                             simu_nondipole      ::Bool,
+                            simu_GPU            ::Bool,
                             rydberg_collect     ::Bool,
                             rydberg_prinQNMax   ::Int,
                             finalMomentum_pMax  ::Tuple{<:Real,<:Real,<:Real},
@@ -191,11 +208,14 @@ function launchAndCollect!( init,
     Fy::Function        = LaserFy(laser)
     targetF::Function   = TargetForce(target)
     targetP::Function   = TargetPotential(target)
+    NuclCharge          = target.NuclCharge
+    # including external function call is infeasible in GPU, thus the external targetF & targetP are replaced by pure Coulomb ones.
     traj::Function =
         if ! simu_nondipole
             if simu_phaseMethod == :CTMC
                 function traj_dipole_ctmc(u,p,t)
-                    tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                    # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                    tFx, tFy, tFz = -NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
                     du1 = u[4]
                     du2 = u[5]
                     du3 = u[6]
@@ -206,26 +226,30 @@ function launchAndCollect!( init,
                 end
             elseif simu_phaseMethod == :QTMC
                 function traj_dipole_qtmc(u,p,t)
-                    AFx, AFy, AFz = targetF(u[1],u[2],u[3])
+                    # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                    tFx, tFy, tFz = -NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
                     du1 = u[4]
                     du2 = u[5]
                     du3 = u[6]
-                    du4 = AFx-Fx(t)
-                    du5 = AFy-Fy(t)
-                    du6 = AFz
-                    du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]))
+                    du4 = tFx-Fx(t)
+                    du5 = tFy-Fy(t)
+                    du6 = tFz
+                    # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]))
+                    du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5))
                     @SVector [du1,du2,du3,du4,du5,du6,du7]
                 end
             elseif simu_phaseMethod == :SCTS
                 function traj_dipole_scts(u,p,t)
-                    AFx, AFy, AFz = targetF(u[1],u[2],u[3])
+                    # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                    tFx, tFy, tFz = -NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
                     du1 = u[4]
                     du2 = u[5]
                     du3 = u[6]
-                    du4 = AFx-Fx(t)
-                    du5 = AFy-Fy(t)
-                    du6 = AFz
-                    du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*AFx+u[2]*AFy+u[3]*AFz))
+                    du4 = tFx-Fx(t)
+                    du5 = tFy-Fy(t)
+                    du6 = tFz
+                    # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                    du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
                     @SVector [du1,du2,du3,du4,du5,du6,du7]
                 end
             end
@@ -247,8 +271,15 @@ function launchAndCollect!( init,
         else
             (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],simu_tFinal))
         end
-    ensembleProb::EnsembleProblem = EnsembleProblem(trajODEProb, prob_func=initTraj)
-    sol = solve(ensembleProb, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batchSize, reltol=simu_relTol, save_everystep=false)
+    ensembleProb::EnsembleProblem = EnsembleProblem(trajODEProb, prob_func=initTraj, safetycopy=false)
+    sol =
+        if ! simu_GPU
+            solve(ensembleProb, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batchSize, reltol=simu_relTol, save_everystep=false)
+        else
+            solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(0.), trajectories=batchSize, dt=0.1)
+            # `save_everystep = false` is currently unsupported.
+            # solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(), trajectories=batchSize, reltol=simu_relTol, save_everystep=false)
+        end
     # collect and summarize.
     @threads for i in 1:batchSize
         x0,y0,z0,px0,py0,pz0 = sol.u[i][ 1 ][1:6]
