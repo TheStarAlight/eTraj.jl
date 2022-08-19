@@ -55,7 +55,7 @@ Performs a semiclassical simulation with given parameters.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                      : Relative error tolerance when solving classical trajectories.
 - `simu_nondipole = false`                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
-- `simu_GPU = false`                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.18. (Note: CPU participates in calculation as well.)
+- `simu_GPU = false`                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.18.
 - `rate_monteCarlo = false`                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
 - `rate_ionRatePrefix = <:ExpRate>`         : Prefix of the exponential term in the ionization rate.
 - `rydberg_collect = false`                 : Determines whether rydberg final states are collected.
@@ -276,7 +276,7 @@ function launchAndCollect!( init,
         if ! simu_GPU
             solve(ensembleProb, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batchSize, reltol=simu_relTol, save_everystep=false)
         else
-            solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(0.), trajectories=batchSize, dt=0.1)
+            solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(0.), trajectories=batchSize, dt=0.1, adaptive=true, save_everystep=false)
             # `save_everystep = false` is currently unsupported.
             # solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(), trajectories=batchSize, reltol=simu_relTol, save_everystep=false)
         end
