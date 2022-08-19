@@ -335,7 +335,7 @@ function launchAndCollect!( init,
             end
         end
     end
-    for i in 1:threadid()
+    for i in 1:nthreads()
         ionProbFinal .+= ionProbCollect[:,:,:,i]
         if rydberg_collect
             rydProbFinal .+= rydProbCollect[:,:,:,i]
