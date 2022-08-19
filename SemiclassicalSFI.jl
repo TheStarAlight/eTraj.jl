@@ -121,24 +121,26 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #* launch electrons and summarize.
     #   * prepare storage
     # ionization amplitude (ionAmpFinal is for final data, ionAmpConnect is for temporary cache)
-    ionProbFinal, ionProbCollect =
+    ionProbFinal, ionProbSumTemp, ionProbCollect =
         if simu_phaseMethod == :CTMC
-            zeros(Float64, finalMomentum_pNum),     zeros(Float64, tuple(finalMomentum_pNum...,nthreads()))
+            zeros(Float64, finalMomentum_pNum),     zeros(Float64, finalMomentum_pNum),     zeros(Float64, tuple(finalMomentum_pNum...,nthreads()))
         else
-            zeros(ComplexF64, finalMomentum_pNum),  zeros(ComplexF64, tuple(finalMomentum_pNum...,nthreads()))
+            zeros(ComplexF64, finalMomentum_pNum),  zeros(ComplexF64, finalMomentum_pNum),  zeros(ComplexF64, tuple(finalMomentum_pNum...,nthreads()))
         end
     # rydberg amplitude
-    rydProbFinal, rydProbCollect =
+    rydProbFinal, rydProbSumTemp, rydProbCollect =
         if rydberg_collect
             if simu_phaseMethod == :CTMC
+                zeros(Float64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
                 zeros(Float64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
                 zeros(Float64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1, nthreads())
             else
                 zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
+                zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
                 zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1, nthreads())
             end
         else
-            nothing, nothing
+            nothing, nothing, nothing
         end
     # classical rates
     classicalRates = Dict{Symbol,Float64}()
@@ -151,7 +153,9 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     prog2 = Progress(batchNum(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
     for batchId in 1:batchNum(sp)
         init = generateElectronBatch(sp, batchId)
-        launchAndCollect!(init, ionProbFinal, ionProbCollect, rydProbFinal, rydProbCollect, classicalRates; kwargs...)
+        launchAndCollect!(init, ionProbFinal, ionProbSumTemp, ionProbCollect,
+                                rydProbFinal, rydProbSumTemp, rydProbCollect,
+                                classicalRates; kwargs...)
         next!(prog1,spinner=raw"-\|/"); next!(prog2);
     end
     finish!(prog1); finish!(prog2);
@@ -186,8 +190,10 @@ end
 
 function launchAndCollect!( init,
                             ionProbFinal,
+                            ionProbSumTemp,
                             ionProbCollect,
                             rydProbFinal,
+                            rydProbSumTemp,
                             rydProbCollect,
                             classicalRates;
                             laser               ::Laser,
@@ -335,11 +341,11 @@ function launchAndCollect!( init,
             end
         end
     end
-    for i in 1:nthreads()
-        ionProbFinal .+= ionProbCollect[:,:,:,i]
-        if rydberg_collect
-            rydProbFinal .+= rydProbCollect[:,:,:,i]
-        end
+    sum!(ionProbSumTemp, ionProbCollect)
+    ionProbFinal .+= ionProbSumTemp
+    if rydberg_collect
+        sum!(rydProbSumTemp, rydProbCollect)
+        rydProbFinal .+= rydProbSumTemp
     end
     classicalRates[:ion]                += sum(classRates_ion)
     classicalRates[:ion_uncollected]    += sum(classRates_ion_uncollected)
