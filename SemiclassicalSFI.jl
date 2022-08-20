@@ -178,12 +178,16 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         h5write(save_fileName, "ionProb", ionProbFinal)
     end
     h5write(save_fileName, "ionProb_xy", reshape(sum(ionProbFinal, dims=3),size(ionProbFinal)[1:2]))
-    h5write(save_fileName, "classicalIonRate",              classicalRates[:ion])
-    h5write(save_fileName, "classicalIonRateUncollected",   classicalRates[:ion_uncollected])
+    if rate_ionRatePrefix == :ExpFull   # will get wrong total ionization rate unless full prefix is included.
+        h5write(save_fileName, "classicalIonRate",              classicalRates[:ion])
+        h5write(save_fileName, "classicalIonRateUncollected",   classicalRates[:ion_uncollected])
+    end
     if rydberg_collect
         h5write(save_fileName, "rydProb", rydProbFinal)
-        h5write(save_fileName, "classicalRydRate",            classicalRates[:ryd])
-        h5write(save_fileName, "classicalRydRateUncollected", classicalRates[:ryd_uncollected])
+        if rate_ionRatePrefix == :ExpFull
+            h5write(save_fileName, "classicalRydRate",            classicalRates[:ryd])
+            h5write(save_fileName, "classicalRydRateUncollected", classicalRates[:ryd_uncollected])
+        end
     end
 end
 
