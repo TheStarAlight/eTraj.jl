@@ -6,7 +6,7 @@ The Targets module provides information about the targeting atoms or molecules.
 module Targets
 
 export Target, SAEAtom, HydrogenLikeAtom
-export TargetPotential, TargetForce, ADKRateExp
+export IonPotential, AsympNuclCharge, TargetPotential, TargetForce, ADKRateExp
 
 
 abstract type Target end
@@ -25,7 +25,10 @@ begin :HydrogenLikeAtom
         "Asymptotic charge of the inner nucleus."
         NuclCharge;
     end
-    #TODO: add accessors IonPotential and AsympNuclCharge.
+    "Gets the ionization potential of the atom."
+    IonPotential(t::HydrogenLikeAtom) = t.IonPotential
+    "Gets the asymptotic nuclear charge of the atom."
+    AsympNuclCharge(t::HydrogenLikeAtom) = t.NuclCharge
     "Gets the potential function of the atom."
     TargetPotential(t::HydrogenLikeAtom) = (x,y,z) -> -t.NuclCharge*(x^2+y^2+z^2+1.0)^(-0.5)
     "Gets the force exerted on the electron from the atom (which is the neg-grad of potential)."

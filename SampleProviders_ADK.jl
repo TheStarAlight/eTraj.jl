@@ -31,8 +31,8 @@ struct ADKSampleProvider <: ElectronSampleProvider
                                 kwargs...   # kwargs are surplus params.
                                 )
         F0 = LaserF0(laser)
-        Ip = target.IonPotential
-        γ0 = LaserAngFreq(laser) * sqrt(2Ip) / F0
+        Ip = IonPotential(target)
+        γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         # check phase method support.
         if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
             error("Undefined phase method [$simu_phaseMethod].")
@@ -101,7 +101,7 @@ function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
     Fy = Fyt(t)
     F  = hypot(Fx,Fy)
     φ  = atan(-Fy,-Fx)
-    Ip = sp.target.IonPotential
+    Ip = IonPotential(sp.target)
     # determining tunneling exit position.
     r_exit =
         if      sp.ADKTunExit == :IpF
