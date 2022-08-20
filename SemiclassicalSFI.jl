@@ -287,8 +287,6 @@ function launchAndCollect!( init,
             solve(ensembleProb, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batchSize, reltol=simu_relTol, save_everystep=false)
         else
             solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(0.), trajectories=batchSize, dt=0.1, adaptive=true, save_everystep=false)
-            # `save_everystep = false` is currently unsupported.
-            # solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(), trajectories=batchSize, reltol=simu_relTol, save_everystep=false)
         end
     # collect and summarize.
     @threads for i in 1:batchSize
