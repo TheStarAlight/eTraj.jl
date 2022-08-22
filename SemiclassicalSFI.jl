@@ -168,7 +168,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #* save as HDF5.
     if isfile(save_fileName)
         @warn "File \"$save_fileName\" already exists. Saving at \"$(defaultFileName())\"."
-        save_fileName = "SCSFI_$(defaultFileName()).h5"
+        save_fileName = "$(defaultFileName()).h5"
     end
     #TODO: add support to save simulation abstract.
     h5write(save_fileName, "px", collect(range(-finalMomentum_pMax[1],finalMomentum_pMax[1], length=finalMomentum_pNum[1])))
