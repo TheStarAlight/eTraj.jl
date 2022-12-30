@@ -96,8 +96,8 @@ function generateElectronBatch(sp::SFASampleProvider, batchId::Int)
             px =  pd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
             py = -pd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
             S  = quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+pz^2)/2 + Ip, ts, tr)[1] # Integrates ∂S/∂t from ts to tr.
-            x0 = quadgk(ti->imag(Ax(tr+ti)), 0.0, ti)[1]
-            y0 = quadgk(ti->imag(Ay(tr+ti)), 0.0, ti)[1]
+            x0 = quadgk(ti->imag(Ax(tr+1im*ti)), 0.0, ti)[1]
+            y0 = quadgk(ti->imag(Ay(tr+1im*ti)), 0.0, ti)[1]
             z0 = 0.0
             px0 = px+Ax(tr)
             py0 = py+Ay(tr)
