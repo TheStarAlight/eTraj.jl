@@ -30,7 +30,7 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all methods:
-- `ionRateMethod = <:ADK|:CCSFA|:CCSFA_AE>`     : Method of determining ionization rate. Currently only supports ADK.
+- `ionRateMethod = <:ADK|:SFA|:SFA_AE>`         : Method of determining ionization rate. Currently only supports ADK.
 - `laser::Laser`                                : Parameters of the laser field.
 - `target::Target`                              : Parameters of the target.
 - `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.

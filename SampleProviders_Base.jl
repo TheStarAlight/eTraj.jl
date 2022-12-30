@@ -10,6 +10,8 @@ export initSampleProvider, ElectronSampleProvider, batchNum, generateElectronBat
 function initSampleProvider(;kwargs...)
     return if kwargs[:ionRateMethod] == :ADK
         ADKSampleProvider(;kwargs...)
+    elseif kwargs[:ionRateMethod] == :SFA
+        SFASampleProvider(;kwargs...)
     else
         error("Undefined tunneling rate method [$(kwargs[:ionRateMethod])].")
         return
@@ -19,5 +21,6 @@ end
 abstract type ElectronSampleProvider end
 
 include("SampleProviders_ADK.jl")
+include("SampleProviders_SFA.jl")
 
 end
