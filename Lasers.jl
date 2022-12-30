@@ -50,7 +50,7 @@ begin :Cos4Laser
 
     "Gets the time-dependent x component of the vector potential under dipole approximation."
     function LaserAx(l::Cos4Laser)
-        local A0 = LaserA0(l); local ω = ω(l); local N = l.cycNum; local φ = l.cep;
+        local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep;
         return function(t)
             A0 * cos(ω*t/(2N))^4 * (abs(ω*t)<N*π) * cos(ω*t+φ)
         end
