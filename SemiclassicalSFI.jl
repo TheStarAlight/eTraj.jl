@@ -15,9 +15,9 @@ using Dates
 using ProgressMeter
 using Pkg
 
-include("Lasers.jl")
-include("Targets.jl")
-include("SampleProviders_Base.jl")
+include("Lasers/Lasers.jl")
+include("Targets/Targets.jl")
+include("SampleProviders/SampleProviders.jl")
 using .Lasers
 using .Targets
 using .SampleProviders
@@ -30,7 +30,7 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all methods:
-- `ionRateMethod = <:ADK|:CCSFA|:CCSFA_AE>`     : Method of determining ionization rate. Currently only supports ADK.
+- `ionRateMethod = <:ADK|:SFA|:SFA_AE>`         : Method of determining ionization rate. Currently only supports ADK.
 - `laser::Laser`                                : Parameters of the laser field.
 - `target::Target`                              : Parameters of the target.
 - `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.
@@ -112,6 +112,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             if v.name == "DiffEqGPU"
                 if v.version < VersionNumber("1.18")
                     error("Package [DiffEqGPU]'s version is lower than required version [v1.18].")
+                elseif v.version == VersionNumber("1.18")
+                    @warn "Package [DiffEqGPU]'s version is [v1.18], you may encounter exceptions during ensemble simulation. Upgrade to [v1.19] to avoid this problem."
                 end
             end
         end
@@ -168,7 +170,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #* save as HDF5.
     if isfile(save_fileName)
         @warn "File \"$save_fileName\" already exists. Saving at \"$(defaultFileName())\"."
-        save_fileName = "SCSFI_$(defaultFileName()).h5"
+        save_fileName = "$(defaultFileName()).h5"
     end
     #TODO: add support to save simulation abstract.
     h5write(save_fileName, "px", collect(range(-finalMomentum_pMax[1],finalMomentum_pMax[1], length=finalMomentum_pNum[1])))
@@ -267,6 +269,8 @@ function launchAndCollect!( init,
             #TODO: add support for nondipole simulation.
         end
     batchSize = size(init,2)
+    warn_num = 0    # number of warnings of anomalous electrons.
+    max_warn_num = 5
     classRates_ion              = zeros(nthreads())
     classRates_ion_uncollected  = zeros(nthreads())
     classRates_ryd              = zeros(nthreads())
@@ -292,6 +296,15 @@ function launchAndCollect!( init,
     @threads for i in 1:batchSize
         x0,y0,z0,px0,py0,pz0 = sol.u[i][ 1 ][1:6]
         x, y, z, px, py, pz  = sol.u[i][end][1:6]
+        if px^2+py^2+pz^2>(finalMomentum_pMax[1]^2+finalMomentum_pMax[2]^2+finalMomentum_pMax[3]^2)*10  # possibly anomalous electron (due to [DiffEqGPU]), intercept and cancel.
+            warn_num += 1
+            if warn_num < max_warn_num
+                @warn "[Ensemble Simulation] Found electron (#$i in the batch) with anomalous momentum $([px,py,pz])."
+            elseif warn_num == max_warn_num
+                @warn "[Ensemble Simulation] Found electron (#$i in the batch) with anomalous momentum $([px,py,pz]). Similar warnings would be suppressed."
+            end
+            continue
+        end
         phase = (simu_phaseMethod == :CTMC) ? (0.) : (sol.u[i][end][7])
         if simu_phaseMethod == :SCTS # asymptotic Coulomb phase correction term in SCTS
             sqrtb = (2Ip)^(-0.25)

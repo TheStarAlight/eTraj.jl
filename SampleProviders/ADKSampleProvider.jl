@@ -35,41 +35,41 @@ struct ADKSampleProvider <: ElectronSampleProvider
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         # check phase method support.
         if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
-            error("Undefined phase method [$simu_phaseMethod].")
+            error("[ADKSampleProvider] Undefined phase method [$simu_phaseMethod].")
             return
         end
         # check tunneling exit support.
         if ! (adk_ADKTunExit in [:IpF, :FDM, :Para])
-            error("Undefined tunneling exit method [$adk_ADKTunExit].")
+            error("[ADKSampleProvider] Undefined tunneling exit method [$adk_ADKTunExit].")
             return
         end
         # switch tunneling exit method if inappropriate.
         if adk_ADKTunExit == :FDM && Ip^2 < 4F0
             adk_ADKTunExit == :IpF
-            @warn "Tunneling exit method has changed from [FDM] to [IpF] due to failure in tunneling exit determination of [FDM] model."
+            @warn "[ADKSampleProvider] Tunneling exit method has changed from [FDM] to [IpF] due to failure in tunneling exit determination of [FDM] model."
         elseif adk_ADKTunExit == :Para && Ip^2 < 4*(1-sqrt(Ip/2))*F0
             adk_ADKTunExit == :IpF
-            @warn "Tunneling exit method has changed from [Para] to [IpF] due to failure in tunneling exit determination of [Para] model."
+            @warn "[ADKSampleProvider] Tunneling exit method has changed from [Para] to [IpF] due to failure in tunneling exit determination of [Para] model."
         end
         # check IonRate prefix support.
         if ! (rate_ionRatePrefix in [:ExpRate])
-            error("Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+            error("[ADKSampleProvider] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
             return
         end
         # check Keldysh parameter.
         if γ0 ≥ 0.5
-            @warn "Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+            @warn "[ADKSampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
         elseif γ0 ≥ 1.0
-            @warn "Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            @warn "[ADKSampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "Invalid time sample number $sample_tSampleNum."
+        @assert (sample_tSampleNum>0) "[ADKSampleProvider] Invalid time sample number $sample_tSampleNum."
         if ! rate_monteCarlo    # check SS sampling parameters.
-            @assert (ss_pdNum>0 && ss_pzNum>0) "Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+            @assert (ss_pdNum>0 && ss_pzNum>0) "[ADKSampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
         else                    # check MC sampling parameters.
-            @assert (sample_tSpan[1] < sample_tSpan[2]) "Invalid sampling time span $sample_tSpan."
-            @assert (mc_tBatchSize>0) "Invalid batch size $mc_tBatchSize."
-            @assert (mc_ptMax>0) "Invalid sampling ptmax $mc_ptMax."
+            @assert (sample_tSpan[1] < sample_tSpan[2]) "[ADKSampleProvider] Invalid sampling time span $sample_tSpan."
+            @assert (mc_tBatchSize>0) "[ADKSampleProvider] Invalid batch size $mc_tBatchSize."
+            @assert (mc_ptMax>0) "[ADKSampleProvider] Invalid sampling ptmax $mc_ptMax."
         end
         # finish initialization.
         return if ! rate_monteCarlo
