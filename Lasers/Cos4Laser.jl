@@ -37,27 +37,27 @@ LaserA0(l::Cos4Laser) = LaserF0(l) / AngFreq(l)
 function LaserAx(l::Cos4Laser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep;
     return function(t)
-        A0 * cos(ω*t/(2N))^4 * (abs(ω*t)<N*π) * cos(ω*t+φ)
+        A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * cos(ω*t+φ)
     end
 end
 "Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::Cos4Laser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local ε = l.ellip;
     return function(t)
-        A0 * cos(ω*t/(2N))^4 * (abs(ω*t)<N*π) * sin(ω*t+φ) * ε
+        A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * sin(ω*t+φ) * ε
     end
 end
 "Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::Cos4Laser)
     local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep;
     return function(t)
-        F0 * cos(ω*t/(2N))^3 * (abs(ω*t)<N*π) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))
+        F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))
     end
 end
 "Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::Cos4Laser)
     local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local ε = l.ellip;
     return function(t)
-        F0 * cos(ω*t/(2N))^3 * (abs(ω*t)<N*π) * (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
+        F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
     end
 end
