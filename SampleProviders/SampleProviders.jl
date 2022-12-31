@@ -13,14 +13,14 @@ function initSampleProvider(;kwargs...)
     elseif kwargs[:ionRateMethod] == :SFA
         SFASampleProvider(;kwargs...)
     else
-        error("Undefined tunneling rate method [$(kwargs[:ionRateMethod])].")
+        error("[SampleProviders] Undefined tunneling rate method [$(kwargs[:ionRateMethod])].")
         return
     end
 end
 
 abstract type ElectronSampleProvider end
 
-include("SampleProviders_ADK.jl")
-include("SampleProviders_SFA.jl")
+include("ADKSampleProvider.jl")
+include("SFASampleProvider.jl")
 
 end

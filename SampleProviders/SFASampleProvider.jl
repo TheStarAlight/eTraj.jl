@@ -26,17 +26,17 @@ struct SFASampleProvider <: ElectronSampleProvider
                                 )
         # check phase method support.
         if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
-            error("Undefined phase method [$simu_phaseMethod].")
+            error("[SFASampleProvider] Undefined phase method [$simu_phaseMethod].")
             return
         end
         # check IonRate prefix support.
         if ! (rate_ionRatePrefix in [:ExpRate])
-            error("Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+            error("[SFASampleProvider] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
             return
         end
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (sample_tSampleNum>0) "[SFASampleProvider] Invalid time sample number $sample_tSampleNum."
+        @assert (ss_pdNum>0 && ss_pzNum>0) "[SFASampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
         # finish initialization.
         return new(laser, target,
                 range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
@@ -111,7 +111,7 @@ function generateElectronBatch(sp::SFASampleProvider, batchId::Int)
     end
 
     if sum(sample_count_thread) < pdNum*pzNum
-        @warn "SFASampleProvider: Found no root in $(pdNum*pzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
+        @warn "[SFASampleProvider] Found no root in $(pdNum*pzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
     end
     # collect electron samples from different threads.
     init = zeros(Float64, dim, sum(sample_count_thread))
