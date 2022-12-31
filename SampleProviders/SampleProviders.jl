@@ -20,7 +20,7 @@ end
 
 abstract type ElectronSampleProvider end
 
-include("SampleProviders_ADK.jl")
-include("SampleProviders_SFA.jl")
+include("ADKSampleProvider.jl")
+include("SFASampleProvider.jl")
 
 end

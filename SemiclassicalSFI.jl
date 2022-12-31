@@ -15,9 +15,9 @@ using Dates
 using ProgressMeter
 using Pkg
 
-include("Lasers.jl")
-include("Targets.jl")
-include("SampleProviders_Base.jl")
+include("Lasers/Lasers.jl")
+include("Targets/Targets.jl")
+include("SampleProviders/SampleProviders.jl")
 using .Lasers
 using .Targets
 using .SampleProviders
