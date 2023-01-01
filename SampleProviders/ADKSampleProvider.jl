@@ -95,21 +95,21 @@ end
 "Generates a batch of electrons of `batchId` from `sp` using ADK method."
 function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
     t = sp.tSamples[batchId]
-    Fxt::Function = LaserFx(sp.laser)
-    Fyt::Function = LaserFy(sp.laser)
-    Fx = Fxt(t)
-    Fy = Fyt(t)
-    F  = hypot(Fx,Fy)
-    φ  = atan(-Fy,-Fx)
+    Fx::Function = LaserFx(sp.laser)
+    Fy::Function = LaserFy(sp.laser)
+    Fxt = Fx(t)
+    Fyt = Fy(t)
+    Ft = hypot(Fxt,Fyt)
+    φ  = atan(-Fyt,-Fxt)
     Ip = IonPotential(sp.target)
     # determining tunneling exit position.
     r_exit =
         if      sp.ADKTunExit == :IpF
-            Ip / F
+            Ip / Ft
         elseif  sp.ADKTunExit == :FDM
-            (Ip + sqrt(Ip^2 - 4F)) / 2F
+            (Ip + sqrt(Ip^2 - 4Ft)) / 2Ft
         elseif  sp.ADKTunExit == :Para
-            (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*F)) / 2F
+            (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
         end
     # determining ADK rate. ADKRate(F,φ,pd,pz)
     ADKRate::Function =
@@ -131,7 +131,7 @@ function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
             py0 = pd0* cos(φ)
             for ipz in 1:pzNum
                 pz0 = sp.ss_pzSamples[ipz]
-                init[1:8,ipd,ipz] = [x0,y0,z0,px0,py0,pz0,t,ADKRate(F,φ,pd0,pz0)]
+                init[1:8,ipd,ipz] = [x0,y0,z0,px0,py0,pz0,t,ADKRate(Ft,φ,pd0,pz0)]
                 if sp.phaseMethod != :CTMC
                     init[9,ipd,ipz] = 0
                 end
@@ -152,7 +152,7 @@ function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
             end
             px0 = pd0*-sin(φ)
             py0 = pd0* cos(φ)
-            init[1:8,i] = [x0,y0,z0,px0,py0,pz0,t,ADKRate(F,φ,pd0,pz0)]
+            init[1:8,i] = [x0,y0,z0,px0,py0,pz0,t,ADKRate(Ft,φ,pd0,pz0)]
             if sp.phaseMethod != :CTMC
                 init[9,i] = 0
             end
