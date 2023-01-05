@@ -1,6 +1,6 @@
 
 "Represents a monochromatic elliptically polarized laser field with Cos4-shape envelope propagating in z direction."
-struct Cos4Laser <: Laser
+struct Cos4Laser <: MonochromaticLaser
     "Peak intensity of the laser field (in W/cm^2)."
     peakInt;
     "Wavelength of the laser field (in NANOMETER)."
@@ -18,7 +18,7 @@ end
 "Gets the peak intensity of the laser field (in W/cm^2)."
 PeakInt(l::Cos4Laser) = l.peakInt
 "Gets the wave length of the laser field (in nm)."
-WaveLenNM(l::Cos4Laser) = l.waveLen
+WaveLen(l::Cos4Laser) = l.waveLen
 "Gets the cycle number of the laser field."
 CycNum(l::Cos4Laser) = l.cycNum
 "Gets the ellpticity of the laser field."
