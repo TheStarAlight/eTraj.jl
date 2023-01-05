@@ -9,7 +9,8 @@ struct HydrogenLikeAtom <: SAEAtomBase
     "Name of the atom."
     name::String;
     "Initializes a new instance of HydrogenLikeAtom."
-    HydrogenLikeAtom(Ip, Z; name="[NA]") = new(Ip, Z, name)
+    HydrogenLikeAtom( Ip, Z, name="[NA]") = new(Ip, Z, name)
+    HydrogenLikeAtom(;Ip, Z, name="[NA]") = new(Ip, Z, name)
 end
 
 "Gets the ionization potential of the atom."
