@@ -6,14 +6,14 @@ using Base.Threads
 "Sample provider which yields electron samples through SFA formula, matching `IonRateMethod=:SFA`"
 struct SFASampleProvider <: ElectronSampleProvider
     laser           ::Laser;
-    target          ::SAEAtom;          # SFA only supports [SAEAtom].
+    target          ::SAEAtomBase;          # SFA only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
     ss_pdSamples    ::AbstractVector;
     ss_pzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     function SFASampleProvider(;laser               ::Laser,
-                                target              ::SAEAtom,
+                                target              ::SAEAtomBase,
                                 sample_tSpan        ::Tuple{<:Real,<:Real},
                                 sample_tSampleNum   ::Int,
                                 simu_phaseMethod    ::Symbol,

@@ -1,7 +1,7 @@
 using StaticArrays
 
 "Represents a Hydrogen-like atom."
-struct HydrogenLikeAtom <: SAEAtom
+struct HydrogenLikeAtom <: SAEAtomBase
     "Ionization potential of the atom."
     IonPotential;
     "Asymptotic charge of the inner nucleus."
