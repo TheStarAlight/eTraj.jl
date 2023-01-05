@@ -6,7 +6,10 @@ struct HydrogenLikeAtom <: SAEAtom
     IonPotential;
     "Asymptotic charge of the inner nucleus."
     NuclCharge;
+    "Initializes a new instance of HydrogenLikeAtom."
+    HydrogenLikeAtom(Ip, Z) = new(Ip, Z)
 end
+
 "Gets the ionization potential of the atom."
 IonPotential(t::HydrogenLikeAtom) = t.IonPotential
 "Gets the asymptotic nuclear charge of the atom."
