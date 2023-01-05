@@ -221,53 +221,7 @@ function launchAndCollect!( init,
     targetF::Function   = TargetForce(target)
     targetP::Function   = TargetPotential(target)
     NuclCharge          = AsympNuclCharge(target)
-    # including external function call is infeasible in GPU, thus the external targetF & targetP are replaced by pure Coulomb ones.
-    traj::Function =
-        if ! simu_nondipole
-            if simu_phaseMethod == :CTMC
-                function traj_dipole_ctmc(u,p,t)
-                    # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
-                    tFx, tFy, tFz = -NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
-                    du1 = u[4]
-                    du2 = u[5]
-                    du3 = u[6]
-                    du4 = tFx-Fx(t)
-                    du5 = tFy-Fy(t)
-                    du6 = tFz
-                    @SVector [du1,du2,du3,du4,du5,du6]
-                end
-            elseif simu_phaseMethod == :QTMC
-                function traj_dipole_qtmc(u,p,t)
-                    # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
-                    tFx, tFy, tFz = -NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
-                    du1 = u[4]
-                    du2 = u[5]
-                    du3 = u[6]
-                    du4 = tFx-Fx(t)
-                    du5 = tFy-Fy(t)
-                    du6 = tFz
-                    # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]))
-                    du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5))
-                    @SVector [du1,du2,du3,du4,du5,du6,du7]
-                end
-            elseif simu_phaseMethod == :SCTS
-                function traj_dipole_scts(u,p,t)
-                    # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
-                    tFx, tFy, tFz = -NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
-                    du1 = u[4]
-                    du2 = u[5]
-                    du3 = u[6]
-                    du4 = tFx-Fx(t)
-                    du5 = tFy-Fy(t)
-                    du6 = tFz
-                    # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-                    du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - NuclCharge*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-                    @SVector [du1,du2,du3,du4,du5,du6,du7]
-                end
-            end
-        else
-            #TODO: add support for nondipole simulation.
-        end
+    traj::Function      = TrajectoryFunction(target, Fx,Fy,simu_phaseMethod,simu_nondipole)
     batchSize = size(init,2)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
