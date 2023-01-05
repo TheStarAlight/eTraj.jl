@@ -14,14 +14,18 @@ struct SAEAtom <: SAEAtomBase
     b2;
     a3;
     b3;
+    "Name of the atom."
+    name::String;
     "Initializes a new instance of SAEAtom."
-    SAEAtom(Ip, Z, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0.)    = new(Ip,Z,a1,b1,a2,b2,a3,b3)
+    SAEAtom(Ip, Z, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0.; name="[NA]") = new(Ip,Z,a1,b1,a2,b2,a3,b3,name)
 end
 
 "Gets the ionization potential of the atom."
 IonPotential(t::SAEAtom) = t.IonPotential
 "Gets the asymptotic nuclear charge of the atom."
 AsympNuclCharge(t::SAEAtom) = t.NuclCharge
+"Gets the name of the atom."
+TargetName(t::SAEAtom) = t.name
 """
 Gets the potential function of the atom.
 Expression: V(r) = - [Z + a1*exp(-b1*r) + a2*exp(-b2*r) + a3*exp(-b3*r)] / r.
@@ -104,3 +108,6 @@ momentum's transverse component `pd` (in xy plane),
 and propagation-direction (which is Z axis) component `pz`.
 """
 ADKRateExp(t::SAEAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.IonPotential)^1.5/3F)
+
+"Prints the information of the atom."
+Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.IonPotential), Z=$(t.NuclCharge)")

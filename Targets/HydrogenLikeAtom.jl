@@ -6,14 +6,18 @@ struct HydrogenLikeAtom <: SAEAtomBase
     IonPotential;
     "Asymptotic charge of the inner nucleus."
     NuclCharge;
+    "Name of the atom."
+    name::String;
     "Initializes a new instance of HydrogenLikeAtom."
-    HydrogenLikeAtom(Ip, Z) = new(Ip, Z)
+    HydrogenLikeAtom(Ip, Z; name="[NA]") = new(Ip, Z, name)
 end
 
 "Gets the ionization potential of the atom."
 IonPotential(t::HydrogenLikeAtom) = t.IonPotential
 "Gets the asymptotic nuclear charge of the atom."
 AsympNuclCharge(t::HydrogenLikeAtom) = t.NuclCharge
+"Gets the name of the atom."
+TargetName(t::HydrogenLikeAtom) = t.name
 "Gets the potential function of the atom."
 TargetPotential(t::HydrogenLikeAtom) = (x,y,z) -> -t.NuclCharge*(x^2+y^2+z^2+1.0)^(-0.5)
 "Gets the force exerted on the electron from the atom (which is the neg-grad of potential)."
@@ -77,3 +81,6 @@ momentum's transverse component `pd` (in xy plane),
 and propagation-direction (which is Z axis) component `pz`.
 """
 ADKRateExp(t::HydrogenLikeAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.IonPotential)^1.5/3F)
+
+"Prints the information of the atom."
+Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.IonPotential), Z=$(t.NuclCharge)")
