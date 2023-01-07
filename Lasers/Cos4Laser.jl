@@ -12,7 +12,7 @@ struct Cos4Laser <: MonochromaticLaser
     "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
     """
-    Constructs a new monochromatic elliptically polarized laser field.
+    Constructs a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
     # Parameters
     - `peakInt`     : Peak intensity of the laser field (in W/cm²).
     - `WaveLen`     : Wavelength of the laser field (in nm).
@@ -35,7 +35,7 @@ struct Cos4Laser <: MonochromaticLaser
         new(peakInt,waveLen,cycNum,ellip,cep)
     end
     """
-    Constructs a new monochromatic elliptically polarized laser field.
+    Constructs a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
     # Parameters
     - `peakInt`     : Peak intensity of the laser field (in W/cm²).
     - `WaveLen`     : Wave length of the laser field (in nm). Must specify either `waveLen` or `angFreq`.
