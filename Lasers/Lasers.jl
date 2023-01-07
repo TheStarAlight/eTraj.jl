@@ -14,5 +14,6 @@ abstract type MonochromaticLaser <: Laser end
 abstract type BichromaticLaser <: Laser end
 
 include("Cos4Laser.jl")
+include("Cos2Laser.jl")
 
 end
