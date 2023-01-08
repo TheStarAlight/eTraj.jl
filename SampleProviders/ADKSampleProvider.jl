@@ -2,7 +2,7 @@
 "Sample provider which yields electron samples through ADK rate formula, matching `IonRateMethod=:ADK`."
 struct ADKSampleProvider <: ElectronSampleProvider
     laser           ::Laser;
-    target          ::SAEAtom;          # ADK only supports [SAEAtom].
+    target          ::SAEAtomBase;          # ADK only supports [SAEAtomBase].
     monteCarlo      ::Bool;
     tSamples        ::AbstractVector;
     ss_pdSamples    ::AbstractVector;
@@ -13,7 +13,7 @@ struct ADKSampleProvider <: ElectronSampleProvider
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     ADKTunExit      ::Symbol;           # currently supports :IpF, :FDM, :ADK.
     function ADKSampleProvider(;laser               ::Laser,
-                                target              ::SAEAtom,
+                                target              ::SAEAtomBase,
                                 sample_tSpan        ::Tuple{<:Real,<:Real},
                                 sample_tSampleNum   ::Int,
                                 rate_monteCarlo     ::Bool,
