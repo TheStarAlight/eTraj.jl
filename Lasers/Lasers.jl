@@ -7,7 +7,7 @@ module Lasers
 # Lasers
 export Laser, Cos4Laser, Cos2Laser, TrapezoidalLaser, GaussianLaser
 # Properties
-export PeakInt, WaveLen, Ellpticity, AngFreq, Period            # General
+export PeakInt, WaveLen, Ellpticity, AngFreq, Period, TimeShift # General
 export LaserF0, LaserA0, LaserAx, LaserAy, LaserFx, LaserFy     # General
 export CycNum                                                   # Cos2, Cos4
 export CycNumTurnOn, CycNumConst, CycNumTurnOff, CycNumTotal    # Trapezoidal
