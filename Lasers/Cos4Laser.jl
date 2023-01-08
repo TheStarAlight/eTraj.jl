@@ -17,7 +17,7 @@ struct Cos4Laser <: MonochromaticLaser
     - `peakInt`     : Peak intensity of the laser field (in W/cm²).
     - `WaveLen`     : Wavelength of the laser field (in nm).
     - `cycNum`      : Number of cycles of the laser field.
-    - `Ellpticity`  : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`       : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     """
     function Cos4Laser(peakInt, waveLen, cycNum, ellip, cep=0.)
@@ -42,7 +42,7 @@ struct Cos4Laser <: MonochromaticLaser
     - `angFreq`     : Angular frequency of the laser field (in a.u.). Must specify either `waveLen` or `angFreq`.
     - `cycNum`      : Number of cycles of the laser field. Must specify either `cycNum` or `duration`.
     - `duration`    : Duration of the laser field (in a.u.). Must specify either `cycNum` or `duration`.
-    - `Ellpticity`  : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`       : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     """
     function Cos4Laser(;peakInt,
@@ -66,7 +66,7 @@ struct Cos4Laser <: MonochromaticLaser
         if cycNum==-1
             cycNum = duration / (2π/angFreq)
         end
-        new(peakInt,waveLen,cycNum,ellip,cep)
+        Cos4Laser(peakInt,waveLen,cycNum,ellip,cep)
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."

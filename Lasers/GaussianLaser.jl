@@ -17,7 +17,7 @@ struct GaussianLaser <: MonochromaticLaser
     - `peakInt`     : Peak intensity of the laser field (in W/cm²).
     - `WaveLen`     : Wavelength of the laser field (in nm).
     - `spreadCycNum`: Temporal width (converting to cycle numbers) of the laser field, namely σ.
-    - `Ellpticity`  : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`       : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     """
     function GaussianLaser(peakInt, waveLen, spreadCycNum, ellip, cep=0.)
@@ -39,7 +39,7 @@ struct GaussianLaser <: MonochromaticLaser
     - `spreadCycNum`    : Temporal width (converting to cycle numbers) of the laser field, namely σ. Must specify one in `spreadCycNum`, `spreadDuration` and `FWHM_duration`.
     - `spreadDuration`  : Temporal width of the laser field (in a.u.). Must specify one in `spreadCycNum`, `spreadDuration` and `FWHM_duration`.
     - `FWHM_duration`   : Temporal FWHM(Full Width at Half Maxima) of the laser field (in a.u.). Must specify one in `spreadCycNum`, `spreadDuration` and `FWHM_duration`.
-    - `Ellpticity`      : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`           : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
     - `cep`             : Carrier-Envelope-Phase of the laser field (optional, default 0).
     """
     function GaussianLaser(;peakInt,
@@ -67,7 +67,7 @@ struct GaussianLaser <: MonochromaticLaser
                 spreadCycNum = spreadDuration / (2π/angFreq)
             end
         end
-        new(peakInt,waveLen,spreadCycNum,ellip,cep)
+        GaussianLaser(peakInt,waveLen,spreadCycNum,ellip,cep)
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."

@@ -23,7 +23,7 @@ struct TrapezoidalLaser <: MonochromaticLaser
     - `cycNumTurnOn`    : Number of cycles of the laser field in the turn-on.
     - `cycNumTurnOff`   : Number of cycles of the laser field in the turn-off.
     - `cycNumConst`     : Number of cycles of the laser field in the constant-intensity.
-    - `Ellpticity`      : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`           : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
     - `cep`             : Carrier-Envelope-Phase of the laser field (optional, default 0).
     """
     function TrapezoidalLaser(peakInt, waveLen, cycNumTurnOn, cycNumTurnOff, cycNumConst, ellip, cep=0.)
@@ -45,7 +45,7 @@ struct TrapezoidalLaser <: MonochromaticLaser
     - `cycNumTurnOn`    : Number of cycles of the laser field in the turn-on.
     - `cycNumTurnOff`   : Number of cycles of the laser field in the turn-off.
     - `cycNumConst`     : Number of cycles of the laser field in the constant-intensity.
-    - `Ellpticity`      : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`           : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
     - `cep`             : Carrier-Envelope-Phase of the laser field (optional, default 0).
     """
     function TrapezoidalLaser(; peakInt,
@@ -62,7 +62,7 @@ struct TrapezoidalLaser <: MonochromaticLaser
         if waveLen==-1
             waveLen = 45.563352525 / angFreq
         end
-        new(peakInt,waveLen,cycNumTurnOn,cycNumTurnOff,cycNumConst,ellip,cep)
+        TrapezoidalLaser(peakInt,waveLen,cycNumTurnOn,cycNumTurnOff,cycNumConst,ellip,cep)
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."
