@@ -67,6 +67,9 @@ function generateElectronBatch(sp::SFAAESampleProvider, batchId::Int)
     Ft  = hypot(Fxt,Fyt)
     φ   = atan(-Fyt,-Fxt)
     Ip  = IonPotential(sp.target)
+    if Ft == 0
+        return nothing
+    end
     pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
     dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
     rate::Function =

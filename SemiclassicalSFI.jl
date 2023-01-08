@@ -153,11 +153,22 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #   * launch electrons and collect
     prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
     prog2 = Progress(batchNum(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
+    warn_num = 0    # number of warnings of empty batches.
+    max_warn_num = 5
     for batchId in 1:batchNum(sp)
         init = generateElectronBatch(sp, batchId)
-        launchAndCollect!(init, ionProbFinal, ionProbSumTemp, ionProbCollect,
-                                rydProbFinal, rydProbSumTemp, rydProbCollect,
-                                classicalRates; kwargs...)
+        if isnothing(init)
+            warn_num += 1
+            if warn_num<max_warn_num
+                @warn "[MainProgram] The electron sample provider yields no electron sample in batch #$batchId, probably due to zero field strength."
+            elseif warn_num==max_warn_num
+                @warn "[MainProgram] The electron sample provider yields no electron sample in batch #$batchId, probably due to zero field strength. Similar warnings would be suppressed."
+            end
+        else
+            launchAndCollect!(init, ionProbFinal, ionProbSumTemp, ionProbCollect,
+                                    rydProbFinal, rydProbSumTemp, rydProbCollect,
+                                    classicalRates; kwargs...)
+        end
         next!(prog1,spinner=raw"-\|/"); next!(prog2);
     end
     finish!(prog1); finish!(prog2);

@@ -102,6 +102,9 @@ function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
     Ft = hypot(Fxt,Fyt)
     φ  = atan(-Fyt,-Fxt)
     Ip = IonPotential(sp.target)
+    if Ft == 0
+        return nothing
+    end
     # determining tunneling exit position.
     r_exit =
         if      sp.ADKTunExit == :IpF
