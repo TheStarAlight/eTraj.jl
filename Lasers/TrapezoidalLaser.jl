@@ -11,7 +11,7 @@ struct TrapezoidalLaser <: MonochromaticLaser
     cycNumTurnOff;
     "Cycle number of the laser field in the constant-intensity."
     cycNumConst;
-    "Ellpticity of the laser field."
+    "Ellipticity of the laser field."
     ellip;
     "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
@@ -25,7 +25,7 @@ struct TrapezoidalLaser <: MonochromaticLaser
     - `cycNumTurnOn`    : Number of cycles of the laser field in the turn-on.
     - `cycNumTurnOff`   : Number of cycles of the laser field in the turn-off.
     - `cycNumConst`     : Number of cycles of the laser field in the constant-intensity.
-    - `ellip`           : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`           : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `cep`             : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`         : Time shift of the laser (in a.u.) relative to the beginning of TURN-ON (optional, default 0).
     """
@@ -33,7 +33,7 @@ struct TrapezoidalLaser <: MonochromaticLaser
         @assert peakInt>0   "[TrapezoidalLaser] Peak intensity must be positive."
         @assert waveLen>0   "[TrapezoidalLaser] Wavelength must be positive."
         @assert cycNumTurnOn>0 && cycNumTurnOff>0 && cycNumConst≥0  "[TrapezoidalLaser] Cycle number must be positive."
-        @assert 0≤ellip≤1   "[TrapezoidalLaser] Ellpticity must be in [0,1]."
+        @assert -1≤ellip≤1  "[TrapezoidalLaser] Ellipticity must be in [-1,1]."
         new(peakInt,waveLen,cycNumTurnOn,cycNumTurnOff,cycNumConst,ellip,cep,t_shift)
     end
     function TrapezoidalLaser(;peakInt, waveLen, cycNumTurnOn, cycNumTurnOff, cycNumConst, ellip, cep=0.,t_shift=0.)
@@ -48,7 +48,7 @@ struct TrapezoidalLaser <: MonochromaticLaser
     - `cycNumTurnOn`    : Number of cycles of the laser field in the turn-on.
     - `cycNumTurnOff`   : Number of cycles of the laser field in the turn-off.
     - `cycNumConst`     : Number of cycles of the laser field in the constant-intensity.
-    - `ellip`           : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`           : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `cep`             : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`         : Time shift of the laser (in a.u.) relative to the beginning of TURN-ON (optional, default 0).
     """
@@ -56,10 +56,8 @@ struct TrapezoidalLaser <: MonochromaticLaser
                                 waveLen=-1, angFreq=-1,     # must specify either waveLen or angFreq.
                                 cycNumTurnOn, cycNumTurnOff, cycNumConst,
                                 ellip, cep=0., t_shift=0.)
-        @assert peakInt>0               "[TrapezoidalLaser] Peak intensity must be positive."
-        @assert waveLen>0 || angFreq>0  "[TrapezoidalLaser] Must specify either waveLen or angFreq."
+        @assert waveLen>0 || angFreq>0                              "[TrapezoidalLaser] Must specify either waveLen or angFreq."
         @assert cycNumTurnOn>0 && cycNumTurnOff>0 && cycNumConst≥0  "[TrapezoidalLaser] Cycle number must be positive."
-        @assert 0≤ellip≤1               "[TrapezoidalLaser] Ellpticity must be in [0,1]."
         if waveLen>0 && angFreq>0
             @warn "[TrapezoidalLaser] Both waveLen & angFreq are specified, will use waveLen."
         end
@@ -81,8 +79,8 @@ CycNumTurnOn(l::TrapezoidalLaser) = l.cycNumTurnOn
 CycNumTurnOff(l::TrapezoidalLaser) = l.cycNumTurnOff
 "Gets the cycle number of the laser field in the constant-intensity."
 CycNumConst(l::TrapezoidalLaser) = l.cycNumConst
-"Gets the ellpticity of the laser field."
-Ellpticity(l::TrapezoidalLaser) = l.ellip
+"Gets the ellipticity of the laser field."
+Ellipticity(l::TrapezoidalLaser) = l.ellip
 "Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::TrapezoidalLaser) = 45.563352525 / l.waveLen
 "Gets the period of the laser field (in a.u.)."
@@ -141,4 +139,4 @@ end
 
 "Prints the information about the laser."
 Base.show(io::IO, l::TrapezoidalLaser) = print(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.waveLen) nm, TurnOn/Constant/TurnOff: $(l.cycNumTurnOn)/$(l.cycNumConst)/$(l.cycNumTurnOff) cycle(s), e=$(l.ellip)"
-                                               * (l.ellip==0 ? " [Linearly (x ax.) polarized]" : "") * (l.ellip==1 ? " [Circularly polarized]" : "") * (l.t_shift==0 ? "" : ", Rises at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+                                               * (l.ellip==0 ? " [Linearly (x ax.) polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "") * (l.t_shift==0 ? "" : ", Rises at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))

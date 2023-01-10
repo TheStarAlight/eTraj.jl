@@ -7,7 +7,7 @@ struct Cos4Laser <: MonochromaticLaser
     waveLen;
     "Cycle number of the laser field."
     cycNum;
-    "Ellpticity of the laser field."
+    "Ellipticity of the laser field."
     ellip;
     "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
@@ -19,7 +19,7 @@ struct Cos4Laser <: MonochromaticLaser
     - `peakInt`     : Peak intensity of the laser field (in W/cm²).
     - `WaveLen`     : Wavelength of the laser field (in nm).
     - `cycNum`      : Number of cycles of the laser field.
-    - `ellip`       : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`       : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
@@ -27,15 +27,11 @@ struct Cos4Laser <: MonochromaticLaser
         @assert peakInt>0   "[Cos4Laser] Peak intensity must be positive."
         @assert waveLen>0   "[Cos4Laser] Wavelength must be positive."
         @assert cycNum>0    "[Cos4Laser] Cycle number must be positive."
-        @assert 0≤ellip≤1   "[Cos4Laser] Ellpticity must be in [0,1]."
+        @assert -1≤ellip≤1  "[Cos4Laser] Ellipticity must be in [-1,1]."
         new(peakInt,waveLen,cycNum,ellip,cep,t_shift)
     end
     function Cos4Laser(;peakInt, waveLen, cycNum, ellip, cep=0., t_shift=0.)
-        @assert peakInt>0   "[Cos4Laser] Peak intensity must be positive."
-        @assert waveLen>0   "[Cos4Laser] Wavelength must be positive."
-        @assert cycNum>0    "[Cos4Laser] Cycle number must be positive."
-        @assert 0≤ellip≤1   "[Cos4Laser] Ellpticity must be in [0,1]."
-        new(peakInt,waveLen,cycNum,ellip,cep,t_shift)
+        Cos4Laser(peakInt,waveLen,cycNum,ellip,cep,t_shift)
     end
     """
     Constructs a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
@@ -45,7 +41,7 @@ struct Cos4Laser <: MonochromaticLaser
     - `angFreq`     : Angular frequency of the laser field (in a.u.). Must specify either `waveLen` or `angFreq`.
     - `cycNum`      : Number of cycles of the laser field. Must specify either `cycNum` or `duration`.
     - `duration`    : Duration of the laser field (in a.u.). Must specify either `cycNum` or `duration`.
-    - `ellip`       : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`       : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
@@ -53,10 +49,8 @@ struct Cos4Laser <: MonochromaticLaser
                         waveLen=-1, angFreq=-1,     # must specify either waveLen or angFreq.
                         cycNum=-1,  duration=-1,    # must specify either cycNum or duration.
                         ellip, cep=0., t_shift=0.)
-        @assert peakInt>0   "[Cos4Laser] Peak intensity must be positive."
         @assert waveLen>0 || angFreq>0  "[Cos4Laser] Must specify either waveLen or angFreq."
         @assert cycNum>0 || duration>0  "[Cos4Laser] Must specify either cycNum or duration."
-        @assert 0≤ellip≤1   "[Cos4Laser] Ellpticity must be in [0,1]."
         if waveLen>0 && angFreq>0
             @warn "[Cos4Laser] Both waveLen & angFreq are specified, will use waveLen."
         end
@@ -78,8 +72,8 @@ PeakInt(l::Cos4Laser) = l.peakInt
 WaveLen(l::Cos4Laser) = l.waveLen
 "Gets the cycle number of the laser field."
 CycNum(l::Cos4Laser) = l.cycNum
-"Gets the ellpticity of the laser field."
-Ellpticity(l::Cos4Laser) = l.ellip
+"Gets the ellipticity of the laser field."
+Ellipticity(l::Cos4Laser) = l.ellip
 "Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::Cos4Laser) = 45.563352525 / l.waveLen
 "Gets the period of the laser field (in a.u.)."
@@ -126,4 +120,4 @@ end
 
 "Prints the information about the laser."
 Base.show(io::IO, l::Cos4Laser) = print(io,"[MonochromaticLaser] Envelope cos⁴, Wavelength=$(l.waveLen) nm, $(l.cycNum) cycle(s), e=$(l.ellip)"
-                                           * (l.ellip==0 ? " [Linearly (x ax.) polarized]" : "") * (l.ellip==1 ? " [Circularly polarized]" : "") * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+                                           * (l.ellip==0 ? " [Linearly (x ax.) polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "") * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))

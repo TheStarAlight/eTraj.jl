@@ -7,7 +7,7 @@ struct GaussianLaser <: MonochromaticLaser
     waveLen;
     "Temporal width (converting to cycle numbers) of the laser field, namely σ."
     spreadCycNum;
-    "Ellpticity of the laser field."
+    "Ellipticity of the laser field."
     ellip;
     "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
@@ -19,15 +19,15 @@ struct GaussianLaser <: MonochromaticLaser
     - `peakInt`     : Peak intensity of the laser field (in W/cm²).
     - `WaveLen`     : Wavelength of the laser field (in nm).
     - `spreadCycNum`: Temporal width (converting to cycle numbers) of the laser field, namely σ.
-    - `ellip`       : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`       : ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
     function GaussianLaser(peakInt, waveLen, spreadCycNum, ellip, cep=0., t_shift=0.)
-        @assert peakInt>0   "[GaussianLaser] Peak intensity must be positive."
-        @assert waveLen>0   "[GaussianLaser] Wavelength must be positive."
+        @assert peakInt>0       "[GaussianLaser] Peak intensity must be positive."
+        @assert waveLen>0       "[GaussianLaser] Wavelength must be positive."
         @assert spreadCycNum>0  "[GaussianLaser] Cycle number must be positive."
-        @assert 0≤ellip≤1   "[GaussianLaser] Ellpticity must be in [0,1]."
+        @assert -1≤ellip≤1      "[GaussianLaser] Ellipticity must be in [-1,1]."
         new(peakInt,waveLen,spreadCycNum,ellip,cep,t_shift)
     end
     function GaussianLaser(;peakInt, waveLen, spreadCycNum, ellip, cep=0., t_shift=0.)
@@ -42,7 +42,7 @@ struct GaussianLaser <: MonochromaticLaser
     - `spreadCycNum`    : Temporal width (converting to cycle numbers) of the laser field, namely σ. Must specify one in `spreadCycNum`, `spreadDuration` and `FWHM_duration`.
     - `spreadDuration`  : Temporal width of the laser field (in a.u.). Must specify one in `spreadCycNum`, `spreadDuration` and `FWHM_duration`.
     - `FWHM_duration`   : Temporal FWHM(Full Width at Half Maxima) of the laser field (in a.u.). Must specify one in `spreadCycNum`, `spreadDuration` and `FWHM_duration`.
-    - `ellip`           : Ellpticity of the laser field [0≤e≤1, 0 indicates linear polarization (in x direction) and 1 indicates circular polarization].
+    - `ellip`           : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `cep`             : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`         : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
@@ -50,10 +50,8 @@ struct GaussianLaser <: MonochromaticLaser
                             waveLen=-1, angFreq=-1,     # must specify either waveLen or angFreq.
                             spreadCycNum=-1, spreadDuration=-1, FWHM_duration=-1,   # must specify one in spreadCycNum, spreadDuration and FWHM_duration.
                             ellip, cep=0., t_shift=0.)
-        @assert peakInt>0   "[GaussianLaser] Peak intensity must be positive."
-        @assert waveLen>0 || angFreq>0  "[GaussianLaser] Must specify either waveLen or angFreq."
-        @assert spreadCycNum>0 || spreadDuration>0 || FWHM_duration>0  "[GaussianLaser] Must specify one in spreadCycNum, spreadDuration and FWHM_duration."
-        @assert 0≤ellip≤1   "[GaussianLaser] Ellpticity must be in [0,1]."
+        @assert waveLen>0 || angFreq>0                                  "[GaussianLaser] Must specify either waveLen or angFreq."
+        @assert spreadCycNum>0 || spreadDuration>0 || FWHM_duration>0   "[GaussianLaser] Must specify one in spreadCycNum, spreadDuration and FWHM_duration."
         if waveLen>0 && angFreq>0
             @warn "[GaussianLaser] Both waveLen & angFreq are specified, will use waveLen."
         end
@@ -83,8 +81,8 @@ SpreadCycNum(l::GaussianLaser) = l.spreadCycNum
 SpreadDuration(l::GaussianLaser) = l.spreadCycNum * Period(l)
 "Gets the temporal FWHM(Full Width at Half Maxima) of the laser field (in a.u.)."
 FWHM_Duration(l::GaussianLaser) = l.spreadCycNum * Period(l) * (2*sqrt(2*log(2)))
-"Gets the ellpticity of the laser field."
-Ellpticity(l::GaussianLaser) = l.ellip
+"Gets the ellipticity of the laser field."
+Ellipticity(l::GaussianLaser) = l.ellip
 "Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::GaussianLaser) = 45.563352525 / l.waveLen
 "Gets the period of the laser field (in a.u.)."
@@ -131,4 +129,4 @@ end
 
 "Prints the information about the laser."
 Base.show(io::IO, l::GaussianLaser) = print(io,"[MonochromaticLaser] Envelope Gaussian, Wavelength=$(l.waveLen) nm, Temporal width $(l.spreadCycNum) cycle(s) [FWHM $(FWHM_Duration(l)*24.19e-3) fs], e=$(l.ellip)"
-                                           * (l.ellip==0 ? " [Linearly (x ax.) polarized]" : "") * (l.ellip==1 ? " [Circularly polarized]" : "") * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+                                           * (l.ellip==0 ? " [Linearly (x ax.) polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "") * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
