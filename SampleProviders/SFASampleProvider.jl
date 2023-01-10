@@ -6,14 +6,14 @@ using Base.Threads
 "Sample provider which yields electron samples through SFA formula, matching `IonRateMethod=:SFA`"
 struct SFASampleProvider <: ElectronSampleProvider
     laser           ::Laser;
-    target          ::SAEAtom;          # SFA only supports [SAEAtom].
+    target          ::SAEAtomBase;          # SFA only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
     ss_pdSamples    ::AbstractVector;
     ss_pzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     function SFASampleProvider(;laser               ::Laser,
-                                target              ::SAEAtom,
+                                target              ::SAEAtomBase,
                                 sample_tSpan        ::Tuple{<:Real,<:Real},
                                 sample_tSampleNum   ::Int,
                                 simu_phaseMethod    ::Symbol,
@@ -64,6 +64,9 @@ function generateElectronBatch(sp::SFASampleProvider, batchId::Int)
     φ   = atan(-Fytr,-Fxtr)
     ω   = AngFreq(sp.laser)
     Ip  = IonPotential(sp.target)
+    if Ftr == 0
+        return nothing
+    end
     pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
     dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
     sample_count_thread = zeros(Int,nthreads())
@@ -110,6 +113,9 @@ function generateElectronBatch(sp::SFASampleProvider, batchId::Int)
         end
     end
 
+    if sum(sample_count_thread) == 0
+        return nothing
+    end
     if sum(sample_count_thread) < pdNum*pzNum
         @warn "[SFASampleProvider] Found no root in $(pdNum*pzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
     end
