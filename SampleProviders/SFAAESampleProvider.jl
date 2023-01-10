@@ -3,14 +3,14 @@ using ForwardDiff
 "Sample provider which yields electron samples through SFA-AE formula, matching `IonRateMethod=:SFA_AE`"
 struct SFAAESampleProvider <: ElectronSampleProvider
     laser           ::Laser;
-    target          ::SAEAtom;          # SFA-AE only supports [SAEAtom].
+    target          ::SAEAtomBase;          # SFA-AE only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
     ss_pdSamples    ::AbstractVector;
     ss_pzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     function SFAAESampleProvider(;  laser               ::Laser,
-                                    target              ::SAEAtom,
+                                    target              ::SAEAtomBase,
                                     sample_tSpan        ::Tuple{<:Real,<:Real},
                                     sample_tSampleNum   ::Int,
                                     simu_phaseMethod    ::Symbol,
@@ -67,6 +67,9 @@ function generateElectronBatch(sp::SFAAESampleProvider, batchId::Int)
     Ft  = hypot(Fxt,Fyt)
     φ   = atan(-Fyt,-Fxt)
     Ip  = IonPotential(sp.target)
+    if Ft == 0
+        return nothing
+    end
     pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
     dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
     rate::Function =
