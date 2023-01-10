@@ -16,5 +16,6 @@ abstract type SAEAtomBase <: Target end
 include("SAEAtom.jl")
 include("HydrogenLikeAtom.jl")
 include("AtomLibrary.jl")
+include("Molecule.jl")
 
 end

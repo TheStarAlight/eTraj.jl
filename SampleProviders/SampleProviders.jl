@@ -26,4 +26,7 @@ include("ADKSampleProvider.jl")
 include("SFASampleProvider.jl")
 include("SFAAESampleProvider.jl")
 
+include("MolecularCalculators/MolecularCalculator.jl")
+include("WFATSampleProvider.jl")
+
 end
