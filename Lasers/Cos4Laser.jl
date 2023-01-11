@@ -9,6 +9,8 @@ struct Cos4Laser <: MonochromaticLaser
     cycNum;
     "Ellipticity of the laser field."
     ellip;
+    "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
+    azi;
     "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
     "Time shift of the laser relative to the peak (in a.u.)."
@@ -20,18 +22,19 @@ struct Cos4Laser <: MonochromaticLaser
     - `WaveLen`     : Wavelength of the laser field (in nm).
     - `cycNum`      : Number of cycles of the laser field.
     - `ellip`       : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+    - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
-    function Cos4Laser(peakInt, waveLen, cycNum, ellip, cep=0., t_shift=0.)
+    function Cos4Laser(peakInt, waveLen, cycNum, ellip, azi=0., cep=0., t_shift=0.)
         @assert peakInt>0   "[Cos4Laser] Peak intensity must be positive."
         @assert waveLen>0   "[Cos4Laser] Wavelength must be positive."
         @assert cycNum>0    "[Cos4Laser] Cycle number must be positive."
         @assert -1≤ellip≤1  "[Cos4Laser] Ellipticity must be in [-1,1]."
-        new(peakInt,waveLen,cycNum,ellip,cep,t_shift)
+        new(peakInt,waveLen,cycNum,ellip,azi,cep,t_shift)
     end
-    function Cos4Laser(;peakInt, waveLen, cycNum, ellip, cep=0., t_shift=0.)
-        Cos4Laser(peakInt,waveLen,cycNum,ellip,cep,t_shift)
+    function Cos4Laser(;peakInt, waveLen, cycNum, ellip, azi=0., cep=0., t_shift=0.)
+        Cos4Laser(peakInt,waveLen,cycNum,ellip,azi,cep,t_shift)
     end
     """
     Constructs a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
@@ -42,13 +45,14 @@ struct Cos4Laser <: MonochromaticLaser
     - `cycNum`      : Number of cycles of the laser field. Must specify either `cycNum` or `duration`.
     - `duration`    : Duration of the laser field (in a.u.). Must specify either `cycNum` or `duration`.
     - `ellip`       : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+    - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
     function Cos4Laser(;peakInt,
                         waveLen=-1, angFreq=-1,     # must specify either waveLen or angFreq.
                         cycNum=-1,  duration=-1,    # must specify either cycNum or duration.
-                        ellip, cep=0., t_shift=0.)
+                        ellip, azi=0., cep=0., t_shift=0.)
         @assert waveLen>0 || angFreq>0  "[Cos4Laser] Must specify either waveLen or angFreq."
         @assert cycNum>0 || duration>0  "[Cos4Laser] Must specify either cycNum or duration."
         if waveLen>0 && angFreq>0
@@ -63,7 +67,7 @@ struct Cos4Laser <: MonochromaticLaser
         if cycNum==-1
             cycNum = duration / (2π/angFreq)
         end
-        Cos4Laser(peakInt,waveLen,cycNum,ellip,cep,t_shift)
+        Cos4Laser(peakInt,waveLen,cycNum,ellip,azi,cep,t_shift)
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."
@@ -74,6 +78,8 @@ WaveLen(l::Cos4Laser) = l.waveLen
 CycNum(l::Cos4Laser) = l.cycNum
 "Gets the ellipticity of the laser field."
 Ellipticity(l::Cos4Laser) = l.ellip
+"Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
+Azimuth(l::Cos4Laser) = l.azi
 "Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::Cos4Laser) = 45.563352525 / l.waveLen
 "Gets the period of the laser field (in a.u.)."
@@ -87,37 +93,66 @@ LaserA0(l::Cos4Laser) = LaserF0(l) / AngFreq(l)
 
 "Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::Cos4Laser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift;
-    return function(t)
-        t -= Δt
-        A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * cos(ω*t+φ)
+    local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    return if ϕ==0
+        function(t)
+            t -= Δt
+            A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * cos(ω*t+φ)
+        end
+    else
+        function(t)
+            t -= Δt
+            A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * (cos(ω*t+φ)*cos(ϕ)+sin(ω*t+φ)*ε*sin(ϕ))
+        end
     end
 end
 "Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::Cos4Laser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip;
-    return function(t)
-        t -= Δt
-        A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * sin(ω*t+φ) * ε
+    local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    return if ϕ==0
+        function(t)
+            t -= Δt
+            A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * sin(ω*t+φ) * ε
+        end
+    else
+        function(t)
+            t -= Δt
+            A0 * cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π) * (cos(ω*t+φ)*-sin(ϕ)+sin(ω*t+φ)*ε*cos(ϕ))
+        end
     end
 end
 "Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::Cos4Laser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift;
-    return function(t)
-        t -= Δt
-        F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))
+    local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    return if ϕ==0
+        function(t)
+            t -= Δt
+            F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))
+        end
+    else
+        function(t)
+            t -= Δt
+            F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))*cos(ϕ) + (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*sin(ϕ) )
+        end
     end
 end
 "Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::Cos4Laser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip;
-    return function(t)
-        t -= Δt
-        F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
+    local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    return if ϕ==0
+        function(t)
+            t -= Δt
+            F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
+        end
+    else
+        function(t)
+            t -= Δt
+            F0 * cos(ω*t/(2N))^3 * (abs(ω*real(t))<N*π) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))*-sin(ϕ) + (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*cos(ϕ) )
+        end
     end
 end
 
 "Prints the information about the laser."
 Base.show(io::IO, l::Cos4Laser) = print(io,"[MonochromaticLaser] Envelope cos⁴, Wavelength=$(l.waveLen) nm, $(l.cycNum) cycle(s), e=$(l.ellip)"
-                                           * (l.ellip==0 ? " [Linearly (x ax.) polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "") * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+                                           * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
+                                           * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
