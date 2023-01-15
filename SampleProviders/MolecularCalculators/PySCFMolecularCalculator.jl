@@ -1,8 +1,10 @@
 using ...Targets
 using Base.Threads
 using SpecialFunctions
-using CUDA
+using SphericalHarmonics
+using Rotations
 using Interpolations
+using Folds
 using PyCall
 
 "An interface of molecular calculation using PySCF."
@@ -112,6 +114,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
 
     #* Define the spherical grids.
     grid_rMin = 0.001
+    grid_dr = (grid_rMax-grid_rMin)/(grid_rNum-1)
     r_grid = range(start=grid_rMin, stop=grid_rMax, length=grid_rNum)
     θ_grid = range(start=0., stop=π, length=grid_θNum)
     ϕ_grid = range(start=0., stop=2π, length=grid_ϕNum)
@@ -174,7 +177,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
         F1 = ((-1)^(l+(abs(m)-m)/2+1)) * (2^(l+3/2)) * (κ^(Z/κ-(abs(m)+1)/2-n))
         F2 = sqrt(1.0*(2l+1)*fact(l+m)*fact(l-m)*fact(abs(m)+n)*fact(n)) * fact(l)/fact(2l+1)     # 1.0 to avoid overflow
         F3 = 0  # Factor3 is a sum over k from 0 to min(n,l-|m|).
-        for k in 1:min(n,l-abs(m))
+        for k in 0:min(n,l-abs(m))
             F3 += gamma(l+1-Z/κ+n-k) / (fact(k)*fact(l-k)*fact(abs(m)+k)*fact(l-abs(m)-k)*fact(n-k))
         end
         return F1*F2*F3
@@ -185,18 +188,38 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     end
 
     # create pre-computation data to accelerate.
-    R_precomp = zeros(int_npmMax,int_lMax+1,int_npmMax,grid_rNum)  # gets the R_nlm(r) by calling R_precomp[n,l+1,abs(m)+1,r_idx] for m≥0, as for m<0, times (-1)^m.
+    R_precomp_data = zeros(int_npmMax,int_lMax+1,int_npmMax,grid_rNum)  # gets the R_nlm(r) by calling R_precomp[n,l+1,abs(m)+1,r_idx] for m≥0, as for m<0, times (-1)^m.
     @threads for l in 0:int_lMax
-        R_precomp[1,l+1,1,:] = map(r->R_(l,Z,κ,r), r_grid)
+        R_precomp_data[1,l+1,1,:] = map(r->R_(l,Z,κ,r), r_grid)
         for n in 1:int_npmMax
         for m in 0:min(int_npmMax-n, l)
-            R_precomp[n,l+1,m+1,:] = R_precomp[1,l+1,1,:] .* ω(n,l,m,Z,κ)
+            R_precomp_data[n,l+1,m+1,:] = R_precomp_data[1,l+1,1,:] .* ω(n,l,m,Z,κ)
         end
         end
+    end
+    angularGrid = [(θ_grid[iθ],ϕ_grid[iϕ]) for iθ in 1:grid_θNum, iϕ in 1:grid_ϕNum] # obtain the interpolation of Y_lm by indexing (l+1,abs(m)+1) for m≥0, as for m<0, times exp(-2im*m*ϕ).
+    Y_precomp_data = Array{AbstractInterpolation}(undef, int_lMax+1, int_npmMax)
+    for l in 0:int_lMax
+        for m in 0:min(int_npmMax-1, l)
+            Y_precomp_data[l+1,m+1] = linear_interpolation((θ_grid,ϕ_grid), map(ang->SphericalHarmonics.sphericalharmonic(ang...;l=l,m=m), angularGrid))
+        end
+    end
+    function Ων_precomp(n,m,(r,θ,ϕ))
+        sum = 0
+        abs(m)>int_lMax && return 0.0
+        for l in abs(m):int_lMax
+            if m≥0
+                sum += R_precomp_data[n,l+1,m+1,floor(Int,(r-grid_rMin)/grid_dr)+1]                 * Y_precomp_data[l+1,m+1](θ,ϕ)
+            else
+                sum += R_precomp_data[n,l+1,abs(m)+1,floor(Int,(r-grid_rMin)/grid_dr)+1] * (-1)^m   * Y_precomp_data[l+1,abs(m)+1](θ,ϕ) * exp(-2im*m*ϕ)
+            end
+        end
+        return sum
     end
 
     #*  2.1 Calculate the wavefunction
     orbit_coeff = @view mo_coeff[:,orbitIdx]    # Select the coefficients related to the interested MO.
     ψ0 = χi * orbit_coeff   # Calculate wavefunction of the interested MO (matmul operation).
 
+    return Folds.mapreduce(i->Ων_precomp(1,0,ptIdx2sphCoord(i))*V_c[i]*ψ0[i]*dV[i], +, 1:N), R_precomp_data
 end
