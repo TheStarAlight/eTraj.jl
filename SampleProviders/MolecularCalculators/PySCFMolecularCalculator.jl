@@ -143,7 +143,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     end
     pt_xyz = hcat(pt_x,pt_y,pt_z)
 
-    #* 1. Calculate the effective core potential.
+    #* 1. Calculate the effective core potential
 
     χi = pymol.eval_gto("GTOval",pt_xyz)    # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
     V_HF_coeff = task.get_veff()[:,orbitIdx]
@@ -153,7 +153,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     end
 
     #* 2. Calculate the integral
-    #*  2.0 Define some special functions
+    #*  2.1 Define some special functions
     "Kummer's confluent hypergeometric function M(a,b,z) = ₁F₁(a;b;z)."
     function M(a,b,z)
         S₀, S₁, j = 1, 1+a*z/b, 1
@@ -187,20 +187,20 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
         return (κ*r)^l*exp(-κ*r)*M(l+1-Z/κ,2l+2,2κ*r)
     end
 
-    # create pre-computation data to accelerate.
-    R_precomp_data = zeros(int_npmMax,int_lMax+1,int_npmMax,grid_rNum)  # gets the R_nlm(r) by calling R_precomp[n,l+1,abs(m)+1,r_idx] for m≥0, as for m<0, times (-1)^m.
+    #*  2.2 Create pre-computation data to accelerate.
+    R_precomp_data = zeros(int_npmMax+1,int_lMax+1,int_npmMax+1,grid_rNum)  # gets the R_nlm(r) by calling R_precomp[n+1,l+1,abs(m)+1,r_idx] for m≥0, as for m<0, times (-1)^m.
     @threads for l in 0:int_lMax
         R_precomp_data[1,l+1,1,:] = map(r->R_(l,Z,κ,r), r_grid)
-        for n in 1:int_npmMax
+        for n in 0:int_npmMax
         for m in 0:min(int_npmMax-n, l)
-            R_precomp_data[n,l+1,m+1,:] = R_precomp_data[1,l+1,1,:] .* ω(n,l,m,Z,κ)
+            R_precomp_data[n+1,l+1,m+1,:] = R_precomp_data[1,l+1,1,:] .* ω(n,l,m,Z,κ)
         end
         end
     end
     angularGrid = [(θ_grid[iθ],ϕ_grid[iϕ]) for iθ in 1:grid_θNum, iϕ in 1:grid_ϕNum] # obtain the interpolation of Y_lm by indexing (l+1,abs(m)+1) for m≥0, as for m<0, times exp(-2im*m*ϕ).
-    Y_precomp_data = Array{AbstractInterpolation}(undef, int_lMax+1, int_npmMax)
+    Y_precomp_data = Array{AbstractInterpolation}(undef, int_lMax+1, int_npmMax+1)
     for l in 0:int_lMax
-        for m in 0:min(int_npmMax-1, l)
+        for m in 0:min(int_npmMax, l)
             Y_precomp_data[l+1,m+1] = linear_interpolation((θ_grid,ϕ_grid), map(ang->SphericalHarmonics.sphericalharmonic(ang...;l=l,m=m), angularGrid))
         end
     end
@@ -209,17 +209,36 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
         abs(m)>int_lMax && return 0.0
         for l in abs(m):int_lMax
             if m≥0
-                sum += R_precomp_data[n,l+1,m+1,floor(Int,(r-grid_rMin)/grid_dr)+1]                 * Y_precomp_data[l+1,m+1](θ,ϕ)
+                sum += R_precomp_data[n+1,l+1,m+1,round(Int,(r-grid_rMin)/grid_dr)+1]                 * Y_precomp_data[l+1,m+1](θ,ϕ)
             else
-                sum += R_precomp_data[n,l+1,abs(m)+1,floor(Int,(r-grid_rMin)/grid_dr)+1] * (-1)^m   * Y_precomp_data[l+1,abs(m)+1](θ,ϕ) * exp(-2im*m*ϕ)
+                sum += R_precomp_data[n+1,l+1,abs(m)+1,round(Int,(r-grid_rMin)/grid_dr)+1] * (-1)^m   * Y_precomp_data[l+1,abs(m)+1](θ,ϕ) * exp(-2im*m*ϕ)
             end
         end
         return sum
     end
 
-    #*  2.1 Calculate the wavefunction
+    #*  2.2 Calculate the wavefunction
     orbit_coeff = @view mo_coeff[:,orbitIdx]    # Select the coefficients related to the interested MO.
     ψ0 = χi * orbit_coeff   # Calculate wavefunction of the interested MO (matmul operation).
 
-    return Folds.mapreduce(i->Ων_precomp(1,0,ptIdx2sphCoord(i))*V_c[i]*ψ0[i]*dV[i], +, 1:N), R_precomp_data
+    #*  2.3 Calculate the integral
+    "Converts the cartesian coordinate to spherical one."
+    function cart2sph(vec)
+        x = vec[1]
+        y = vec[2]
+        z = vec[3]
+        r = sqrt(x^2+y^2+z^2)
+        θ = acos(z/r)
+        ϕ = atan(y,x)
+        (ϕ<0) && (ϕ+=2π)
+        return [r,θ,ϕ]
+    end
+    βlist = 0:π/18:π
+    glist = zeros(size(βlist))
+    for iβ in eachindex(βlist)
+        rot = inv(Rotations.RotZXZ(0,βlist[iβ],0))
+        glist[iβ] = Folds.mapreduce(i->conj(Ων_precomp(0,0,Tuple(cart2sph(rot*pt_xyz[i,1:3]))))*V_c[i]*ψ0[i]*dV[i], +, 1:N)
+        @info "β=$(βlist[iβ]), g=$(glist[iβ])"
+    end
+    return βlist,glist
 end
