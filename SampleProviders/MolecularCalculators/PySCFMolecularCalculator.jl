@@ -5,7 +5,7 @@ using SphericalHarmonics
 using Rotations
 using Interpolations
 using Folds
-using TensorOperations
+using Einsum
 using PyCall
 
 "An interface of molecular calculation using PySCF."
@@ -42,6 +42,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
             mc._pyscf  = pyimport("pyscf")
             mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis)
             mc._pytask = mc._pyscf.scf.RHF(mc._pymol)
+            mc._pytask.chkfile = false
             @info "[PySCFMolecularCalculator] Running molecular calculation..."
             time = @elapsed mc._pytask.run()
             @info "Finished initialization [taking $time second(s)]."
@@ -66,7 +67,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
                             int_lMax  ::Int = 10,
                             int_npmMax::Int = 6)
     # == PROCEDURE ==
-    # 0. Obtain the wavefunction and coefficients (finished in the initialization).
+    # 0. Obtain the coefficients (finished in the initialization).
     # 1. Calculate the effective core potential.
     # 2. Calculate the integral for each Euler angle parameter (β,γ) (α is omitted) to get structure factor.
 
@@ -74,15 +75,12 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
 
     pyscf = molCalc._pyscf
     pyscf_df = pyimport("pyscf.df")
-    mol   = molCalc.mol
     pymol = molCalc._pymol   # storing the molecule's info and the basis's info.
     task  = molCalc._pytask  # storing the calculation result.
 
     mo_coeff    = task.mo_coeff     # Linear combination coefficients of AO to make up MO.
     mo_occ      = Int.(task.mo_occ) # Ground state electron occupation number of each MO.
-    den_mat     = task.make_rdm1()  # Density matrix.
     num_atom    = pymol.natm        # Total number of atoms.
-    num_elec    = pymol.nelectron   # Total number of electrons.
     num_AO      = size(mo_coeff,1)  # Number of atomic orbits (aka AO) or Gaussian basis. (pymol.nao doesn't return an interger!)
     HOMO_orbitIdx = begin
         idx = 1
@@ -163,7 +161,6 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
     orbit_coeff = @view mo_coeff[:,orbitIdx]    # Select the coefficients related to the interested MO.
     ψ0 = χi * orbit_coeff                       # Calculate wavefunction of the interested MO (matmul operation).
-    ψ0 ./= sqrt(Folds.mapreduce(i->abs2(ψ0[i])*dV[i], +, 1:N))    # Normalization
 
     #*  1.2 Calculate the asymptotic Coulomb potential Z/r
     @threads for ir in 1:grid_rNum
@@ -176,7 +173,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     for iatm in 1:num_atom
         Folds.map(
             function (i)
-                Vc_ψ0[i] -= atomCharges[iatm]/sqrt((pt_xyz[i,1]-atomCoords[iatm,1])^2+(pt_xyz[i,2]-atomCoords[iatm,2])^2+(pt_xyz[i,3]-atomCoords[iatm,3])^2)
+                Vc_ψ0[i] -= atomCharges[iatm]/sqrt((pt_xyz[i,1]-atomCoords[iatm,1])^2+(pt_xyz[i,2]-atomCoords[iatm,2])^2+(pt_xyz[i,3]-atomCoords[iatm,3])^2+1e-5)
             end
         , 1:N)
     end
@@ -184,17 +181,28 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     #*  1.4 Calculate the inter-electron interaction: Vd & Vex
     batch_size = 5000  # the integral takes huge memory and thus needs to be performed in batches.
     batch_num = ceil(Int, N/batch_size)
-    Vd = nothing
+    den_mat = zeros(num_AO,num_AO); i,α,β=0,0,0 # den_mat_αβ = ∑_i c[i,α]*c[i,β]
+    occupied_mo_coeff = mo_coeff[:,1:HOMO_orbitIdx]
+    @einsum den_mat[α,β] := 2 * occupied_mo_coeff[α,i] * occupied_mo_coeff[β,i]
+
     @threads for i in 1:batch_num
         pt_idx = if i < batch_num
-            CartesianIndices(((i-1)*batch_size+1:i*batch_size))
+            CartesianIndices((((i-1)*batch_size+1): i*batch_size,))
         else
-            CartesianIndices(((i-1)*batch_size+1:N))
+            CartesianIndices((((i-1)*batch_size+1): N,))
         end
         fakemol = pyscf.gto.fakemol_for_charges(pt_xyz[pt_idx,:])
-        I = pyscf.df.incore.aux_e2(pymol, fakemol)      # Size: num_AO × num_AO × batch_size, I_ab = ∫dr' (χa(r'-Ra)*χb(r'-Rb))/|r-r'|
-        @tensoropt Vd[3] := I[1,2,3] * den_mat[1,2]     # Vd[k] := I[i,j,k] * den_mat[i,j]
-
+        I = pyscf_df.incore.aux_e2(pymol, fakemol)      # Size: num_AO × num_AO × batch_size, I_αβ = ∫dr' (χα(r'-Rα)*χβ(r'-Rβ))/|r-r'|
+        #* Calculate Vd
+        Vd = zeros(size(pt_idx,1)); α,β,i_pt = 0,0,0     # α,β are indices of the basis, i_pt is the index of the points.
+        @einsum Vd[i_pt] := I[α,β,i_pt] * den_mat[α,β]     # Einstein's summation notation is used.
+        Vc_ψ0[pt_idx] .+= Vd            # now it is (Z/r + Vnuc + Vd).
+        Vc_ψ0[pt_idx] .*= ψ0[pt_idx]    # now it is (Z/r + Vnuc + Vd) * ψ0.
+        #* Calculate Vex_ψ0
+        χα = χi[pt_idx,:]   # basis function values on the selected points.
+        Vex_ψ0 = zeros(size(pt_idx,1)); α,β,γ,i_pt = 0,0,0,0
+        @einsimd Vex_ψ0[i_pt] := -1/2 * den_mat[α,β] * χα[i_pt,α] * orbit_coeff[γ] * I[β,γ,i_pt]
+        Vc_ψ0[pt_idx] .+= Vex_ψ0    # finished building Vc_ψ0.
     end
 
     #* 2. Calculate the integral
@@ -250,7 +258,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
         end
     end
     function Ων_precomp(n,m,(r,θ,ϕ))
-        sum = 0
+        sum = complex(0.0)
         abs(m)>int_lMax && return 0.0
         for l in abs(m):int_lMax
             if m≥0
@@ -277,7 +285,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     βlist = 0:π/18:π
     glist = zeros(size(βlist))
     for iβ in eachindex(βlist)
-        rot = inv(Rotations.RotZXZ(0,βlist[iβ],0))
+        rot = Rotations.RotZXZ(0,βlist[iβ],0)
         glist[iβ] = Folds.mapreduce(i->conj(Ων_precomp(0,0,Tuple(cart2sph(rot*pt_xyz[i,1:3]))))*Vc_ψ0[i]*dV[i], +, 1:N)
         @info "β=$(βlist[iβ]), g=$(glist[iβ])"
     end
