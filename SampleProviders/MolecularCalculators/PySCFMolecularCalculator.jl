@@ -2,11 +2,12 @@ using ...Targets
 using Base.Threads
 using SpecialFunctions
 using SphericalHarmonics
-using Rotations
-using Interpolations
 using Folds
 using Einsum
 using PyCall
+using HDF5
+using Dates
+using ProgressMeter
 
 "An interface of molecular calculation using PySCF."
 mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
@@ -17,7 +18,6 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The molecular orbital from which the electron is ionized."
     orbitIdx::String;
 
-    # private variables.
     "PySCF library."
     _pyscf;
     "The PySCF molecule object."
@@ -25,6 +25,10 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The PySCF computation task object."
     _pytask;
 
+    "HOMO energy."
+    HOMO_energy;
+    "Dipole momentum vector in the MF."
+    dip_momentum;
 
     """
     Initializes an instance of `PySCFMolecularCalculator` with given parameter.
@@ -38,38 +42,92 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
             error("[PySCFMolecularCalculator] orbitIdx $orbitIdx not supported.")
         end
         mc::PySCFMolecularCalculator = new(mol,basis,orbitIdx)
+        @info "[PySCFMolecularCalculator] Running molecular calculation..."
         try
             mc._pyscf  = pyimport("pyscf")
             mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis)
             mc._pytask = mc._pyscf.scf.RHF(mc._pymol)
-            mc._pytask.chkfile = false
-            @info "[PySCFMolecularCalculator] Running molecular calculation..."
+            mc._pytask.chkfile = nothing
             time = @elapsed mc._pytask.run()
-            @info "Finished initialization [taking $time second(s)]."
         catch
             @error "[PySCFMolecularCalculator] Encountered error when calling pyscf."
             rethrow()
         end
+        if ! mc._pytask.converged
+            error("[PySCFMolecularCalculator] SCF calculation unable to converge.")
+        end
+        mc.HOMO_energy = mc._pytask.mo_energy[HOMOIndex(mc)]
+        mc.dip_momentum = mc._pytask.dip_moment(unit="AU")
+        @info "Finished initialization [taking $time second(s)]."
         return mc
     end
 end
 
+"Gets the index of the HOMO."
+function HOMOIndex(mc::PySCFMolecularCalculator)
+    task     = mc._pytask
+    mo_occ   = Int.(task.mo_occ)
+    num_AO   = size(task.mo_coeff,1)
+    idx = 1
+    for i = 1:num_AO
+        if mo_occ[i]==0
+            idx = i; break
+        end
+    end
+    return idx-1    # idx is LUMO, while idx-1 is HOMO
+end
+
+"Gets the energy level of the molecule's HOMO (in a.u.)."
+function HOMOEnergy(mc::PySCFMolecularCalculator)
+    return mc.HOMO_energy
+end
+
 """
-Calculates the structure factors in WFAT of the given molecule.
+Gets the energy level of a specific molecular orbital (MO) of the molecule (in a.u.).
+- `orbitIdx::Int`   : Index of the orbital.
 """
-function calcStructFactor(; molCalc::PySCFMolecularCalculator,
-                            grid_rNum::Int  = 100,
-                            grid_rMax::Real = 10.,
-                            grid_θNum::Int  = 60,
-                            grid_ϕNum::Int  = 60,
-                            EulerGrid_βNum::Int = 30,
-                            EulerGrid_γNum::Int = 30,
-                            int_lMax  ::Int = 10,
-                            int_npmMax::Int = 6)
+function EnergyLevel(mc::PySCFMolecularCalculator, orbitIdx::Int)
+    return mc._pytask.mo_energy[orbitIdx]
+end
+
+"Gets the energy levels of all the molecular orbitals (MO) of the molecule (in a.u.)."
+function EnergyLevels(mc::PySCFMolecularCalculator)
+    return mc._pytask.mo_energy
+end
+
+"Gets the permanent dipole momentum vector of the molecule in the molecular frame (MF) (in a.u.)."
+function DipoleMomentum(mc::PySCFMolecularCalculator)
+    return mc.dip_momentum
+end
+
+"""
+Calculates the DATA used in structure factor calculation in WFAT of the given molecule.
+
+# Parameters
+- `molCalc`     : The molecular calculator.
+- `grid_rNum`   : The number of radial grid (default 200).
+- `grid_rMax`   : The maximum radius of the radial grid (default 10.0).
+- `grid_θNum`   : The number of angular grid in the θ direction (default 60).
+- `grid_ϕNum`   : The number of angular grid in the ϕ direction (default 60).
+- `sf_nξMax`    : The maximum number of nξ used in calculation (default 3).
+- `sf_mMax`     : The maximum number of |m| used in calculation (default 3).
+- `sf_lMax`     : The maximum angular quantum number l used in calculation (default 6).
+- `save_path`   : The path to save the data (default "WFAT_StructFactor_CalcData_yyyymmdd_hhmmss.h5").
+                   An empty string indicates saving as default filename; `nothing` indicates no saving.
+"""
+function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
+                                grid_rNum::Int  = 200,
+                                grid_rMax::Real = 10.,
+                                grid_θNum::Int  = 60,
+                                grid_ϕNum::Int  = 60,
+                                sf_nξMax ::Int = 3,
+                                sf_mMax  ::Int = 3,
+                                sf_lMax  ::Int = 6,
+                                save_path::String = "")
     # == PROCEDURE ==
     # 0. Obtain the coefficients (finished in the initialization).
     # 1. Calculate the effective core potential.
-    # 2. Calculate the integral for each Euler angle parameter (β,γ) (α is omitted) to get structure factor.
+    # 2. Calculate the integrals and save them as output.
 
     #* Preprocess molecular information
 
@@ -78,6 +136,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     pymol = molCalc._pymol   # storing the molecule's info and the basis's info.
     task  = molCalc._pytask  # storing the calculation result.
 
+    mol         = molCalc.mol
     mo_coeff    = task.mo_coeff     # Linear combination coefficients of AO to make up MO.
     mo_occ      = Int.(task.mo_occ) # Ground state electron occupation number of each MO.
     num_atom    = pymol.natm        # Total number of atoms.
@@ -110,7 +169,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     Z   = MolCharge(molCalc.mol)+1
     Ip  = -task.mo_energy[orbitIdx]
     if Ip ≤ 0
-        error("[PySCFMolecularCalculator] The energy of the selected molecular orbit $(molCalc.orbitIdx) is positive.")
+        error("[PySCFMolecularCalculator] The energy of the selected molecular orbital $(molCalc.orbitIdx) is positive.")
     end
     κ   = sqrt(2Ip)
 
@@ -122,12 +181,12 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     ϕ_grid = range(start=0., stop=2π, length=grid_ϕNum)
     N = grid_rNum*grid_θNum*grid_ϕNum
 
-    "Returns the spherical coordinate of the given index of the given point."
-    function ptIdx2sphCoord(i::Int)
+    "Returns the spherical grid indices of the given index of the point."
+    function ptIdx2sphCoordIdx(i::Int)
         iϕ = (i-1) % grid_ϕNum + 1
         iθ = (ceil(Int, i/grid_ϕNum)-1) % grid_θNum + 1
         ir = ceil(Int, i/grid_ϕNum/grid_θNum)
-        return (r_grid[ir],θ_grid[iθ],ϕ_grid[iϕ])
+        return (ir,iθ,iϕ)
     end
 
     # converting to cartesian grid points.
@@ -136,12 +195,16 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     pt_y = zeros(N)
     pt_z = zeros(N)
     dV   = zeros(N) # dV = r²sinθ drdθdϕ, used in the integration.
+    dr   = r_grid[2]-r_grid[1]
+    dθ   = θ_grid[2]-θ_grid[1]
+    dϕ   = ϕ_grid[2]-ϕ_grid[1]
     @threads for i in 1:N
-        r,θ,ϕ = ptIdx2sphCoord(i)
+        ir,iθ,iϕ = ptIdx2sphCoordIdx(i)
+        r,θ,ϕ = r_grid[ir],θ_grid[iθ],ϕ_grid[iϕ]
         pt_x[i] = r*sin(θ)*cos(ϕ)
         pt_y[i] = r*sin(θ)*sin(ϕ)
         pt_z[i] = r*cos(θ)
-        dV[i]   = r^2*sin(θ)*(r_grid[2]-r_grid[1])*(θ_grid[2]-θ_grid[1])*(ϕ_grid[2]-ϕ_grid[1])
+        dV[i]   = r^2*sin(θ)*dr*dθ*dϕ
     end
     pt_xyz = hcat(pt_x,pt_y,pt_z)
 
@@ -155,6 +218,7 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     # In the following scheme, Z/r, Vnuc, Vd would be first calculated and directly added to Vc_ψ0,
     # and then would be multiplied by ψ0.
     # Vc_ψ0 = (Z/r + Vnuc + Vd) * ψ0 + Vex_ψ0.
+
     Vc_ψ0 = zeros(N)
 
     #*  1.1 Calculate the wavefunction
@@ -185,7 +249,11 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
     occupied_mo_coeff = mo_coeff[:,1:HOMO_orbitIdx]
     @einsum den_mat[α,β] := 2 * occupied_mo_coeff[α,i] * occupied_mo_coeff[β,i]
 
-    @threads for i in 1:batch_num
+    prog11 = ProgressUnknown(dt=0.2, desc="Calculating the effective potential...", color = :cyan, spinner = true)
+    prog12 = Progress(N; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
+
+    # @threads for i in 1:batch_num
+    for i in 1:batch_num    #TODO: Multi-threading is disabled because PyCall.jl doesn't support it. Directly calling libcint might be a solution.
         pt_idx = if i < batch_num
             CartesianIndices((((i-1)*batch_size+1): i*batch_size,))
         else
@@ -203,7 +271,10 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
         Vex_ψ0 = zeros(size(pt_idx,1)); α,β,γ,i_pt = 0,0,0,0
         @einsimd Vex_ψ0[i_pt] := -1/2 * den_mat[α,β] * χα[i_pt,α] * orbit_coeff[γ] * I[β,γ,i_pt]
         Vc_ψ0[pt_idx] .+= Vex_ψ0    # finished building Vc_ψ0.
+
+        next!(prog11,spinner=raw"-\|/"); update!(prog12,pt_idx.indices[1][end]);
     end
+    finish!(prog11); finish!(prog12); println()
 
     #* 2. Calculate the integral
     #*  2.1 Define some special functions
@@ -225,69 +296,137 @@ function calcStructFactor(; molCalc::PySCFMolecularCalculator,
         end
         return F
     end
-    "Normalization coefficient ω_l^ν for radial function R_l^ν of Ω_{lm'}^ν. (n→n_ξ)"
-    function ω(n,l,m,Z,κ)
-        F1 = ((-1)^(l+(abs(m)-m)/2+1)) * (2^(l+3/2)) * (κ^(Z/κ-(abs(m)+1)/2-n))
-        F2 = sqrt(1.0*(2l+1)*fact(l+m)*fact(l-m)*fact(abs(m)+n)*fact(n)) * fact(l)/fact(2l+1)     # 1.0 to avoid overflow
+    "Normalization coefficient ω_l^ν for radial function R_l^ν of Ω_{lm'}^ν."
+    function ω(nξ,m,l,Z,κ)
+        F1 = ((-1)^(l+(abs(m)-m)/2+1)) * (2^(l+3/2)) * (κ^(Z/κ-(abs(m)+1)/2-nξ))
+        F2 = sqrt(1.0*(2l+1)*fact(l+m)*fact(l-m)*fact(abs(m)+nξ)*fact(nξ)) * fact(l)/fact(2l+1)     # 1.0 to avoid overflow
         F3 = 0  # Factor3 is a sum over k from 0 to min(n,l-|m|).
-        for k in 0:min(n,l-abs(m))
-            F3 += gamma(l+1-Z/κ+n-k) / (fact(k)*fact(l-k)*fact(abs(m)+k)*fact(l-abs(m)-k)*fact(n-k))
+        for k in 0:min(nξ,l-abs(m))
+            F3 += gamma(l+1-Z/κ+nξ-k) / (fact(k)*fact(l-k)*fact(abs(m)+k)*fact(l-abs(m)-k)*fact(nξ-k))
         end
         return F1*F2*F3
     end
-    "Radial function R_l^ν of Ω_{lm'}^ν EXCLUDING the normalization constant ω. (n→n_ξ)"
+    "Radial function R_l^ν of Ω_{lm'}^ν EXCLUDING the normalization constant ω."
     function R_(l,Z,κ,r)
         return (κ*r)^l*exp(-κ*r)*M(l+1-Z/κ,2l+2,2κ*r)
     end
 
     #*  2.2 Create pre-computation data to accelerate.
-    R_precomp_data = zeros(int_npmMax+1,int_lMax+1,int_npmMax+1,grid_rNum)  # gets the R_nlm(r) by calling R_precomp[n+1,l+1,abs(m)+1,r_idx] for m≥0, as for m<0, times (-1)^m.
-    @threads for l in 0:int_lMax
-        R_precomp_data[1,l+1,1,:] = map(r->R_(l,Z,κ,r), r_grid)
-        for n in 0:int_npmMax
-        for m in 0:min(int_npmMax-n, l)
-            R_precomp_data[n+1,l+1,m+1,:] = R_precomp_data[1,l+1,1,:] .* ω(n,l,m,Z,κ)
+    R_precomp_data = zeros(sf_nξMax+1, sf_mMax+1, sf_lMax+1, grid_rNum)
+    # gets the R_nml(r) by indexing [n+1,abs(m)+1,l+1,r_idx] for m≥0, as for m<0, times (-1)^m.
+    @threads for l in 0:sf_lMax
+        R_precomp_data[1,1,l+1,:] = map(r->R_(l,Z,κ,r), r_grid)
+        for nξ in 0:sf_nξMax
+        for m  in 0:sf_mMax
+            R_precomp_data[nξ+1,m+1,l+1,:] = R_precomp_data[1,1,l+1,:] .* ω(nξ,m,l,Z,κ)
         end
         end
     end
-    angularGrid = [(θ_grid[iθ],ϕ_grid[iϕ]) for iθ in 1:grid_θNum, iϕ in 1:grid_ϕNum] # obtain the interpolation of Y_lm by indexing (l+1,abs(m)+1) for m≥0, as for m<0, times exp(-2im*m*ϕ).
-    Y_precomp_data = Array{AbstractInterpolation}(undef, int_lMax+1, int_npmMax+1)
-    for l in 0:int_lMax
-        for m in 0:min(int_npmMax, l)
-            Y_precomp_data[l+1,m+1] = linear_interpolation((θ_grid,ϕ_grid), map(ang->SphericalHarmonics.sphericalharmonic(ang...;l=l,m=m), angularGrid))
+    Y_precomp_data = zeros(ComplexF64, sf_lMax+1, sf_lMax+1, grid_θNum, grid_ϕNum)  # for given l, -l ≤ m' ≤ l.
+    # obtain the Y_lm'(θ,ϕ) by indexing [l+1,abs(m)+1,θ_idx,ϕ_idx] for m≥0, as for m<0, times exp(-2im*m*ϕ).
+    @threads for l in 0:sf_lMax
+    for m_ in 0:l
+        for iθ in eachindex(θ_grid)
+        for iϕ in eachindex(ϕ_grid)
+            Y_precomp_data[l+1,m_+1,iθ,iϕ] = SphericalHarmonics.sphericalharmonic(θ_grid[iθ], ϕ_grid[iϕ]; l=l, m=m_)
+        end; end
+    end; end
+    "Utilizes the pre-computed data to calculate the Ω_{lm'}^{ν}, where ν=(nξ,m)."
+    @inline function Ωνl_precomp(nξ,m,l,m_, i_pt)
+        ir,iθ,iϕ = ptIdx2sphCoordIdx(i_pt)
+        abs(m_)>l && return 0.0
+        F1 = if m≥0
+            R_precomp_data[nξ+1,m+1,l+1,ir]
+        else
+            R_precomp_data[nξ+1,abs(m)+1,l+1,ir] * (-1)^m
         end
-    end
-    function Ων_precomp(n,m,(r,θ,ϕ))
-        sum = complex(0.0)
-        abs(m)>int_lMax && return 0.0
-        for l in abs(m):int_lMax
-            if m≥0
-                sum += R_precomp_data[n+1,l+1,m+1,round(Int,(r-grid_rMin)/grid_dr)+1]                 * Y_precomp_data[l+1,m+1](θ,ϕ)
-            else
-                sum += R_precomp_data[n+1,l+1,abs(m)+1,round(Int,(r-grid_rMin)/grid_dr)+1] * (-1)^m   * Y_precomp_data[l+1,abs(m)+1](θ,ϕ) * exp(-2im*m*ϕ)
-            end
+        F2 = if m_≥0
+            Y_precomp_data[l+1,m_+1,iθ,iϕ]
+        else
+            Y_precomp_data[l+1,abs(m_)+1,iθ,iϕ] * exp(-2im*m_*ϕ_grid[iϕ])
         end
-        return sum
+        return F1*F2
     end
 
     #*  2.3 Calculate the integral
-    "Converts the cartesian coordinate to spherical one."
-    function cart2sph(vec)
-        x = vec[1]
-        y = vec[2]
-        z = vec[3]
-        r = sqrt(x^2+y^2+z^2)
-        θ = acos(z/r)
-        ϕ = atan(y,x)
-        (ϕ<0) && (ϕ+=2π)
-        return [r,θ,ϕ]
+
+    prog21 = ProgressUnknown(dt=0.2, desc="Calculating the integrals...", color = :cyan, spinner = true)
+    prog22 = Progress((sf_nξMax+1)*(2*sf_mMax+1)*(sf_lMax+1)^2; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
+
+    # `IntData` would store the final data: The integral I(nξ,m,l,m')=∫Ω(nξ,m,l,m')*Vc_ψ0(r)*dV.
+    # nξ=0,1,⋯,nξMax;  m=0,±1,⋯,±mMax;  l=0,1,⋯,lMax;  m'=-l,-l+1,⋯,0,1,⋯,l.
+    # Obtain I(nξ,m,l,m') by indexing [nξ+1, m+mMax+1, l+1, m'+l+1]
+    IntData = zeros(sf_nξMax+1,2*sf_mMax+1,sf_lMax+1,2*sf_lMax+1)
+    Vc_ψ0_dV = Vc_ψ0 .* dV
+    for nξ in 0:sf_nξMax
+    for m in -sf_mMax:sf_mMax
+    for l in 0:sf_lMax
+    for m_ in -l:l
+        IntData[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = real(Folds.mapreduce(i->conj(Ωνl_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N))
+        next!(prog21); next!(prog22)
+    end; end; end; end
+    finish!(prog21); finish!(prog22); println()
+
+    #* 3. Save the data
+
+    function defaultFileName()
+        Y,M,D = yearmonthday(now())
+        h,m,s = hour(now()), minute(now()), second(now())
+        return "WFAT_INTDATA-$(string(Y,pad=4))$(string(M,pad=2))$(string(D,pad=2))-$(string(h,pad=2))$(string(m,pad=2))$(string(s,pad=2)).h5"
     end
-    βlist = 0:π/18:π
-    glist = zeros(size(βlist))
-    for iβ in eachindex(βlist)
-        rot = Rotations.RotZXZ(0,βlist[iβ],0)
-        glist[iβ] = Folds.mapreduce(i->conj(Ων_precomp(0,0,Tuple(cart2sph(rot*pt_xyz[i,1:3]))))*Vc_ψ0[i]*dV[i], +, 1:N)
-        @info "β=$(βlist[iβ]), g=$(glist[iβ])"
+    if isfile(save_path)
+        @warn "[PySCFMolecularCalculator] File \"$save_path\" already exists. Saving at \"$(defaultFileName())\"."
+        save_path = defaultFileName()
     end
-    return βlist,glist
+    if save_path == ""
+        save_path = defaultFileName()
+    end
+
+    save_success = (true,)  # defining it as a tuple object so that code in the inner block can access it.
+    file = nothing
+    try
+        file = h5open(save_path,"w")
+        file["molInfo"] = exportMolAtomInfo(mol)
+        file["basis"]   = molCalc.basis
+        file["molName"] = mol.name
+        file["nξMax"]   = sf_nξMax
+        file["mMax"]    = sf_mMax
+        file["lMax"]    = sf_lMax
+        file["IntData"] = IntData
+    catch
+        @error "[PySCFMolecularCalculator] Failed to save file at \"$save_path\", trying to save at default path \"$(defaultFileName())\". Check if you have permission to write to the destination file."
+        save_success = (false,)
+    finally
+        if ! isnothing(file)
+            close(file)
+        end
+    end
+    if save_success[1]
+        @info "Output file saved at \"$save_path\"."
+        return IntData
+    end
+    # if failed, try again
+    try
+        save_path = defaultFileName()
+        file = h5open(save_path,"w")
+        file["molInfo"] = exportMolAtomInfo(mol)
+        file["basis"]   = molCalc.basis
+        file["molName"] = mol.name
+        file["nξMax"]   = sf_nξMax
+        file["mMax"]    = sf_mMax
+        file["lMax"]    = sf_lMax
+        file["IntData"] = IntData
+        save_success = (true,)
+    catch
+        @error "[PySCFMolecularCalculator] Failed to save at default path \"$(defaultFileName())\", the data would NOT be saved! Check if you have permission to write to the destination file."
+        save_success = (false,)
+    finally
+        if ! isnothing(file)
+            close(file)
+        end
+    end
+    if save_success[1]
+        @info "Output file saved at \"$save_path\"."
+    end
+    return IntData
 end
