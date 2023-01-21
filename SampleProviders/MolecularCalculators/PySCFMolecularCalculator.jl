@@ -356,18 +356,22 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
     # `IntData` would store the final data: The integral I(nξ,m,l,m')=∫Ω(nξ,m,l,m')*Vc_ψ0(r)*dV.
     # nξ=0,1,⋯,nξMax;  m=0,±1,⋯,±mMax;  l=0,1,⋯,lMax;  m'=-l,-l+1,⋯,0,1,⋯,l.
     # Obtain I(nξ,m,l,m') by indexing [nξ+1, m+mMax+1, l+1, m'+l+1]
-    IntData = zeros(sf_nξMax+1,2*sf_mMax+1,sf_lMax+1,2*sf_lMax+1)
+    IntData = zeros(ComplexF64, sf_nξMax+1, 2*sf_mMax+1, sf_lMax+1, 2*sf_lMax+1)
     Vc_ψ0_dV = Vc_ψ0 .* dV
     for nξ in 0:sf_nξMax
     for m in -sf_mMax:sf_mMax
     for l in 0:sf_lMax
     for m_ in -l:l
-        IntData[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = real(Folds.mapreduce(i->conj(Ωνl_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N))
+        IntData[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = Folds.mapreduce(i->conj(Ωνl_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N)
         next!(prog21); next!(prog22)
     end; end; end; end
     finish!(prog21); finish!(prog22); println()
 
     #* 3. Save the data
+
+    if isnothing(save_path)
+        return IntData
+    end
 
     function defaultFileName()
         Y,M,D = yearmonthday(now())
