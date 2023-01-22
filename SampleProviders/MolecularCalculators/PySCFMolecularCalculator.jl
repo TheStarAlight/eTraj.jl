@@ -16,7 +16,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The basis function used for calculation."
     basis::String;
     "The molecular orbital from which the electron is ionized."
-    orbitIdx::String;
+    orbit::String;
 
     "PySCF library."
     _pyscf;
@@ -27,6 +27,8 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
 
     "HOMO energy."
     HOMO_energy;
+    "Energy level of the selected orbit `orbitIdx`."
+    selectedOrbit_energy;
     "Dipole momentum vector in the MF."
     dip_momentum;
 
@@ -35,20 +37,21 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     # Parameters
     - `mol::Molecule`   : The molecule to be calculated.
     - `basis::String`   : Basis set used for calculation (default `pcseg-3`).
-    - `orbitIdx::Symbol`: The molecular orbital from which the electron is ionized (default `"HOMO"`). Candidates are `"HOMO"`, `"HOMO-1"`, `"HOMO-2"`, `"LUMO"`, `"LUMO+1"`, `"LUMO+2"`.
+    - `orbit::String`   : The molecular orbital from which the electron is ionized (default `"HOMO"`). Candidates are `"HOMO"`, `"HOMO-1"`, `"HOMO-2"`, `"LUMO"`, `"LUMO+1"`, `"LUMO+2"`.
     """
-    function PySCFMolecularCalculator(mol::Molecule, basis::String="pcseg-3", orbitIdx::String="HOMO")
-        if ! (orbitIdx in ["HOMO", "HOMO-1", "HOMO-2", "LUMO", "LUMO+1", "LUMO+2"])
-            error("[PySCFMolecularCalculator] orbitIdx $orbitIdx not supported.")
+    function PySCFMolecularCalculator(mol::Molecule, basis::String="pcseg-3", orbit::String="HOMO")
+        if ! (orbit in ["HOMO", "HOMO-1", "HOMO-2", "LUMO", "LUMO+1", "LUMO+2"])
+            error("[PySCFMolecularCalculator] orbitIdx $orbit not supported.")
         end
-        mc::PySCFMolecularCalculator = new(mol,basis,orbitIdx)
+        mc::PySCFMolecularCalculator = new(mol,basis,orbit)
         @info "[PySCFMolecularCalculator] Running molecular calculation..."
+        time = [0.0]
         try
             mc._pyscf  = pyimport("pyscf")
             mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis)
             mc._pytask = mc._pyscf.scf.RHF(mc._pymol)
             mc._pytask.chkfile = nothing
-            time = @elapsed mc._pytask.run()
+            time[1] = @elapsed mc._pytask.run()
         catch
             @error "[PySCFMolecularCalculator] Encountered error when calling pyscf."
             rethrow()
@@ -57,8 +60,9 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
             error("[PySCFMolecularCalculator] SCF calculation unable to converge.")
         end
         mc.HOMO_energy = mc._pytask.mo_energy[HOMOIndex(mc)]
+        mc.selectedOrbit_energy = mc._pytask.mo_energy[parseOrbitIndex(mc)]
         mc.dip_momentum = mc._pytask.dip_moment(unit="AU")
-        @info "Finished initialization [taking $time second(s)]."
+        @info "Finished initialization [taking $(time[1]) second(s)]."
         return mc
     end
 end
@@ -75,6 +79,27 @@ function HOMOIndex(mc::PySCFMolecularCalculator)
         end
     end
     return idx-1    # idx is LUMO, while idx-1 is HOMO
+end
+
+function parseOrbitIndex(mc::PySCFMolecularCalculator, orbit=mc.orbit)
+    return HOMOIndex(mc) + begin
+        if mc.orbit == "HOMO"
+            0
+        elseif mc.orbit == "HOMO-1"
+            -1
+        elseif mc.orbit == "HOMO-2"
+            -2
+        elseif mc.orbit == "LUMO"
+            +1
+        elseif mc.orbit == "LUMO+1"
+            +2
+        elseif mc.orbit == "LUMO+2"
+            +3
+        else
+            @warn "Unsupported MO index \"$(orbit)\". Using HOMO instead."
+            0
+        end
+    end
 end
 
 "Gets the energy level of the molecule's HOMO (in a.u.)."
@@ -151,25 +176,28 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
         idx-1
     end
     orbitIdx = HOMO_orbitIdx + begin
-        if molCalc.orbitIdx == "HOMO"
+        if molCalc.orbit == "HOMO"
             0
-        elseif molCalc.orbitIdx == "HOMO-1"
+        elseif molCalc.orbit == "HOMO-1"
             -1
-        elseif molCalc.orbitIdx == "HOMO-2"
+        elseif molCalc.orbit == "HOMO-2"
             -2
-        elseif molCalc.orbitIdx == "LUMO"
+        elseif molCalc.orbit == "LUMO"
             +1
-        elseif molCalc.orbitIdx == "LUMO+1"
+        elseif molCalc.orbit == "LUMO+1"
             +2
-        elseif molCalc.orbitIdx == "LUMO+2"
+        elseif molCalc.orbit == "LUMO+2"
             +3
+        else
+            @warn "Unsupported MO index \"$(molCalc.orbit)\". Using HOMO instead."
+            0
         end
     end
 
     Z   = MolCharge(molCalc.mol)+1
     Ip  = -task.mo_energy[orbitIdx]
     if Ip ≤ 0
-        error("[PySCFMolecularCalculator] The energy of the selected molecular orbital $(molCalc.orbitIdx) is positive.")
+        error("[PySCFMolecularCalculator] The energy of the selected molecular orbital $(molCalc.orbit) is positive.")
     end
     κ   = sqrt(2Ip)
 
@@ -343,7 +371,7 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
         F2 = if m_≥0
             Y_precomp_data[l+1,m_+1,iθ,iϕ]
         else
-            Y_precomp_data[l+1,abs(m_)+1,iθ,iϕ] * exp(-2im*m_*ϕ_grid[iϕ])
+            Y_precomp_data[l+1,abs(m_)+1,iθ,iϕ] * exp(-2im*abs(m_)*ϕ_grid[iϕ])
         end
         return F1*F2
     end
@@ -365,7 +393,7 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
         IntData[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = Folds.mapreduce(i->conj(Ωνl_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N)
         next!(prog21); next!(prog22)
     end; end; end; end
-    finish!(prog21); finish!(prog22); println()
+    finish!(prog21,spinner=raw"-\|/"); finish!(prog22); println()
 
     #* 3. Save the data
 
@@ -393,6 +421,9 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
         file["molInfo"] = exportMolAtomInfo(mol)
         file["basis"]   = molCalc.basis
         file["molName"] = mol.name
+        file["HOMO_energy"]             = molCalc.HOMO_energy
+        file["selectedOrbit_energy"]    = molCalc.selectedOrbit_energy
+        file["μ_vec"]   = molCalc.dip_momentum
         file["nξMax"]   = sf_nξMax
         file["mMax"]    = sf_mMax
         file["lMax"]    = sf_lMax
@@ -416,6 +447,9 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
         file["molInfo"] = exportMolAtomInfo(mol)
         file["basis"]   = molCalc.basis
         file["molName"] = mol.name
+        file["HOMO_energy"]             = molCalc.HOMO_energy
+        file["selectedOrbit_energy"]    = molCalc.selectedOrbit_energy
+        file["μ_vec"]   = molCalc.dip_momentum
         file["nξMax"]   = sf_nξMax
         file["mMax"]    = sf_mMax
         file["lMax"]    = sf_lMax
