@@ -39,7 +39,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     - `basis::String`   : Basis set used for calculation (default `pcseg-3`).
     - `orbit::String`   : The molecular orbital from which the electron is ionized (default `"HOMO"`). Candidates are `"HOMO"`, `"HOMO-1"`, `"HOMO-2"`, `"LUMO"`, `"LUMO+1"`, `"LUMO+2"`.
     """
-    function PySCFMolecularCalculator(mol::Molecule, basis::String="pcseg-3", orbit::String="HOMO")
+    function PySCFMolecularCalculator(mol::Molecule, basis::String="pcseg-3", orbit::String="HOMO", symmetry::Bool=false)
         if ! (orbit in ["HOMO", "HOMO-1", "HOMO-2", "LUMO", "LUMO+1", "LUMO+2"])
             error("[PySCFMolecularCalculator] orbitIdx $orbit not supported.")
         end
@@ -48,7 +48,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
         time = [0.0]
         try
             mc._pyscf  = pyimport("pyscf")
-            mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis)
+            mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis, symmetry=symmetry)
             mc._pytask = mc._pyscf.scf.RHF(mc._pymol)
             mc._pytask.chkfile = nothing
             time[1] = @elapsed mc._pytask.run()
@@ -340,40 +340,34 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
     end
 
     #*  2.2 Create pre-computation data to accelerate.
-    R_precomp_data = zeros(sf_nξMax+1, sf_mMax+1, sf_lMax+1, grid_rNum)
-    # gets the R_nml(r) by indexing [n+1,abs(m)+1,l+1,r_idx] for m≥0, as for m<0, times (-1)^m.
+    R_precomp_data = zeros(sf_nξMax+1, 2*sf_mMax+1, sf_lMax+1, grid_rNum)
+    # obtain the R_{nξ,m,l}(r) by indexing [nξ+1,m+mMax+1,l+1,r_idx].
     @threads for l in 0:sf_lMax
         R_precomp_data[1,1,l+1,:] = map(r->R_(l,Z,κ,r), r_grid)
         for nξ in 0:sf_nξMax
-        for m  in 0:sf_mMax
-            R_precomp_data[nξ+1,m+1,l+1,:] = R_precomp_data[1,1,l+1,:] .* ω(nξ,m,l,Z,κ)
+        for m  in -sf_mMax:sf_mMax
+            if nξ==0 && m==-sf_mMax
+                continue
+            end
+            R_precomp_data[nξ+1,m+sf_mMax+1,l+1,:] = R_precomp_data[1,1,l+1,:] .* ω(nξ,m,l,Z,κ)
         end
         end
+        R_precomp_data[1,1,l+1,:] .*= ω(0,0,l,Z,κ)
     end
-    Y_precomp_data = zeros(ComplexF64, sf_lMax+1, sf_lMax+1, grid_θNum, grid_ϕNum)  # for given l, -l ≤ m' ≤ l.
-    # obtain the Y_lm'(θ,ϕ) by indexing [l+1,abs(m)+1,θ_idx,ϕ_idx] for m≥0, as for m<0, times exp(-2im*m*ϕ).
+    Y_precomp_data = zeros(ComplexF64, sf_lMax+1, 2*sf_lMax+1, grid_θNum, grid_ϕNum)  # for given l, -l ≤ m' ≤ l.
+    # obtain the Y_lm'(θ,ϕ) by indexing [l+1,m'+l+1,θ_idx,ϕ_idx].
     @threads for l in 0:sf_lMax
-    for m_ in 0:l
+    for m_ in -l:l
         for iθ in eachindex(θ_grid)
         for iϕ in eachindex(ϕ_grid)
-            Y_precomp_data[l+1,m_+1,iθ,iϕ] = SphericalHarmonics.sphericalharmonic(θ_grid[iθ], ϕ_grid[iϕ]; l=l, m=m_)
+            Y_precomp_data[l+1,m_+l+1,iθ,iϕ] = SphericalHarmonics.sphericalharmonic(θ_grid[iθ], ϕ_grid[iϕ]; l=l, m=m_) / (-1)^m_
         end; end
     end; end
     "Utilizes the pre-computed data to calculate the Ω_{lm'}^{ν}, where ν=(nξ,m)."
-    @inline function Ωνl_precomp(nξ,m,l,m_, i_pt)
+    function Ω_precomp(nξ,m,l,m_, i_pt)
         ir,iθ,iϕ = ptIdx2sphCoordIdx(i_pt)
         abs(m_)>l && return 0.0
-        F1 = if m≥0
-            R_precomp_data[nξ+1,m+1,l+1,ir]
-        else
-            R_precomp_data[nξ+1,abs(m)+1,l+1,ir] * (-1)^m
-        end
-        F2 = if m_≥0
-            Y_precomp_data[l+1,m_+1,iθ,iϕ]
-        else
-            Y_precomp_data[l+1,abs(m_)+1,iθ,iϕ] * exp(-2im*abs(m_)*ϕ_grid[iϕ])
-        end
-        return F1*F2
+        return R_precomp_data[nξ+1,m+sf_mMax+1,l+1,ir] * Y_precomp_data[l+1,m_+l+1,iθ,iϕ]
     end
 
     #*  2.3 Calculate the integral
@@ -390,10 +384,10 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
     for m in -sf_mMax:sf_mMax
     for l in 0:sf_lMax
     for m_ in -l:l
-        IntData[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = Folds.mapreduce(i->conj(Ωνl_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N)
-        next!(prog21); next!(prog22)
+        IntData[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = Folds.mapreduce(i->conj(Ω_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N)
+        next!(prog21,spinner=raw"-\|/"); next!(prog22)
     end; end; end; end
-    finish!(prog21,spinner=raw"-\|/"); finish!(prog22); println()
+    finish!(prog21); finish!(prog22); println()
 
     #* 3. Save the data
 
