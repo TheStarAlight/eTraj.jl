@@ -29,7 +29,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     HOMO_energy;
     "Energy level of the selected orbit `orbitIdx`."
     selectedOrbit_energy;
-    "Dipole momentum vector in the MF."
+    "Total dipole momentum vector in the MF."
     dip_momentum;
 
     """
@@ -39,16 +39,16 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     - `basis::String`   : Basis set used for calculation (default `pcseg-3`).
     - `orbit::String`   : The molecular orbital from which the electron is ionized (default `"HOMO"`). Candidates are `"HOMO"`, `"HOMO-1"`, `"HOMO-2"`, `"LUMO"`, `"LUMO+1"`, `"LUMO+2"`.
     """
-    function PySCFMolecularCalculator(mol::Molecule, basis::String="pcseg-3", orbit::String="HOMO", symmetry::Bool=false)
+    function PySCFMolecularCalculator(mol::Molecule, basis::String="pcseg-3", orbit::String="HOMO")
         if ! (orbit in ["HOMO", "HOMO-1", "HOMO-2", "LUMO", "LUMO+1", "LUMO+2"])
-            error("[PySCFMolecularCalculator] orbitIdx $orbit not supported.")
+            error("[PySCFMolecularCalculator] Orbit $orbit not supported.")
         end
         mc::PySCFMolecularCalculator = new(mol,basis,orbit)
         @info "[PySCFMolecularCalculator] Running molecular calculation..."
         time = [0.0]
         try
             mc._pyscf  = pyimport("pyscf")
-            mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis, symmetry=symmetry)
+            mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis, verbose=0)
             mc._pytask = mc._pyscf.scf.RHF(mc._pymol)
             mc._pytask.chkfile = nothing
             time[1] = @elapsed mc._pytask.run()
@@ -61,7 +61,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
         end
         mc.HOMO_energy = mc._pytask.mo_energy[HOMOIndex(mc)]
         mc.selectedOrbit_energy = mc._pytask.mo_energy[parseOrbitIndex(mc)]
-        mc.dip_momentum = mc._pytask.dip_moment(unit="AU")
+        mc.dip_momentum = mc._pytask.dip_moment(unit="AU", verbose=0)
         @info "Finished initialization [taking $(time[1]) second(s)]."
         return mc
     end
@@ -249,10 +249,16 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
 
     Vc_ψ0 = zeros(N)
 
-    #*  1.1 Calculate the wavefunction
+    #*  1.1 Calculate the wavefunction ψ0 & dip_moment μ
+    # wavefunction ψ0
     χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
     orbit_coeff = @view mo_coeff[:,orbitIdx]    # Select the coefficients related to the interested MO.
     ψ0 = χi * orbit_coeff                       # Calculate wavefunction of the interested MO (matmul operation).
+
+    # selected orbit's dipole momentum μ (shouldn't be mixed with the total dip. moment. D)
+    dip_int = -1 .* pymol.intor_symmetric("int1e_r")  # I[i,α,β] = ∫(ψα*)(ri)(ψβ)dr, where r1=x, r2=y, r3=z.
+    μ = zeros(3); i,α,β=0,0,0
+    @einsum μ[i] := orbit_coeff[α] * orbit_coeff[β] * dip_int[i,α,β]
 
     #*  1.2 Calculate the asymptotic Coulomb potential Z/r
     @threads for ir in 1:grid_rNum
@@ -271,8 +277,10 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
     end
 
     #*  1.4 Calculate the inter-electron interaction: Vd & Vex
-    batch_size = 5000  # the integral takes huge memory and thus needs to be performed in batches.
+    batch_size = 2000  # the integral takes huge memory and thus needs to be performed in batches.
     batch_num = ceil(Int, N/batch_size)
+
+    # density matrix
     den_mat = zeros(num_AO,num_AO); i,α,β=0,0,0 # den_mat_αβ = ∑_i c[i,α]*c[i,β]
     occupied_mo_coeff = mo_coeff[:,1:HOMO_orbitIdx]
     @einsum den_mat[α,β] := 2 * occupied_mo_coeff[α,i] * occupied_mo_coeff[β,i]
@@ -415,9 +423,11 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
         file["molInfo"] = exportMolAtomInfo(mol)
         file["basis"]   = molCalc.basis
         file["molName"] = mol.name
+        file["molCharge"] = mol.molCharge
+        file["ionOrbit"]  = molCalc.orbit
         file["HOMO_energy"]             = molCalc.HOMO_energy
         file["selectedOrbit_energy"]    = molCalc.selectedOrbit_energy
-        file["μ_vec"]   = molCalc.dip_momentum
+        file["μ_vec"]   = μ
         file["nξMax"]   = sf_nξMax
         file["mMax"]    = sf_mMax
         file["lMax"]    = sf_lMax
@@ -441,9 +451,11 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
         file["molInfo"] = exportMolAtomInfo(mol)
         file["basis"]   = molCalc.basis
         file["molName"] = mol.name
+        file["molCharge"] = mol.molCharge
+        file["ionOrbit"]  = molCalc.orbit
         file["HOMO_energy"]             = molCalc.HOMO_energy
         file["selectedOrbit_energy"]    = molCalc.selectedOrbit_energy
-        file["μ_vec"]   = molCalc.dip_momentum
+        file["μ_vec"]   = μ
         file["nξMax"]   = sf_nξMax
         file["mMax"]    = sf_mMax
         file["lMax"]    = sf_lMax
