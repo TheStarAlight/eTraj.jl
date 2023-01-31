@@ -209,7 +209,7 @@ function MolCalcEnergyData!(mol::Molecule, MCType::Type = PySCFMolecularCalculat
         if ! (MCType<:MolecularCalculatorBase)
             error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
-        mol.mol_calc = MCType(mol=mol, kwargs...)
+        mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
     mol.energy_data_available = true
     mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
@@ -242,6 +242,7 @@ function _MolSaveEnergyData(mol::Molecule)
     file = h5open(mol.data_path,"r+")
     _MolSaveEnergyData(mol,file)
     close(file)
+    @info "[Molecule] Energy data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
 """
@@ -254,7 +255,7 @@ function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type
         if ! (MCType<:MolecularCalculatorBase)
             error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
-        mol.mol_calc = MCType(mol=mol, kwargs...)
+        mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
     if ! mol.energy_data_available  # won't replace if the data exists.
         mol.energy_data_available = true
@@ -268,7 +269,7 @@ function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type
         mol.wfat_μ = Dict()
     end
     push!(mol.wfat_orbital_indices, orbitIdx_relHOMO)
-    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calcStructFactorData(mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calcStructFactorData(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
     _MolSaveWFATData(mol,orbitIdx_relHOMO)
 end
 function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Int = 0)
@@ -302,6 +303,7 @@ function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Int = 0)
     file = h5open(mol.data_path,"r+")
     _MolSaveWFATData(mol,file,orbitIdx_relHOMO)
     close(file)
+    @info "[Molecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
 function MolSaveDataAs(mol::Molecule, data_path::String)
@@ -338,6 +340,7 @@ function MolSaveDataAs(mol::Molecule, data_path::String)
         end
     end
     close(file)
+    @info "[Molecule] Data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
 #* Properties & methods that implement the supertype Target.
