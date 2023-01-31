@@ -106,13 +106,11 @@ mutable struct Molecule <: Target
         # reads WFAT
         wfat_data_available = haskey(file, "WFAT")
         wfat_orbital_indices = Set()
-        wfat_intdata = nothing
-        wfat_μ = nothing
+        wfat_intdata = Dict()
+        wfat_μ = Dict()
         if wfat_data_available
             wfat = open_group(file, "WFAT")
             wfat_orbital_indices = Set(read_dataset(wfat, "orbital_indices"))
-            wfat_intdata = Dict()
-            wfat_μ = Dict()
             for idx in wfat_orbital_indices
                 wfat_intdata[idx] = read_dataset(wfat, "intdata_$idx")
                 wfat_μ[idx] = read_dataset(wfat, "μ_$idx")
