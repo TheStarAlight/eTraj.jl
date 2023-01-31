@@ -126,10 +126,7 @@ mutable struct Molecule <: Target
                     wfat_data_available, wfat_orbital_indices, wfat_intdata, wfat_μ,
                     rot_α,rot_β,rot_γ)
     end
-    function Molecule(;data_path::String, rot_α=0.,rot_β=0.,rot_γ=0.)
-        return Molecule(data_path,rot_α,rot_β,rot_γ)
-    end
-    function Molecule(;data_path::String, rot::Tuple=(0.,0.,0.))
+    function Molecule(data_path::String, rot::Tuple=(0.,0.,0.))
         return Molecule(data_path,rot[1],rot[2],rot[3])
     end
 end
@@ -209,7 +206,7 @@ end
 Calculates the energy data of the molecule and saves the data.
 - `MCType`: Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
 """
-function MolCalcEnergyData!(mol::Molecule, MCType::Type = PySCFMolecularCalculator, kwargs...)
+function MolCalcEnergyData!(mol::Molecule, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
             error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
@@ -254,7 +251,7 @@ Calculates the WFAT data of the molecule and saves the data.
 - `MCType`: Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 """
-function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type = PySCFMolecularCalculator, kwargs...)
+function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
             error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
