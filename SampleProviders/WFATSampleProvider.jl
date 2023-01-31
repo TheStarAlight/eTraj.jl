@@ -1,4 +1,4 @@
-using .MolecularCalculators
+using ..Targets
 using HDF5
 using Rotations
 using WignerD
@@ -30,40 +30,27 @@ struct WFATSampleProvider <: ElectronSampleProvider
                                 ss_pdNum            ::Int,
                                 ss_pzMax            ::Real,
                                 ss_pzNum            ::Int,
-                                wfat_intdata_path   ::String,
+                                mol_ionOrbitRelHOMO ::Int,
                                 kwargs...   # kwargs are surplus params.
                                 )
         # check sampling parameters.
         @assert (sample_tSampleNum>0) "[WFATSampleProvider] Invalid time sample number $sample_tSampleNum."
         @assert (ss_pdNum>0 && ss_pzNum>0) "[WFATSampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
         # load WFAT IntData.
-        wfat_intdata_file = nothing; wfat_intdata = nothing; molName = "";
-        mol_param = nothing; # ionOrbit, selectedOrbit_energy, μ_vec
-        wfat_calcParams = nothing   # nξMax, mMax, lMax
-        if ! isfile(wfat_intdata_path)
-            error("[WFATSampleProvider] WFAT Intdata \"$wfat_intdata_path\" doesn't exist.")
+        if ! (mol_ionOrbitRelHOMO in MolWFATAvailableIndices(target))
+            MolCalcWFATData!(target, mol_ionOrbitRelHOMO)
         end
-        try
-            wfat_intdata_file = h5open(wfat_intdata_path, "r")
-            molName = read(wfat_intdata_file, "molName")
-            mol_param = read(wfat_intdata_file, "ionOrbit"), read(wfat_intdata_file, "selectedOrbit_energy"), read(wfat_intdata_file, "μ_vec")
-            wfat_intdata = read(wfat_intdata_file, "IntData")
-            wfat_calcParams = read(wfat_intdata_file, "nξMax"), read(wfat_intdata_file, "mMax"), read(wfat_intdata_file, "lMax")
-        catch
-            @error "[WFATSampleProvider] Encountered error when trying to read the WFAT Intdata."
-            rethrow()
-        finally
-            if ! isnothing(wfat_intdata_file)
-                close(wfat_intdata_file)
-            end
-        end
+        μ, intdata = MolWFATData(target, mol_ionOrbitRelHOMO)
+        Ip = IonPotential(target, mol_ionOrbitRelHOMO)
+        nξMax = size(intdata,1) - 1
+        mMax = round(Int,(size(intdata,2)-1)/2)
+        lMax = size(intdata,3) - 1
         # check IonRate prefix support.
         if ! (rate_ionRatePrefix in [:ExpRate])
             error("[WFATSampleProvider] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
         end
         # check Keldysh parameter & over-barrier condition.
         F0 = LaserF0(laser)
-        Ip = -mol_param[2]
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         if γ0 ≥ 0.5
             @warn "[WFATSampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
@@ -78,18 +65,13 @@ struct WFATSampleProvider <: ElectronSampleProvider
             @warn "[WFATSampleProvider] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied."
             tunExit = :IpF
         end
-        # check parameters.
-        if molName != target.name
-            @warn "[WFATSampleProvider] The molecule's name [$(target.name)] mismatches that in the Intdata [$molName]. Check out if your data is correct."
-        end
         # finish initialization.
         return new( laser, target,
                     range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
                     range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum), range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
                     rate_ionRatePrefix, tunExit,
-                    -1*mol_param[2], mol_param[3], # selectedOrbit_energy (Ip), μ_vec (μ)
-                    wfat_intdata,
-                    wfat_calcParams[1], wfat_calcParams[2], wfat_calcParams[3]  # nξMax, mMax, lMax
+                    Ip, μ, # Ionizing Orbit Energy (-Ip), orbital dipole moment μ
+                    intdata, nξMax, mMax, lMax
                     )
     end
 end
@@ -123,7 +105,8 @@ function generateElectronBatch(sp::WFATSampleProvider, batchId::Int)
     r_exit = (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
 
     # determining Euler angles (β,γ) (α contributes nothing to Γ, thus is neglected)
-    RotMol = RotZYZ(sp.target.rot_γ, sp.target.rot_β, sp.target.rot_α)  # the molecule's rotation
+    mα,mβ,mγ = MolRotation(sp.target)
+    RotMol = RotZYZ(mγ, mβ, mα)  # the molecule's rotation
     RotLaser = RotMatrix3([[ 0  -sin(φ_field)  cos(φ_field)];
                            [ 0   cos(φ_field)  sin(φ_field)];
                            [-1              0             0]])          # the laser's rotation (directions of x&y can be arbitrary)

@@ -1,4 +1,4 @@
-using ...Targets
+using ..Targets
 using Base.Threads
 using SpecialFunctions
 using SphericalHarmonics
@@ -12,11 +12,10 @@ using ProgressMeter
 "An interface of molecular calculation using PySCF."
 mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The molecule to be calculated."
-    mol::Molecule;
+    # mol::Molecule; # linter reported error when specifying type Molecule.
+    mol;
     "The basis function used for calculation."
     basis::String;
-    "The molecular orbital from which the electron is ionized."
-    orbit::String;
 
     "PySCF library."
     _pyscf;
@@ -27,23 +26,18 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
 
     "HOMO energy."
     HOMO_energy;
-    "Energy level of the selected orbit `orbitIdx`."
-    selectedOrbit_energy;
     "Total dipole momentum vector in the MF."
     dip_momentum;
 
     """
     Initializes an instance of `PySCFMolecularCalculator` with given parameter.
+
     # Parameters
     - `mol::Molecule`   : The molecule to be calculated.
-    - `basis::String`   : Basis set used for calculation (default `pcseg-3`).
-    - `orbit::String`   : The molecular orbital from which the electron is ionized (default `"HOMO"`). Candidates are `"HOMO"`, `"HOMO-1"`, `"HOMO-2"`, `"LUMO"`, `"LUMO+1"`, `"LUMO+2"`.
+    - `basis::String`   : Basis set used for calculation (default `pc-1`).
     """
-    function PySCFMolecularCalculator(mol::Molecule, basis::String="pcseg-3", orbit::String="HOMO")
-        if ! (orbit in ["HOMO", "HOMO-1", "HOMO-2", "LUMO", "LUMO+1", "LUMO+2"])
-            error("[PySCFMolecularCalculator] Orbit $orbit not supported.")
-        end
-        mc::PySCFMolecularCalculator = new(mol,basis,orbit)
+    function PySCFMolecularCalculator(; mol, basis::String="pc-1", kwargs...)
+        mc::PySCFMolecularCalculator = new(mol,basis)
         @info "[PySCFMolecularCalculator] Running molecular calculation..."
         time = [0.0]
         try
@@ -60,7 +54,6 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
             error("[PySCFMolecularCalculator] SCF calculation unable to converge.")
         end
         mc.HOMO_energy = mc._pytask.mo_energy[HOMOIndex(mc)]
-        mc.selectedOrbit_energy = mc._pytask.mo_energy[parseOrbitIndex(mc)]
         mc.dip_momentum = mc._pytask.dip_moment(unit="AU", verbose=0)
         @info "Finished initialization [taking $(time[1]) second(s)]."
         return mc
@@ -73,33 +66,12 @@ function HOMOIndex(mc::PySCFMolecularCalculator)
     mo_occ   = Int.(task.mo_occ)
     num_AO   = size(task.mo_coeff,1)
     idx = 1
-    for i = 1:num_AO
+    for i in 1:num_AO
         if mo_occ[i]==0
             idx = i; break
         end
     end
     return idx-1    # idx is LUMO, while idx-1 is HOMO
-end
-
-function parseOrbitIndex(mc::PySCFMolecularCalculator, orbit=mc.orbit)
-    return HOMOIndex(mc) + begin
-        if mc.orbit == "HOMO"
-            0
-        elseif mc.orbit == "HOMO-1"
-            -1
-        elseif mc.orbit == "HOMO-2"
-            -2
-        elseif mc.orbit == "LUMO"
-            +1
-        elseif mc.orbit == "LUMO+1"
-            +2
-        elseif mc.orbit == "LUMO+2"
-            +3
-        else
-            @warn "Unsupported MO index \"$(orbit)\". Using HOMO instead."
-            0
-        end
-    end
 end
 
 "Gets the energy level of the molecule's HOMO (in a.u.)."
@@ -128,19 +100,22 @@ end
 """
 Calculates the DATA used in structure factor calculation in WFAT of the given molecule.
 
+# Returns
+(μ, IntData): Orbital dipole momentum and the IntData which stores the integrals.
+
 # Parameters
-- `molCalc`     : The molecular calculator.
-- `grid_rNum`   : The number of radial grid (default 200).
-- `grid_rMax`   : The maximum radius of the radial grid (default 10.0).
-- `grid_θNum`   : The number of angular grid in the θ direction (default 60).
-- `grid_ϕNum`   : The number of angular grid in the ϕ direction (default 60).
-- `sf_nξMax`    : The maximum number of nξ used in calculation (default 3).
-- `sf_mMax`     : The maximum number of |m| used in calculation (default 3).
-- `sf_lMax`     : The maximum angular quantum number l used in calculation (default 6).
-- `save_path`   : The path to save the data (default "WFAT_StructFactor_CalcData_yyyymmdd_hhmmss.h5").
-                   An empty string indicates saving as default filename; `nothing` indicates no saving.
+- `molCalc`         : The molecular calculator.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO and -1 indicates HOMO-1) (default 0).
+- `grid_rNum`       : The number of radial grid (default 200).
+- `grid_rMax`       : The maximum radius of the radial grid (default 10.0).
+- `grid_θNum`       : The number of angular grid in the θ direction (default 60).
+- `grid_ϕNum`       : The number of angular grid in the ϕ direction (default 60).
+- `sf_nξMax`        : The maximum number of nξ used in calculation (default 3).
+- `sf_mMax`         : The maximum number of |m| used in calculation (default 3).
+- `sf_lMax`         : The maximum angular quantum number l used in calculation (default 6).
 """
-function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
+function calcStructFactorData(; mc::PySCFMolecularCalculator,
+                                orbitIdx_relHOMO::Int = 0,
                                 grid_rNum::Int  = 200,
                                 grid_rMax::Real = 10.,
                                 grid_θNum::Int  = 60,
@@ -148,56 +123,32 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
                                 sf_nξMax ::Int = 3,
                                 sf_mMax  ::Int = 3,
                                 sf_lMax  ::Int = 6,
-                                save_path::String = "")
+                                kwargs...)
     # == PROCEDURE ==
     # 0. Obtain the coefficients (finished in the initialization).
     # 1. Calculate the effective core potential.
     # 2. Calculate the integrals and save them as output.
 
+    @info "[PySCFMolecularCalculator] Running calculation of structure factor data... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
+
     #* Preprocess molecular information
 
-    pyscf = molCalc._pyscf
+    pyscf = mc._pyscf
     pyscf_df = pyimport("pyscf.df")
-    pymol = molCalc._pymol   # storing the molecule's info and the basis's info.
-    task  = molCalc._pytask  # storing the calculation result.
+    pymol = mc._pymol   # storing the molecule's info and the basis's info.
+    task  = mc._pytask  # storing the calculation result.
 
-    mol         = molCalc.mol
     mo_coeff    = task.mo_coeff     # Linear combination coefficients of AO to make up MO.
-    mo_occ      = Int.(task.mo_occ) # Ground state electron occupation number of each MO.
     num_atom    = pymol.natm        # Total number of atoms.
     num_AO      = size(mo_coeff,1)  # Number of atomic orbits (aka AO) or Gaussian basis. (pymol.nao doesn't return an interger!)
-    HOMO_orbitIdx = begin
-        idx = 1
-        for i = 1:num_AO
-            if mo_occ[i]==0
-                idx = i; break
-            end
-        end
-        idx-1
-    end
-    orbitIdx = HOMO_orbitIdx + begin
-        if molCalc.orbit == "HOMO"
-            0
-        elseif molCalc.orbit == "HOMO-1"
-            -1
-        elseif molCalc.orbit == "HOMO-2"
-            -2
-        elseif molCalc.orbit == "LUMO"
-            +1
-        elseif molCalc.orbit == "LUMO+1"
-            +2
-        elseif molCalc.orbit == "LUMO+2"
-            +3
-        else
-            @warn "Unsupported MO index \"$(molCalc.orbit)\". Using HOMO instead."
-            0
-        end
-    end
+    HOMO_orbitIdx = HOMOIndex(mc)
+    orbitIdx = HOMO_orbitIdx + orbitIdx_relHOMO
+    @assert 0<orbitIdx<num_AO "[PySCFMolecularCalculator] Orbit index $(orbitIdx_relHOMO) out of range."
 
-    Z   = MolCharge(molCalc.mol)+1
+    Z   = MolCharge(mc.mol)+1
     Ip  = -task.mo_energy[orbitIdx]
     if Ip ≤ 0
-        error("[PySCFMolecularCalculator] The energy of the selected molecular orbital $(molCalc.orbit) is positive.")
+        error("[PySCFMolecularCalculator] The energy of the selected molecular orbital is positive.")
     end
     κ   = sqrt(2Ip)
 
@@ -285,7 +236,7 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
     occupied_mo_coeff = mo_coeff[:,1:HOMO_orbitIdx]
     @einsum den_mat[α,β] := 2 * occupied_mo_coeff[α,i] * occupied_mo_coeff[β,i]
 
-    prog11 = ProgressUnknown(dt=0.2, desc="Calculating the effective potential...", color = :cyan, spinner = true)
+    prog11 = ProgressUnknown(dt=0.2, desc="Calculating the effective potential... ($N pts)", color = :cyan, spinner = true)
     prog12 = Progress(N; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
 
     # @threads for i in 1:batch_num
@@ -380,7 +331,7 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
 
     #*  2.3 Calculate the integral
 
-    prog21 = ProgressUnknown(dt=0.2, desc="Calculating the integrals...", color = :cyan, spinner = true)
+    prog21 = ProgressUnknown(dt=0.2, desc="Calculating the integrals... ($((sf_nξMax+1)*(2*sf_mMax+1)*(sf_lMax+1)^2) integrals)", color = :cyan, spinner = true)
     prog22 = Progress((sf_nξMax+1)*(2*sf_mMax+1)*(sf_lMax+1)^2; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
 
     # `IntData` would store the final data: The integral I(nξ,m,l,m')=∫Ω(nξ,m,l,m')*Vc_ψ0(r)*dV.
@@ -397,80 +348,5 @@ function calcStructFactorData(; molCalc::PySCFMolecularCalculator,
     end; end; end; end
     finish!(prog21); finish!(prog22); println()
 
-    #* 3. Save the data
-
-    if isnothing(save_path)
-        return IntData
-    end
-
-    function defaultFileName()
-        Y,M,D = yearmonthday(now())
-        h,m,s = hour(now()), minute(now()), second(now())
-        return "WFAT_INTDATA-$(string(Y,pad=4))$(string(M,pad=2))$(string(D,pad=2))-$(string(h,pad=2))$(string(m,pad=2))$(string(s,pad=2)).h5"
-    end
-    if isfile(save_path)
-        @warn "[PySCFMolecularCalculator] File \"$save_path\" already exists. Saving at \"$(defaultFileName())\"."
-        save_path = defaultFileName()
-    end
-    if save_path == ""
-        save_path = defaultFileName()
-    end
-
-    save_success = (true,)  # defining it as a tuple object so that code in the inner block can access it.
-    file = nothing
-    try
-        file = h5open(save_path,"w")
-        file["molInfo"] = exportMolAtomInfo(mol)
-        file["basis"]   = molCalc.basis
-        file["molName"] = mol.name
-        file["molCharge"] = mol.molCharge
-        file["ionOrbit"]  = molCalc.orbit
-        file["HOMO_energy"]             = molCalc.HOMO_energy
-        file["selectedOrbit_energy"]    = molCalc.selectedOrbit_energy
-        file["μ_vec"]   = μ
-        file["nξMax"]   = sf_nξMax
-        file["mMax"]    = sf_mMax
-        file["lMax"]    = sf_lMax
-        file["IntData"] = IntData
-    catch
-        @error "[PySCFMolecularCalculator] Failed to save file at \"$save_path\", trying to save at default path \"$(defaultFileName())\". Check if you have permission to write to the destination file."
-        save_success = (false,)
-    finally
-        if ! isnothing(file)
-            close(file)
-        end
-    end
-    if save_success[1]
-        @info "Output file saved at \"$save_path\"."
-        return IntData
-    end
-    # if failed, try again
-    try
-        save_path = defaultFileName()
-        file = h5open(save_path,"w")
-        file["molInfo"] = exportMolAtomInfo(mol)
-        file["basis"]   = molCalc.basis
-        file["molName"] = mol.name
-        file["molCharge"] = mol.molCharge
-        file["ionOrbit"]  = molCalc.orbit
-        file["HOMO_energy"]             = molCalc.HOMO_energy
-        file["selectedOrbit_energy"]    = molCalc.selectedOrbit_energy
-        file["μ_vec"]   = μ
-        file["nξMax"]   = sf_nξMax
-        file["mMax"]    = sf_mMax
-        file["lMax"]    = sf_lMax
-        file["IntData"] = IntData
-        save_success = (true,)
-    catch
-        @error "[PySCFMolecularCalculator] Failed to save at default path \"$(defaultFileName())\", the data would NOT be saved! Check if you have permission to write to the destination file."
-        save_success = (false,)
-    finally
-        if ! isnothing(file)
-            close(file)
-        end
-    end
-    if save_success[1]
-        @info "Output file saved at \"$save_path\"."
-    end
-    return IntData
+    return μ, IntData
 end

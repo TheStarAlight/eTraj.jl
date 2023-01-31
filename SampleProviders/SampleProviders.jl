@@ -14,6 +14,8 @@ function initSampleProvider(;kwargs...)
         SFASampleProvider(;kwargs...)
     elseif kwargs[:ionRateMethod] == :SFA_AE
         SFAAESampleProvider(;kwargs...)
+    elseif kwargs[:ionRateMethod] == :WFAT
+        WFATSampleProvider(;kwargs...)
     else
         error("[SampleProviders] Undefined tunneling rate method [$(kwargs[:ionRateMethod])].")
         return
@@ -25,8 +27,6 @@ abstract type ElectronSampleProvider end
 include("ADKSampleProvider.jl")
 include("SFASampleProvider.jl")
 include("SFAAESampleProvider.jl")
-
-include("MolecularCalculators/MolecularCalculator.jl")
 include("WFATSampleProvider.jl")
 
 end

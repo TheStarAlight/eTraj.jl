@@ -4,8 +4,8 @@ module MolecularCalculators
 
 using ..Targets
 
+export MolecularCalculatorBase
 export PySCFMolecularCalculator
-export HOMOIndex, HOMOEnergy, EnergyLevel, EnergyLevels, DipoleMomentum
 
 abstract type MolecularCalculatorBase end
 

@@ -30,7 +30,7 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all methods:
-- `ionRateMethod = <:ADK|:SFA|:SFA_AE>`         : Method of determining ionization rate. Currently only supports ADK.
+- `ionRateMethod = <:ADK|:SFA|:SFA_AE|:WFAT>`   : Method of determining ionization rate. Currently supports `:ADK`, `:SFA`, `:SFA_AE` for atoms and `:WFAT` for molecules.
 - `laser::Laser`                                : Parameters of the laser field.
 - `target::Target`                              : Parameters of the target.
 - `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.
@@ -61,7 +61,10 @@ Performs a semiclassical simulation with given parameters.
 - `rydberg_collect = false`                 : Determines whether rydberg final states are collected.
 - `rydberg_prinQNMax`                       : Maximum principle quantum number n to be collected.
 
-## Optional params. for ADK methods:
+## Optional params. for target `Molecule`:
+- `mol_ionOrbitRelHOMO`                     : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+
+## Optional params. for ADK method:
 - `adk_ADKTunExit = <:IpF|:FDM|:Para>`      : Tunneling exit method for ADK methods (when `ionRateMethod==:ADK`).
 
 """
@@ -94,7 +97,9 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     rate_ionRatePrefix  ::Symbol = :ExpRate,
                     rydberg_collect     ::Bool   = false,
                     rydberg_prinQNMax   ::Int    = 0,
-                        #* opt. params. for ADK methods
+                        #* opt. params. for target `Molecule`
+                    mol_ionOrbitRelHOMO ::Int    = 0,
+                        #* opt. params. for atomic ADK method
                     adk_ADKTunExit      ::Symbol = :IpF
                     )
     #* pack up all parameters.
@@ -103,6 +108,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     ss_pdMax, ss_pdNum, ss_pzMax, ss_pzNum,
                     mc_tBatchSize, mc_ptMax,
                     simu_phaseMethod, simu_relTol, simu_nondipole, simu_GPU, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
+                    mol_ionOrbitRelHOMO,
                     adk_ADKTunExit)
     #* compatibility check
     # GPU acceleration requires [DiffEqGPU] up to v1.18

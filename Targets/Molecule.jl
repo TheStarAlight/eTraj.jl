@@ -1,55 +1,409 @@
 
+using .MolecularCalculators
+using Dates
+using HDF5
+
 "Represents a molecule."
-struct Molecule <: Target
-    "Atoms in the molecule with their coordinates, which are stored as a vector of (:AtomName, X, Y, Z)."
+mutable struct Molecule <: Target
+
+    "Path to the data file that stores information and data about the molecule."
+    data_path::String
+
+    "Molecular calculator that calculates energy, structure factors ... of the molecule."
+    mol_calc
+
+    #* primitive properties
+
+    "Atoms in the molecule, stored as a vector of String."
     atoms;
+    "Atoms' coordinates in the molecule, stored as a N×3 matrix."
+    atom_coords;
     "Total charge of the molecule (ion)."
-    molCharge;
-    "Euler angles (ZYZ convention) specifying the molecule's orientation."
-    rot_α;
-    rot_β;
-    rot_γ;
+    charge::Int;
     "Name of the molecule."
     name::String;
 
+    #* properties that would be stored in data upon related calculation.
+
+    # energy levels
+    energy_data_available::Bool;
+    "Energy levels of all the molecular orbitals (MO) of the molecule (in a.u.)."
+    energy_levels;
+    "The index of the HOMO of the molecule."
+    HOMO_index;
+
+    # WFAT IntData
+    wfat_data_available::Bool;
+    "Available orbital indices of WFAT IntData."
+    wfat_orbital_indices::Set
+    "WFAT IntData of the molecule's molecular orbitals."
+    wfat_intdata::Dict;
+    "Orbital dipole moment of the molecule's molecular orbitals."
+    wfat_μ::Dict;
+
+    #* properties that would not be stored in data
+
+    "Euler angles (ZYZ convention) specifying the molecule's orientation."  # not stored in data
+    rot_α;
+    rot_β;
+    rot_γ;
+
+
+    #* fresh init without data.
     """
     Initializes a new instance of `Molecule` with given parameters.
     # Parameters
-    - `atoms`                   : Atoms in the molecule with their coordinates, which are stored as a vector of (:AtomName, X, Y, Z).
-    - `molCharge`               : Total charge of the molecule (ion) (optional, default 0).
-    - `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (optional, default 0).
+    - `atoms`                   : Atoms in the molecule, stored as a vector of String.
+    - `atom_coords`             : Atoms' coordinates in the molecule, stored as a N×3 matrix.
+    - `charge`                  : Total charge of the molecule (ion) (optional, default 0).
     - `name`                    : Name of the molecule (optional).
+    - `data_path`               : Path to the molecule's data (default empty). Specifying an empty string indicates no saving (but can still be saved later by calling method `MolSaveDataAs`).
+    - `calc_energy`             : Indicates whether to calculate the energy data of the molecule upon initialization (default false).
+    - `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (optional, default 0).
     """
-    function Molecule(atoms,molCharge=0,rot_α=0.,rot_β=0.,rot_γ=0.,name::String="[NA]")
-        new(atoms,molCharge,rot_α,rot_β,rot_γ,name)
+    function Molecule(atoms,atom_coords,charge::Int=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
+        @assert eltype(atoms)<:String   "[Molecule] Element type of `atoms` must be String."
+        @assert ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[Molecule] `atom_coords` should be of size N×3."
+        mol = new(  data_path,  # data_path
+                    nothing,    # mol_calc
+                    atoms, atom_coords, charge, name,
+                    false, nothing, -1,             # energy_data
+                    false, Set(), Dict(), Dict(), # wfat_data
+                    rot_α,rot_β,rot_γ)
+        if calc_energy
+            MolCalcEnergyData!(mol)
+        end
+        if ! (data_path=="")
+            MolSaveDataAs(mol, data_path)
+        end
+        return mol
     end
-    function Molecule(;atoms,molCharge=0,rot_α=0.,rot_β=0.,rot_γ=0.,name::String="[NA]")
-        new(atoms,molCharge,rot_α,rot_β,rot_γ,name)
+    function Molecule(;atoms,atom_coords,charge::Int=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
+        return Molecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot_α,rot_β,rot_γ)
     end
-    function Molecule(;atoms,molCharge=0,rot::Tuple=(0.,0.,0.),name::String="[NA]")
-        new(atoms,molCharge,rot[1],rot[2],rot[3],name)
+    function Molecule(;atoms,atom_coords,charge::Int=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot::Tuple=(0.,0.,0.))
+        return Molecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot[1],rot[2],rot[3])
+    end
+
+    #* init from data.
+    function Molecule(data_path::String, rot_α=0.,rot_β=0.,rot_γ=0.)
+        file = h5open(data_path,"r")
+        # reads MolInfo
+        MolInfo = open_group(file, "MolInfo")
+        atoms = read_dataset(MolInfo, "atoms")
+        atom_coords = read_dataset(MolInfo, "atom_coords")
+        charge = read_dataset(MolInfo, "charge")
+        name = read_dataset(MolInfo, "name")
+        # reads MolEnergy
+        energy_data_available = haskey(file, "MolEnergy")
+        energy_levels = nothing
+        HOMO_index = -1
+        if energy_data_available
+            MolEnergy = open_group(file, "MolEnergy")
+            energy_levels = read_dataset(MolEnergy, "energy_levels")
+            HOMO_index = read_dataset(MolEnergy, "HOMO_index")
+        end
+        # reads WFAT
+        wfat_data_available = haskey(file, "WFAT")
+        wfat_orbital_indices = Set()
+        wfat_intdata = nothing
+        wfat_μ = nothing
+        if wfat_data_available
+            wfat = open_group(file, "WFAT")
+            wfat_orbital_indices = Set(read_dataset(wfat, "orbital_indices"))
+            wfat_intdata = Dict()
+            wfat_μ = Dict()
+            for idx in wfat_orbital_indices
+                wfat_intdata[idx] = read_dataset(wfat, "intdata_$idx")
+                wfat_μ[idx] = read_dataset(wfat, "μ_$idx")
+            end
+        end
+        close(file)
+        return new( data_path,
+                    nothing,
+                    atoms, atom_coords, charge, name,
+                    energy_data_available, energy_levels, HOMO_index,
+                    wfat_data_available, wfat_orbital_indices, wfat_intdata, wfat_μ,
+                    rot_α,rot_β,rot_γ)
+    end
+    function Molecule(;data_path::String, rot_α=0.,rot_β=0.,rot_γ=0.)
+        return Molecule(data_path,rot_α,rot_β,rot_γ)
+    end
+    function Molecule(;data_path::String, rot::Tuple=(0.,0.,0.))
+        return Molecule(data_path,rot[1],rot[2],rot[3])
     end
 end
 
-"Gets the atoms in the molecule with their coordinates."
-Atoms(mol::Molecule) = mol.atoms
-"Gets the total charge of the molecule (ion)."
-MolCharge(mol::Molecule) = mol.molCharge
-"Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
-Rotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
-"Gets the name of the molecule."
-TargetName(mol::Molecule) = mol.name
 
+#* Molecule's specific properties & methods
+
+"Gets the atoms in the molecule with their coordinates."
+MolAtoms(mol::Molecule) = mol.atoms
+"Gets the atoms' coordinates in the molecule."
+MolAtomCoords(mol::Molecule) = mol.atom_coords
+"Gets the total charge of the molecule (ion)."
+MolCharge(mol::Molecule) = mol.charge
+"Gets the availability of the energy data of the molecule."
+function MolEnergyDataAvailable(mol::Molecule)
+    return mol.energy_data_available
+end
+"Gets the energy levels of the molecule's MOs."
+function MolEnergyLevels(mol::Molecule)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    return mol.energy_levels
+end
+"Gets the orbital index of the molecule's HOMO."
+function MolHOMOIndex(mol::Molecule)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    return mol.HOMO_index
+end
+"Gets the energy of the molecule's HOMO."
+function MolHOMOEnergy(mol::Molecule)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    return mol.energy_levels[mol.HOMO_index]
+end
+"Gets the available orbital indices (relative to HOMO) of the molecule's WFAT data."
+function MolWFATAvailableIndices(mol::Molecule)
+    return if mol.wfat_data_available
+        mol.wfat_orbital_indices
+    else
+        Set()
+    end
+end
+"""
+Gets the WFAT data in format `(μ,IntData)`.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+"""
+function MolWFATData(mol::Molecule, orbitIdx_relHOMO::Int=0)
+    if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
+        MolCalcWFATData!(mol, orbitIdx_relHOMO)
+    end
+    return mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO]
+end
+"Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
+MolRotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
+"Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
+function SetMolRotation(mol::Molecule, α,β,γ)
+    mol.rot_α = α; mol.rot_β = β; mol.rot_γ = γ;
+end
+function SetMolRotation(mol::Molecule, (α,β,γ))
+    SetMolRotation(mol, α,β,γ)
+end
 """
 Exports the given molecule's atom information to string as `MolecularCalculator`'s input.
 Note: Rotations defined by the Euler angles wouldn't be applied.
 """
 function exportMolAtomInfo(mol::Molecule)
-    atomToString(atom) = join([String(atom[1]),atom[2],atom[3],atom[4]], " ")
-    return join(map(atomToString, mol.atoms),";")
+    atomToString(i_atm) = join([String(mol.atoms[i_atm]),mol.atom_coords[i_atm,1:3]], " ")
+    return join(map(atomToString, eachindex(mol.atoms)),"; ")
 end
 
-#TODO: The structure of Molecule needs to be improved.
-#TODO: Maybe init the Molecule with a precomputed data is a better choice.
-#TODO: If there's no data, the user may provide information about this molecule, and the MolecularCalculator would be utilized to calculate.
-#TODO: And what to calculate can be specified. The user can append data by loading the Molecule data and call methods in the MolecularCalculator.
+# data calculation and operation
+"""
+Calculates the energy data of the molecule and saves the data.
+- `MCType`: Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+"""
+function MolCalcEnergyData!(mol::Molecule, MCType::Type = PySCFMolecularCalculator, kwargs...)
+    if isnothing(mol.mol_calc)
+        if ! (MCType<:MolecularCalculatorBase)
+            error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
+        end
+        mol.mol_calc = MCType(mol=mol, kwargs...)
+    end
+    mol.energy_data_available = true
+    mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
+    mol.HOMO_index = MolecularCalculators.HOMOIndex(mol.mol_calc)
+    _MolSaveEnergyData(mol)
+end
+
+function _MolSaveEnergyData(mol::Molecule, file::HDF5.File)
+    # this method will not close the file handle!
+    if ! mol.energy_data_available
+        return
+    end
+    if ! haskey(file,"MolEnergy")
+        create_group(file,"MolEnergy")
+    end
+    g = open_group(file, "MolEnergy")
+    haskey(g,"energy_levels") && delete_object(g,"energy_levels")   # HDF5 doesn't support overwriting.
+    haskey(g,"HOMO_index") && delete_object(g,"HOMO_index")
+    write_dataset(g,"energy_levels",mol.energy_levels)
+    write_dataset(g,"HOMO_index",mol.HOMO_index)
+end
+function _MolSaveEnergyData(mol::Molecule)
+    # open, write and close.
+    if mol.data_path==""    # would not save if data_path is empty.
+        return
+    end
+    if ! isfile(mol.data_path)
+        error("[Molecule] Destination file \"$(mol.data_path)\" not exists.")
+    end
+    file = h5open(mol.data_path,"r+")
+    _MolSaveEnergyData(mol,file)
+    close(file)
+end
+
+"""
+Calculates the WFAT data of the molecule and saves the data.
+- `MCType`: Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+"""
+function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type = PySCFMolecularCalculator, kwargs...)
+    if isnothing(mol.mol_calc)
+        if ! (MCType<:MolecularCalculatorBase)
+            error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
+        end
+        mol.mol_calc = MCType(mol=mol, kwargs...)
+    end
+    if ! mol.energy_data_available  # won't replace if the data exists.
+        mol.energy_data_available = true
+        mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
+        mol.HOMO_index = MolecularCalculators.HOMOIndex(mol.mol_calc)
+    end
+    mol.wfat_data_available = true
+    if isnothing(mol.wfat_orbital_indices)
+        mol.wfat_orbital_indices = Set()
+        mol.wfat_intdata = Dict()
+        mol.wfat_μ = Dict()
+    end
+    push!(mol.wfat_orbital_indices, orbitIdx_relHOMO)
+    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calcStructFactorData(mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    _MolSaveWFATData(mol,orbitIdx_relHOMO)
+end
+function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Int = 0)
+    # this method will not close the file handle!
+    if ! mol.wfat_data_available
+        return
+    end
+    if ! haskey(file,"WFAT")
+        create_group(file,"WFAT")
+    end
+    g = open_group(file, "WFAT")
+    if ! haskey(g, "orbital_indices")
+        write_dataset(g,"orbital_indices",Vector{Int32}())     # directly passing an empty array [] results in error.
+    end
+    indices = sort!(collect(push!(read_dataset(g,"orbital_indices"),orbitIdx_relHOMO)))
+    haskey(g,"orbital_indices") && delete_object(g,"orbital_indices")   # HDF5 doesn't support overwriting.
+    haskey(g,"intdata_$(orbitIdx_relHOMO)") && delete_object(g,"intdata_$(orbitIdx_relHOMO)")
+    haskey(g,"μ_$(orbitIdx_relHOMO)") && delete_object(g,"μ_$(orbitIdx_relHOMO)")
+    write_dataset(g,"orbital_indices", indices)
+    write_dataset(g,"intdata_$(orbitIdx_relHOMO)", mol.wfat_intdata[orbitIdx_relHOMO])  # WFAT data is stored separately in different datasets!
+    write_dataset(g,"μ_$(orbitIdx_relHOMO)", mol.wfat_μ[orbitIdx_relHOMO])
+end
+function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Int = 0)
+    # open, write and close.
+    if mol.data_path==""    # would not save if data_path is empty.
+        return
+    end
+    if ! isfile(mol.data_path)
+        error("[Molecule] Destination file \"$(mol.data_path)\" not exists.")
+    end
+    file = h5open(mol.data_path,"r+")
+    _MolSaveWFATData(mol,file,orbitIdx_relHOMO)
+    close(file)
+end
+
+function MolSaveDataAs(mol::Molecule, data_path::String)
+    function defaultFileName()
+        Y,M,D = yearmonthday(now())
+        h,m,s = hour(now()), minute(now()), second(now())
+        return "Molecule_$(mol.name)_$(string(Y,pad=4))$(string(M,pad=2))$(string(D,pad=2))-$(string(h,pad=2))$(string(m,pad=2))$(string(s,pad=2)).h5"
+    end
+    if isfile(data_path) || data_path==""        # if destination exists or not specified, saving as default file name.
+        defaultPath = defaultFileName()
+        if isfile(data_path)
+            @warn "[Molecule] Destination file \"$data_path\" already exists. Saving at \"$defaultPath\"."
+        elseif data_path==""
+            @warn "[Molecule] Destination file not specified. Saving at \"$defaultPath\"."
+        end
+        data_path = defaultPath
+    end
+    mol.data_path = data_path
+    file = h5open(data_path, "w")
+    #* writes MolInfo
+    MolInfo = create_group(file, "MolInfo")
+    MolInfo["atoms"] = mol.atoms
+    MolInfo["atom_coords"] = mol.atom_coords
+    MolInfo["charge"] = mol.charge
+    MolInfo["name"] = mol.name
+    #* writes MolEnergy
+    if mol.energy_data_available
+        _MolSaveEnergyData(mol,file)
+    end
+    #* writes WFAT
+    if mol.wfat_data_available
+        for idx in mol.wfat_orbital_indices
+            _MolSaveWFATData(mol,file,idx)
+        end
+    end
+    close(file)
+end
+
+#* Properties & methods that implement the supertype Target.
+
+"Gets the ionization potential of the molecule's HOMO."
+function IonPotential(mol::Molecule)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    return -MolHOMOEnergy(mol)
+end
+"""
+Gets the ionization potential of the specified MO of molecule.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+"""
+function IonPotential(mol::Molecule, orbitIdx_relHOMO::Int=0)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    idx = mol.HOMO_index+orbitIdx_relHOMO
+    if ! (0<idx<size(mol.energy_levels,1))
+        error("[Molecule] Orbit index out of bound.")
+    end
+    return -mol.energy_levels[idx]
+end
+"Gets the asymptotic nuclear charge of the molecule (ion) (after an electron got ionized)."
+AsympNuclCharge(mol::Molecule) = mol.charge + 1
+"Gets the name of the molecule."
+TargetName(mol::Molecule) = mol.name
+"Gets the ASYMPTOTIC Coulomb potential function of the molecule."
+TargetPotential(mol::Molecule) = (x,y,z) -> -(mol.charge+1)*(x^2+y^2+z^2+1.0)^(-0.5)
+"Gets the ASYMPTOTIC Coulomb force exerted on the electron from the molecular ion (which is the neg-grad of potential)."
+TargetForce(mol::Molecule) = (x,y,z) -> -(mol.charge+1)*(x^2+y^2+z^2+1.0)^(-1.5) .* (x,y,z)
+"Gets the trajectory function according to given parameter."
+function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function, phase_method::Symbol, non_dipole::Bool; kwargs...)
+    Z  = mol.charge+1
+    # including external function call is infeasible in GPU, thus the external targetF & targetP are replaced by pure Coulomb ones.
+    return if ! non_dipole
+        if phase_method == :CTMC
+            function traj_dipole_ctmc(u,p,t)
+                # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
+                du1 = u[4]
+                du2 = u[5]
+                du3 = u[6]
+                du4 = tFx-laserFx(t)
+                du5 = tFy-laserFy(t)
+                du6 = tFz
+                @SVector [du1,du2,du3,du4,du5,du6]
+            end
+        else
+            #TODO: QTMC & SCTS can be added if any theory on phase comes out.
+        end
+    else
+        #TODO: Nondipole
+    end
+end
+
+function Base.show(io::IO, mol::Molecule)
+    print(io, "Molecule [$(mol.name)]")
+    if mol.energy_data_available
+        print(io, ", HOMO energy: $(MolHOMOEnergy(mol))")
+    end
+end
