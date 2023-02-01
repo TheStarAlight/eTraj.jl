@@ -202,7 +202,8 @@ end
 # data calculation and operation
 """
 Calculates the energy data of the molecule and saves the data.
-- `MCType`: Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+- `MCType`      : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+- `kwargs...`   : Keyword arguments to pass to the `MolecularCalculator`, e.g. `basis`.
 """
 function MolCalcEnergyData!(mol::Molecule, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
@@ -247,8 +248,9 @@ end
 
 """
 Calculates the WFAT data of the molecule and saves the data.
-- `MCType`: Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `MCType`              : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+- `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator` and the `calcStructFactorData` method, e.g. `basis`, `grid_rNum`, `grid_rMax`, `sf_lMax`, ⋯
 """
 function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
@@ -306,6 +308,7 @@ function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Int = 0)
     @info "[Molecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
+"Saves the data of the `Molecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`)."
 function MolSaveDataAs(mol::Molecule, data_path::String)
     function defaultFileName()
         Y,M,D = yearmonthday(now())
