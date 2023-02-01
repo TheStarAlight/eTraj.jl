@@ -68,13 +68,13 @@ mutable struct Molecule <: Target
                     nothing,    # mol_calc
                     atoms, atom_coords, charge, name,
                     false, nothing, -1,             # energy_data
-                    false, Set(), Dict(), Dict(), # wfat_data
+                    false, Set(), Dict(), Dict(),   # wfat_data
                     rot_α,rot_β,rot_γ)
-        if calc_energy
-            MolCalcEnergyData!(mol)
-        end
         if ! (data_path=="")
             MolSaveDataAs(mol, data_path)
+        end
+        if calc_energy
+            MolCalcEnergyData!(mol)
         end
         return mol
     end
