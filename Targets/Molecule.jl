@@ -19,7 +19,7 @@ mutable struct Molecule <: Target
     "Atoms' coordinates in the molecule, stored as a N×3 matrix."
     atom_coords;
     "Total charge of the molecule (ion)."
-    charge::Int;
+    charge::Integer;
     "Name of the molecule."
     name::String;
 
@@ -61,7 +61,7 @@ mutable struct Molecule <: Target
     - `calc_energy`             : Indicates whether to calculate the energy data of the molecule upon initialization (default false).
     - `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (optional, default 0).
     """
-    function Molecule(atoms,atom_coords,charge::Int=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
+    function Molecule(atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
         @assert eltype(atoms)<:String   "[Molecule] Element type of `atoms` must be String."
         @assert ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[Molecule] `atom_coords` should be of size N×3."
         mol = new(  data_path,  # data_path
@@ -78,10 +78,10 @@ mutable struct Molecule <: Target
         end
         return mol
     end
-    function Molecule(;atoms,atom_coords,charge::Int=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
+    function Molecule(;atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
         return Molecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot_α,rot_β,rot_γ)
     end
-    function Molecule(;atoms,atom_coords,charge::Int=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot::Tuple=(0.,0.,0.))
+    function Molecule(;atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot::Tuple=(0.,0.,0.))
         return Molecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot[1],rot[2],rot[3])
     end
 
@@ -175,7 +175,7 @@ end
 Gets the WFAT data in format `(μ,IntData)`.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 """
-function MolWFATData(mol::Molecule, orbitIdx_relHOMO::Int=0)
+function MolWFATData(mol::Molecule, orbitIdx_relHOMO::Integer=0)
     if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
         MolCalcWFATData!(mol, orbitIdx_relHOMO)
     end
@@ -252,7 +252,7 @@ Calculates the WFAT data of the molecule and saves the data.
 - `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator` and the `calcStructFactorData` method, e.g. `basis`, `grid_rNum`, `grid_rMax`, `sf_lMax`, ⋯
 """
-function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
+function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
             error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
@@ -274,7 +274,7 @@ function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Int = 0, MCType::Type
     mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calcStructFactorData(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
     _MolSaveWFATData(mol,orbitIdx_relHOMO)
 end
-function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Int = 0)
+function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
     # this method will not close the file handle!
     if ! mol.wfat_data_available
         return
@@ -294,7 +294,7 @@ function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Int 
     write_dataset(g,"intdata_$(orbitIdx_relHOMO)", mol.wfat_intdata[orbitIdx_relHOMO])  # WFAT data is stored separately in different datasets!
     write_dataset(g,"μ_$(orbitIdx_relHOMO)", mol.wfat_μ[orbitIdx_relHOMO])
 end
-function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Int = 0)
+function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Integer)
     # open, write and close.
     if mol.data_path==""    # would not save if data_path is empty.
         return
@@ -357,9 +357,9 @@ function IonPotential(mol::Molecule)
 end
 """
 Gets the ionization potential of the specified MO of molecule.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1).
 """
-function IonPotential(mol::Molecule, orbitIdx_relHOMO::Int=0)
+function IonPotential(mol::Molecule, orbitIdx_relHOMO::Integer)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
