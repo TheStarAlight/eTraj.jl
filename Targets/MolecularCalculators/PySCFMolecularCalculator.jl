@@ -43,7 +43,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
         time = [0.0]
         try
             mc._pyscf  = pyimport("pyscf")
-            mc._pymol  = mc._pyscf.gto.M(atom=exportMolAtomInfo(mol), charge=MolCharge(mol), basis=basis, verbose=0)
+            mc._pymol  = mc._pyscf.gto.M(atom=MolExportAtomInfo(mol), charge=MolCharge(mol), basis=basis, verbose=0)
             mc._pytask = mc._pyscf.scf.RHF(mc._pymol)
             mc._pytask.chkfile = nothing
             time[1] = @elapsed mc._pytask.run()

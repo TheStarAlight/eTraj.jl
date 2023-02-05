@@ -119,7 +119,7 @@ function generateElectronBatch(sp::WFATSampleProvider, batchId::Int)
     μ_field = μ[1]*cos(φ_field)+μ[2]*sin(φ_field)   # μ's component along the field F, aka μ_z (here F is not along the Z axis!).
     g_data = zeros(nξMax+1, 2*mMax+1)
     for nξ in 0:nξMax, m in -mMax:mMax
-        g_data[nξ+1, m+mMax+1] = getStructFactor(sp, nξ, m, β, γ)
+        g_data[nξ+1, m+mMax+1] = _getMolStructFactor_g(sp, nξ, m, β, γ)
     end
     g(nξ,m) = g_data[nξ+1, m+mMax+1]
     ionRate::Function =
@@ -154,8 +154,8 @@ function generateElectronBatch(sp::WFATSampleProvider, batchId::Int)
     return reshape(init,dim,:)
 end
 
-"Gets the structure factor of the molecule target of a given channel under a specific Euler angle (β,γ)."
-function getStructFactor(sp::WFATSampleProvider, nξ::Int, m::Int, β, γ)
+"Gets the structure factor g of the molecule target of a given channel under a specific Euler angle (β,γ)."
+function _getMolStructFactor_g(sp::WFATSampleProvider, nξ::Int, m::Int, β, γ)
     @assert nξ≥0 "[WFATSampleProvider] The nξ must be positive."
     sum = zero(ComplexF64)
     for l in abs(m):sp.wfat_lMax, m_ in -l:l

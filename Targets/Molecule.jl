@@ -1,5 +1,7 @@
 
 using .MolecularCalculators
+using WignerD
+using Rotations
 using Dates
 using HDF5
 
@@ -176,10 +178,60 @@ Gets the WFAT data in format `(μ,IntData)`.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 """
 function MolWFATData(mol::Molecule, orbitIdx_relHOMO::Integer=0)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
     if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
         MolCalcWFATData!(mol, orbitIdx_relHOMO)
     end
     return mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO]
+end
+"""
+Gets the WFAT structure factor \$G_{n_ξ m}\$ according to the given Euler angles `β` and `γ` (ZYZ convention).
+Note: the rotational Euler angles of the molecule would not be applied.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `nξ`  : Parabolic quantum number nξ=0,1,2,⋯ (nξ up to 5 is calculated by default).
+- `m`   : Parabolic quantum number nξ=⋯,-1,0,1,⋯ (|m| up to 5 is calculated by default).
+- `β`   : Euler angle β, can be passed as a `Real` value or a `Vector` of `Real`.
+- `γ`   : Euler angle γ, can be passed as a `Real` value or a `Vector` of `Real`.
+"""
+function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β,γ)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
+        MolCalcWFATData!(mol, orbitIdx_relHOMO)
+    end
+    @assert (typeof(β)<:Real && typeof(γ)<:Real) || ((typeof(β)<:Vector{T} where T<:Real) && (typeof(γ)<:Vector{T} where T<:Real) && size(β,1)==size(γ,1)) "[Molecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
+    @assert nξ≥0 "[Molecule] nξ should be non-negative."
+    intdata = mol.wfat_intdata[orbitIdx_relHOMO]
+    nξMax = size(intdata,1) - 1
+    mMax = round(Int,(size(intdata,2)-1)/2)
+    lMax = size(intdata,3) - 1
+    if nξ>nξMax
+        @error "[Molecule] The given nξ=$nξ is larger than the maximum value $nξMax, zero value would be returned."
+        return 0.0
+    end
+    if abs(m)>mMax
+        @error "[Molecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
+        return 0.0
+    end
+    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbitIdx_relHOMO])[3]   # the result is independent of α
+
+    if typeof(β)<:Real  # passed as a `Real` value
+        sum = zero(ComplexF64)
+        for l in abs(m):lMax, m_ in -l:l
+            sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        end
+        return real(sum)*exp(-sqrt(2IonPotential(mol))*μz(β,γ))
+    else    # passed as a Vector
+        sum = zeros(ComplexF64,size(β))
+        for l in abs(m):lMax, m_ in -l:l
+            sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        end
+        κ = sqrt(2IonPotential(mol))
+        return @. real(sum)*exp(-κ*μz(β,γ))
+    end
 end
 "Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
 MolRotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
@@ -194,7 +246,7 @@ end
 Exports the given molecule's atom information to string as `MolecularCalculator`'s input.
 Note: Rotations defined by the Euler angles wouldn't be applied.
 """
-function exportMolAtomInfo(mol::Molecule)
+function MolExportAtomInfo(mol::Molecule)
     atomToString(i_atm) = join([String(mol.atoms[i_atm]),mol.atom_coords[i_atm,1:3]], " ")
     return join(map(atomToString, eachindex(mol.atoms)),"; ")
 end

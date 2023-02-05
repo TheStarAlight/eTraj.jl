@@ -13,7 +13,7 @@ export HAtom, He1pAtom, Li2pAtom, HeAtom, NeAtom, Ne1pAtom, Ne2pAtom, ArAtom, Ar
 export ADKRateExp
 
 export Molecule
-export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolHOMOEnergy, MolHOMOIndex, MolWFATAvailableIndices, MolWFATData, MolRotation, SetMolRotation, exportMolAtomInfo
+export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolHOMOEnergy, MolHOMOIndex, MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolRotation, SetMolRotation, MolExportAtomInfo
 export MolCalcEnergyData!, MolCalcWFATData!, MolSaveDataAs
 
 export MolecularCalculators
