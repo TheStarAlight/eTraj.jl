@@ -5,6 +5,7 @@ using SphericalHarmonics
 using Folds
 using Einsum
 using PyCall
+using libcint_jll
 using HDF5
 using Dates
 using ProgressMeter
@@ -120,9 +121,9 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
                                 grid_rMax::Real = 10.,
                                 grid_θNum::Int  = 60,
                                 grid_ϕNum::Int  = 60,
-                                sf_nξMax ::Int = 3,
-                                sf_mMax  ::Int = 3,
-                                sf_lMax  ::Int = 6,
+                                sf_nξMax ::Int = 5,
+                                sf_mMax  ::Int = 5,
+                                sf_lMax  ::Int = 10,
                                 kwargs...)
     # == PROCEDURE ==
     # 0. Obtain the coefficients (finished in the initialization).
@@ -228,7 +229,7 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     end
 
     #*  1.4 Calculate the inter-electron interaction: Vd & Vex
-    batch_size = 2000  # the integral takes huge memory and thus needs to be performed in batches.
+    batch_size = 200  # the integral takes huge memory and thus needs to be performed in batches.
     batch_num = ceil(Int, N/batch_size)
 
     # density matrix
@@ -239,27 +240,132 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     prog11 = ProgressUnknown(dt=0.2, desc="Calculating the effective potential... ($N pts)", color = :cyan, spinner = true)
     prog12 = Progress(N; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
 
-    # @threads for i in 1:batch_num
-    for i in 1:batch_num    #TODO: Multi-threading is disabled because PyCall.jl doesn't support it. Directly calling libcint might be a solution.
+    # libcint param. preparation
+
+    m_atm  = pymol._atm
+    m_nbas = pymol.nbas
+    m_bas = pymol._bas
+    m_env = pymol._env
+    ao_loc = pymol.ao_loc   # example: [0,2,5,7,10] indicates 4 AOs, whose GTOs are of indices 0~1,2~4,5~6,7~9 (indices starting from 0).
+
+    """
+    (translated from pyscf) Constructs the data of 'fakemol' (which is actually a delta function) used in `libcint` integration.
+    - Returns: `(atm,bas,env)` of the constructed fakemol.
+    """
+    function construct_fakemol_data(coords)
+        PTR_COORD  = 1
+        ATM_SLOTS  = 6
+        ATOM_OF    = 0
+        NPRIM_OF   = 2
+        NCTR_OF    = 3
+        PTR_EXP    = 5
+        PTR_COEFF  = 6
+        BAS_SLOTS  = 8
+        PTR_ENV_START = 20
+        f_nbas = size(coords,1)
+        f_atm = zeros(Int32, f_nbas, ATM_SLOTS)
+        f_bas = zeros(Int32, f_nbas, BAS_SLOTS)
+        f_env = vcat(zeros(PTR_ENV_START), reshape(transpose(coords),:), [1e16, 6.366197723675814e23])
+        pos = PTR_ENV_START
+        #* Note: in julia the indices begin at ONE!
+        f_atm[:,PTR_COORD+1] = pos:3:(pos+3*f_nbas-3)
+        pos += 3*f_nbas
+        f_bas[:,ATOM_OF+1  ]  = 0:(f_nbas-1)
+        f_bas[:,NPRIM_OF+1 ] .= 1
+        f_bas[:,NCTR_OF+1  ] .= 1
+        f_bas[:,PTR_EXP+1  ] .= pos
+        f_bas[:,PTR_COEFF+1] .= pos+1
+        return f_atm,f_bas,f_env
+    end
+    """
+    Concatenates the two molecules' integral parameters.
+    - Returns: `(atm,bas,env)` of the concatenated param.
+    """
+    function conc_mol_param(atm1,bas1,env1,atm2,bas2,env2)
+        PTR_COORD  = 1
+        PTR_ZETA   = 3
+        ATOM_OF    = 0
+        PTR_EXP    = 5
+        PTR_COEFF  = 6
+        offset = size(env1,1)
+        natm_offset = size(atm1,1)
+        atm2_ = copy(atm2)
+        bas2_ = copy(bas2)
+        atm2_[:,PTR_COORD+1] .+= offset
+        atm2_[:,PTR_ZETA+1 ] .+= offset
+        bas2_[:,ATOM_OF+1  ] .+= natm_offset
+        bas2_[:,PTR_EXP+1  ] .+= offset
+        bas2_[:,PTR_COEFF+1] .+= offset
+        return Int32.(vcat(atm1,atm2_)), Int32.(vcat(bas1,bas2_)), vcat(env1,env2)
+    end
+    "Wraps the `int3c2e_sph` function in the `libcint`. Def: int3c2e_sph(double *out, int *dims, int *shls, int *atm, int natm, int *bas, int nbas, double *env, CINTOpt *opt, double *cache)."
+    function int3c2e_sph!(out,dims,shls,atm,natm,bas,nbas,env,opt=C_NULL,cache=C_NULL)
+        @ccall libcint.int3c2e_sph( out  :: Ptr{Cdouble},
+                                    dims :: Ptr{Cint},
+                                    shls :: Ptr{Cint},
+                                    atm  :: Ptr{Cint},
+                                    natm :: Cint,
+                                    bas  :: Ptr{Cint},
+                                    nbas :: Cint,
+                                    env  :: Ptr{Cdouble},
+                                    opt  :: Ptr{Cvoid},
+                                    cache:: Ptr{Cvoid}
+                                    )::Cvoid
+    end
+    #TODO: add support for cintopt.
+    @threads for i in 1:batch_num
         pt_idx = if i < batch_num
             CartesianIndices((((i-1)*batch_size+1): i*batch_size,))
         else
             CartesianIndices((((i-1)*batch_size+1): N,))
         end
-        fakemol = pyscf.gto.fakemol_for_charges(pt_xyz[pt_idx,:])
-        I = pyscf_df.incore.aux_e2(pymol, fakemol)      # Size: num_AO × num_AO × batch_size, I_αβ = ∫dr' (χα(r'-Rα)*χβ(r'-Rβ))/|r-r'|
+        batch_size_this = size(pt_idx,1)
+        I = zeros(num_AO,num_AO,batch_size_this)   # Size: num_AO × num_AO × num_pts, I_αβ = ∫dr' (χα(r'-Rα)*χβ(r'-Rβ))/|r-r'|
+        begin
+            # here we denote α,β as indices of AOs (in julia, starting from 1);
+            # i,j as shells (used in libcint API, starting from 0);
+            # ipt as indices of the fakemol's delta function.
+            f_atm,f_bas,f_env = construct_fakemol_data(pt_xyz[pt_idx,:])
+            atm,bas,env = conc_mol_param(m_atm,m_bas,m_env,f_atm,f_bas,f_env)
+            atm = collect(atm)
+            bas = collect(bas)
+            env = collect(env)
+            natm = size(atm,1)
+            nbas = size(bas,1)
+            atm = permutedims(atm,(2,1))    # julia stores arrays in column order, calling C requires arrays in row order.
+            bas = permutedims(bas,(2,1))
+            for ipt in 1:batch_size_this
+                for i in 0:m_nbas-1, j in 0:i     # I[i,j]=I[j,i], thus only half of the matrix needs to be calculated.
+                    k = ipt-1
+                    shls = Int32[i,j,m_nbas+k]      # denoting the shells to integrate (e.g. H1's 1s and H2's 2px)
+                    di = ao_loc[i+2] - ao_loc[i+1]  # each shell i contains di AOs, these AOs' integrations would be evaluated in a single call.
+                    dj = ao_loc[j+2] - ao_loc[j+1]
+                    dims = Int32[di,dj,1]           # denoting the count of AOs (in each dimension) in this evaluation.
+                    out = zeros(di,dj)
+                    int3c2e_sph!(out,dims,shls,atm,natm,bas,nbas,env)
+                    out = permutedims(out,(2,1))
+                    I[ao_loc[j+1]+1:ao_loc[j+2], ao_loc[i+1]+1:ao_loc[i+2], ipt] = out
+                end
+            end
+            if num_AO != 1
+                # filling the remaining part according to the symmetry.
+                for α in 2:num_AO, β in 1:α-1
+                    I[α,β,:] = I[β,α,:]
+                end
+            end
+        end
         #* Calculate Vd
-        Vd = zeros(size(pt_idx,1)); α,β,i_pt = 0,0,0     # α,β are indices of the basis, i_pt is the index of the points.
-        @einsum Vd[i_pt] := I[α,β,i_pt] * den_mat[α,β]     # Einstein's summation notation is used.
+        Vd = zeros(batch_size_this); α,β,i_pt = 0,0,0     # α,β are indices of the basis, i_pt is the index of the points.
+        @einsimd Vd[i_pt] := I[α,β,i_pt] * den_mat[α,β]     # Einstein's summation notation is used.
         Vc_ψ0[pt_idx] .+= Vd            # now it is (Z/r + Vnuc + Vd).
         Vc_ψ0[pt_idx] .*= ψ0[pt_idx]    # now it is (Z/r + Vnuc + Vd) * ψ0.
         #* Calculate Vex_ψ0
         χα = χi[pt_idx,:]   # basis function values on the selected points.
-        Vex_ψ0 = zeros(size(pt_idx,1)); α,β,γ,i_pt = 0,0,0,0
+        Vex_ψ0 = zeros(batch_size_this); α,β,γ,i_pt = 0,0,0,0
         @einsimd Vex_ψ0[i_pt] := -1/2 * den_mat[α,β] * χα[i_pt,α] * orbit_coeff[γ] * I[β,γ,i_pt]
         Vc_ψ0[pt_idx] .+= Vex_ψ0    # finished building Vc_ψ0.
 
-        next!(prog11,spinner=raw"-\|/"); update!(prog12,pt_idx.indices[1][end]);
+        next!(prog11,spinner=raw"-\|/"); next!(prog12,step=size(pt_idx,1));
     end
     finish!(prog11); finish!(prog12); println()
 
