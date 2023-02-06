@@ -223,13 +223,13 @@ function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ:
         for l in abs(m):lMax, m_ in -l:l
             sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
         end
-        return real(sum)*exp(-sqrt(2IonPotential(mol))*μz(β,γ))
+        return real(sum)*exp(-sqrt(2IonPotential(mol,orbitIdx_relHOMO))*μz(β,γ))
     else    # passed as a Vector
         sum = zeros(ComplexF64,size(β))
         for l in abs(m):lMax, m_ in -l:l
             sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
         end
-        κ = sqrt(2IonPotential(mol))
+        κ = sqrt(2IonPotential(mol,orbitIdx_relHOMO))
         return @. real(sum)*exp(-κ*μz(β,γ))
     end
 end
