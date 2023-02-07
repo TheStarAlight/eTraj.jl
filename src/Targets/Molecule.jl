@@ -83,9 +83,6 @@ mutable struct Molecule <: Target
     function Molecule(;atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
         return Molecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot_α,rot_β,rot_γ)
     end
-    function Molecule(;atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot::Tuple=(0.,0.,0.))
-        return Molecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot[1],rot[2],rot[3])
-    end
 
     #* init from data.
     function Molecule(data_path::String, rot_α=0.,rot_β=0.,rot_γ=0.)
@@ -125,9 +122,6 @@ mutable struct Molecule <: Target
                     energy_data_available, energy_levels, HOMO_index,
                     wfat_data_available, wfat_orbital_indices, wfat_intdata, wfat_μ,
                     rot_α,rot_β,rot_γ)
-    end
-    function Molecule(data_path::String, rot::Tuple=(0.,0.,0.))
-        return Molecule(data_path,rot[1],rot[2],rot[3])
     end
 end
 

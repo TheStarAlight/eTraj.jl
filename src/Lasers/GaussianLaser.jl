@@ -33,9 +33,6 @@ struct GaussianLaser <: MonochromaticLaser
         @assert -1≤ellip≤1      "[GaussianLaser] Ellipticity must be in [-1,1]."
         new(peakInt,waveLen,spreadCycNum,ellip,azi,cep,t_shift)
     end
-    function GaussianLaser(;peakInt, waveLen, spreadCycNum, ellip, azi=0., cep=0., t_shift=0.)
-        GaussianLaser(peakInt,waveLen,spreadCycNum,ellip,azi,cep,t_shift)
-    end
     """
     Constructs a new monochromatic elliptically polarized laser field with Gaussian-shape envelope.
     # Parameters
