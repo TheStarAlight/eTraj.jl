@@ -33,9 +33,6 @@ struct Cos2Laser <: MonochromaticLaser
         @assert -1≤ellip≤1  "[Cos2Laser] Ellipticity must be in [-1,1]."
         new(peakInt,waveLen,cycNum,ellip,azi,cep,t_shift)
     end
-    function Cos2Laser(;peakInt, waveLen, cycNum, ellip, azi=0., cep=0., t_shift=0.)
-        Cos2Laser(peakInt,waveLen,cycNum,ellip,azi,cep,t_shift)
-    end
     """
     Constructs a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
     # Parameters
