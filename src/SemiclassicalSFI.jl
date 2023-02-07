@@ -9,7 +9,6 @@ using DiffEqGPU, CUDA
 using LinearAlgebra
 using StaticArrays
 using Parameters
-using Base.Threads
 using HDF5
 using Dates
 using ProgressMeter
@@ -55,7 +54,7 @@ Performs a semiclassical simulation with given parameters.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                      : Relative error tolerance when solving classical trajectories.
 - `simu_nondipole = false`                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
-- `simu_GPU = false`                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.18.
+- `simu_GPU = false`                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.19.
 - `rate_monteCarlo = false`                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
 - `rate_ionRatePrefix = <:ExpRate>`         : Prefix of the exponential term in the ionization rate.
 - `rydberg_collect = false`                 : Determines whether rydberg final states are collected.
@@ -112,28 +111,30 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     adk_ADKTunExit)
     #* compatibility check
     # GPU acceleration requires [DiffEqGPU] up to v1.18
-    if simu_GPU
-        dep = Pkg.dependencies()
-        for (k,v::Pkg.API.PackageInfo) in dep
-            if v.name == "DiffEqGPU"
-                if v.version < VersionNumber("1.18")
-                    error("Package [DiffEqGPU]'s version is lower than required version [v1.18].")
-                elseif v.version == VersionNumber("1.18")
-                    @warn "Package [DiffEqGPU]'s version is [v1.18], you may encounter exceptions during ensemble simulation. Upgrade to [v1.19] to avoid this problem."
-                end
-            end
-        end
-    end
+    #* DiffEqGPU version would be restrained to ≥v1.19
+    # if simu_GPU
+    #     dep = Pkg.dependencies()
+    #     for (k,v::Pkg.API.PackageInfo) in dep
+    #         if v.name == "DiffEqGPU"
+    #             if v.version < VersionNumber("1.18")
+    #                 error("Package [DiffEqGPU]'s version is lower than required version [v1.18].")
+    #             elseif v.version == VersionNumber("1.18")
+    #                 @warn "Package [DiffEqGPU]'s version is [v1.18], you may encounter exceptions during ensemble simulation. Upgrade to [v1.19] to avoid this problem."
+    #             end
+    #         end
+    #     end
+    # end
     #* initialize sample provider.
     sp::ElectronSampleProvider = initSampleProvider(;kwargs...)
     #* launch electrons and summarize.
     #   * prepare storage
+    nthreads = Threads.nthreads()
     # ionization amplitude (ionAmpFinal is for final data, ionAmpConnect is for temporary cache)
     ionProbFinal, ionProbSumTemp, ionProbCollect =
         if simu_phaseMethod == :CTMC
-            zeros(Float64, finalMomentum_pNum),     zeros(Float64, finalMomentum_pNum),     zeros(Float64, tuple(finalMomentum_pNum...,nthreads()))
+            zeros(Float64, finalMomentum_pNum),     zeros(Float64, finalMomentum_pNum),     zeros(Float64, tuple(finalMomentum_pNum...,nthreads))
         else
-            zeros(ComplexF64, finalMomentum_pNum),  zeros(ComplexF64, finalMomentum_pNum),  zeros(ComplexF64, tuple(finalMomentum_pNum...,nthreads()))
+            zeros(ComplexF64, finalMomentum_pNum),  zeros(ComplexF64, finalMomentum_pNum),  zeros(ComplexF64, tuple(finalMomentum_pNum...,nthreads))
         end
     # rydberg amplitude
     rydProbFinal, rydProbSumTemp, rydProbCollect =
@@ -141,11 +142,11 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             if simu_phaseMethod == :CTMC
                 zeros(Float64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
                 zeros(Float64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
-                zeros(Float64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1, nthreads())
+                zeros(Float64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1, nthreads)
             else
                 zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
                 zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1),
-                zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1, nthreads())
+                zeros(ComplexF64, rydberg_prinQNMax, rydberg_prinQNMax, 2*rydberg_prinQNMax+1, nthreads)
             end
         else
             nothing, nothing, nothing
@@ -242,10 +243,11 @@ function launchAndCollect!( init,
     batchSize = size(init,2)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
-    classRates_ion              = zeros(nthreads())
-    classRates_ion_uncollected  = zeros(nthreads())
-    classRates_ryd              = zeros(nthreads())
-    classRates_ryd_uncollected  = zeros(nthreads())
+    nthreads = Threads.nthreads()
+    classRates_ion              = zeros(nthreads)
+    classRates_ion_uncollected  = zeros(nthreads)
+    classRates_ryd              = zeros(nthreads)
+    classRates_ryd_uncollected  = zeros(nthreads)
 
     # create ODE problem and solve the ensemble.
     probDim = (simu_phaseMethod == :CTMC) ? 6 : 7
@@ -264,7 +266,8 @@ function launchAndCollect!( init,
             solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(0.), trajectories=batchSize, dt=0.1, adaptive=true, save_everystep=false)
         end
     # collect and summarize.
-    @threads for i in 1:batchSize
+    Threads.@threads for i in 1:batchSize
+        threadid = Threads.threadid()
         x0,y0,z0,px0,py0,pz0 = sol.u[i][ 1 ][1:6]
         x, y, z, px, py, pz  = sol.u[i][end][1:6]
         if px^2+py^2+pz^2>(finalMomentum_pMax[1]^2+finalMomentum_pMax[2]^2+finalMomentum_pMax[3]^2)*10  # possibly anomalous electron (due to [DiffEqGPU]), intercept and cancel.
@@ -288,24 +291,24 @@ function launchAndCollect!( init,
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
         if E_inf ≥ 0    # finally ionized.
-            classRates_ion[threadid()] += init[8,i]
+            classRates_ion[threadid] += init[8,i]
             p_inf = sqrt(2E_inf)
             a_vec = p_vec × L_vec - AsympNuclCharge(target) * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
             pxIdx = round(Int, (p_inf_vec[1]+finalMomentum_pMax[1])/(finalMomentum_pMax[1]/finalMomentum_pNum[1]*2))
             pyIdx = round(Int, (p_inf_vec[2]+finalMomentum_pMax[2])/(finalMomentum_pMax[2]/finalMomentum_pNum[2]*2))
             pzIdx = round(Int, (p_inf_vec[3]+finalMomentum_pMax[3])/(finalMomentum_pMax[3]/finalMomentum_pNum[3]*2))
-            if checkbounds(Bool, ionProbCollect, pxIdx,pyIdx,pzIdx, threadid())
+            if checkbounds(Bool, ionProbCollect, pxIdx,pyIdx,pzIdx, threadid)
                 if simu_phaseMethod == :CTMC
-                    ionProbCollect[pxIdx,pyIdx,pzIdx, threadid()] += init[8,i] # ionRate
+                    ionProbCollect[pxIdx,pyIdx,pzIdx, threadid] += init[8,i] # ionRate
                 else
-                    ionProbCollect[pxIdx,pyIdx,pzIdx, threadid()] += sqrt(init[8,i])*exp(1im*init[9,i]) # sqrt(ionRate)*phaseFactor
+                    ionProbCollect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(init[8,i])*exp(1im*init[9,i]) # sqrt(ionRate)*phaseFactor
                 end
             else
-                classRates_ion_uncollected[threadid()] += init[8,i]
+                classRates_ion_uncollected[threadid] += init[8,i]
             end
         else            # finally become rydberg.
-            classRates_ryd[threadid()] += init[8,i]
+            classRates_ryd[threadid] += init[8,i]
             if rydberg_collect
                 n = round(Int, AsympNuclCharge(target) / sqrt(-2E_inf))
                 l = round(Int, (sqrt(1.0+4L2)-1.0)/2)
@@ -313,17 +316,17 @@ function launchAndCollect!( init,
                 nIdx = n
                 lIdx = l+1
                 mIdx = m+rydberg_prinQNMax
-                if checkbounds(Bool, rydProbCollect, nIdx,lIdx,mIdx, threadid())
+                if checkbounds(Bool, rydProbCollect, nIdx,lIdx,mIdx, threadid)
                     if simu_phaseMethod == :CTMC
-                        rydProbCollect[nIdx,lIdx,mIdx,threadid()] += init[8,i]
+                        rydProbCollect[nIdx,lIdx,mIdx,threadid] += init[8,i]
                     else
-                        rydProbCollect[nIdx,lIdx,mIdx,threadid()] += sqrt(init[8,i])*exp(1im*init[9,i])
+                        rydProbCollect[nIdx,lIdx,mIdx,threadid] += sqrt(init[8,i])*exp(1im*init[9,i])
                     end
                 else
-                    classRates_ryd_uncollected[threadid()] += init[8,i]
+                    classRates_ryd_uncollected[threadid] += init[8,i]
                 end
             else
-                classRates_ryd_uncollected[threadid()] += init[8,i]
+                classRates_ryd_uncollected[threadid] += init[8,i]
             end
         end
     end
