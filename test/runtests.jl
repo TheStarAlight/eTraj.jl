@@ -1,6 +1,6 @@
 using SemiclassicalSFI
 using Test
 
-@testset "SemiclassicalSFI.jl" begin
-    # Write your tests here.
+@testset verbose=true "SemiclassicalSFI" begin
+    include("PySCFMolecularCalculator_test.jl")
 end
