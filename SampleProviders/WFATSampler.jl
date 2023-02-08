@@ -33,8 +33,8 @@ struct WFATSampler <: ElectronSampleProvider
                             kwargs...   # kwargs are surplus params.
                             )
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "[WFATSampleProvider] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "[WFATSampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (sample_tSampleNum>0) "[WFATSampler] Invalid time sample number $sample_tSampleNum."
+        @assert (ss_pdNum>0 && ss_pzNum>0) "[WFATSampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
         # load WFAT IntData.
         if ! (mol_ionOrbitRelHOMO in MolWFATAvailableIndices(target))
             MolCalcWFATData!(target, mol_ionOrbitRelHOMO)
@@ -46,22 +46,22 @@ struct WFATSampler <: ElectronSampleProvider
         lMax = size(intdata,3) - 1
         # check IonRate prefix support.
         if ! (rate_ionRatePrefix in [:ExpRate])
-            error("[WFATSampleProvider] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+            error("[WFATSampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
         end
         # check Keldysh parameter & over-barrier condition.
         F0 = LaserF0(laser)
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         if γ0 ≥ 0.5
-            @warn "[WFATSampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+            @warn "[WFATSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
         elseif γ0 ≥ 1.0
-            @warn "[WFATSampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            @warn "[WFATSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         F_crit = Ip^2/4/(1-sqrt(Ip/2))
         tunExit = :Para
         if F0 ≥ F_crit*2/3
-            @warn "[WFATSampleProvider] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
+            @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
         elseif F0 ≥ F_crit
-            @warn "[WFATSampleProvider] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied. Tunneling exit method switched from [Para] to [IpF]."
+            @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied. Tunneling exit method switched from [Para] to [IpF]."
             tunExit = :IpF
         end
         # finish initialization.
@@ -155,7 +155,7 @@ end
 
 "Gets the structure factor g of the molecule target of a given channel under a specific Euler angle (β,γ)."
 function _getMolStructFactor_g(sp::WFATSampler, nξ::Int, m::Int, β, γ)
-    @assert nξ≥0 "[WFATSampleProvider] The nξ must be positive."
+    @assert nξ≥0 "[WFATSampler] The nξ must be positive."
     sum = zero(ComplexF64)
     for l in abs(m):sp.wfat_lMax, m_ in -l:l
         sum += sp.wfat_intdata[nξ+1,m+sp.wfat_mMax+1,l+1,m_+l+1] * WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
