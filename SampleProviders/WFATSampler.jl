@@ -61,7 +61,7 @@ struct WFATSampler <: ElectronSampleProvider
         if F0 ≥ F_crit*2/3
             @warn "[WFATSampleProvider] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
         elseif F0 ≥ F_crit
-            @warn "[WFATSampleProvider] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied."
+            @warn "[WFATSampleProvider] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied. Tunneling exit method switched from [Para] to [IpF]."
             tunExit = :IpF
         end
         # finish initialization.

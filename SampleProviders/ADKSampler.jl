@@ -11,7 +11,7 @@ struct ADKSampler <: ElectronSampleProvider
     mc_ptMax        ::Real;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
-    ADKTunExit      ::Symbol;           # currently supports :IpF, :FDM, :ADK.
+    ADKTunExit      ::Symbol;           # currently supports :IpF, :FDM, :Para.
     function ADKSampler(;   laser               ::Laser,
                             target              ::SAEAtomBase,
                             sample_tSpan        ::Tuple{<:Real,<:Real},
