@@ -4,7 +4,7 @@ using QuadGK
 using Base.Threads
 
 "Sample provider which yields electron samples through SFA formula, matching `IonRateMethod=:SFA`"
-struct SFASampleProvider <: ElectronSampleProvider
+struct SFASampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::SAEAtomBase;          # SFA only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
@@ -12,18 +12,18 @@ struct SFASampleProvider <: ElectronSampleProvider
     ss_pzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
-    function SFASampleProvider(;laser               ::Laser,
-                                target              ::SAEAtomBase,
-                                sample_tSpan        ::Tuple{<:Real,<:Real},
-                                sample_tSampleNum   ::Int,
-                                simu_phaseMethod    ::Symbol,
-                                rate_ionRatePrefix  ::Symbol,
-                                ss_pdMax            ::Real,
-                                ss_pdNum            ::Int,
-                                ss_pzMax            ::Real,
-                                ss_pzNum            ::Int,
-                                kwargs...   # kwargs are surplus params.
-                                )
+    function SFASampler(;   laser               ::Laser,
+                            target              ::SAEAtomBase,
+                            sample_tSpan        ::Tuple{<:Real,<:Real},
+                            sample_tSampleNum   ::Int,
+                            simu_phaseMethod    ::Symbol,
+                            rate_ionRatePrefix  ::Symbol,
+                            ss_pdMax            ::Real,
+                            ss_pdNum            ::Int,
+                            ss_pzMax            ::Real,
+                            ss_pzNum            ::Int,
+                            kwargs...   # kwargs are surplus params.
+                            )
         # check phase method support.
         if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
             error("[SFASampleProvider] Undefined phase method [$simu_phaseMethod].")
@@ -47,12 +47,12 @@ struct SFASampleProvider <: ElectronSampleProvider
 end
 
 "Gets the total number of batches."
-function batchNum(sp::SFASampleProvider)
+function batchNum(sp::SFASampler)
     return length(sp.tSamples)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA method."
-function generateElectronBatch(sp::SFASampleProvider, batchId::Int)
+function generateElectronBatch(sp::SFASampler, batchId::Int)
     tr   = sp.tSamples[batchId]  # real part of time
     Ax::Function = LaserAx(sp.laser)
     Ay::Function = LaserAy(sp.laser)

@@ -1,6 +1,6 @@
 
 "Sample provider which yields electron samples through ADK rate formula, matching `IonRateMethod=:ADK`."
-struct ADKSampleProvider <: ElectronSampleProvider
+struct ADKSampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::SAEAtomBase;          # ADK only supports [SAEAtomBase].
     monteCarlo      ::Bool;
@@ -12,24 +12,24 @@ struct ADKSampleProvider <: ElectronSampleProvider
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     ADKTunExit      ::Symbol;           # currently supports :IpF, :FDM, :ADK.
-    function ADKSampleProvider(;laser               ::Laser,
-                                target              ::SAEAtomBase,
-                                sample_tSpan        ::Tuple{<:Real,<:Real},
-                                sample_tSampleNum   ::Int,
-                                rate_monteCarlo     ::Bool,
-                                simu_phaseMethod    ::Symbol,
-                                rate_ionRatePrefix  ::Symbol,
-                                adk_ADKTunExit      ::Symbol,
-                                    #* for step-sampling (!rate_monteCarlo)
-                                ss_pdMax            ::Real,
-                                ss_pdNum            ::Int,
-                                ss_pzMax            ::Real,
-                                ss_pzNum            ::Int,
-                                    #* for Monte-Carlo-sampling (rate_monteCarlo)
-                                mc_tBatchSize       ::Int,
-                                mc_ptMax            ::Real,
-                                kwargs...   # kwargs are surplus params.
-                                )
+    function ADKSampler(;   laser               ::Laser,
+                            target              ::SAEAtomBase,
+                            sample_tSpan        ::Tuple{<:Real,<:Real},
+                            sample_tSampleNum   ::Int,
+                            rate_monteCarlo     ::Bool,
+                            simu_phaseMethod    ::Symbol,
+                            rate_ionRatePrefix  ::Symbol,
+                            adk_ADKTunExit      ::Symbol,
+                                #* for step-sampling (!rate_monteCarlo)
+                            ss_pdMax            ::Real,
+                            ss_pdNum            ::Int,
+                            ss_pzMax            ::Real,
+                            ss_pzNum            ::Int,
+                                #* for Monte-Carlo-sampling (rate_monteCarlo)
+                            mc_tBatchSize       ::Int,
+                            mc_ptMax            ::Real,
+                            kwargs...   # kwargs are surplus params.
+                            )
         F0 = LaserF0(laser)
         Ip = IonPotential(target)
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
@@ -89,11 +89,11 @@ struct ADKSampleProvider <: ElectronSampleProvider
     end
 end
 "Gets the total number of batches."
-function batchNum(sp::ADKSampleProvider)
+function batchNum(sp::ADKSampler)
     return length(sp.tSamples)
 end
 "Generates a batch of electrons of `batchId` from `sp` using ADK method."
-function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
+function generateElectronBatch(sp::ADKSampler, batchId::Int)
     t = sp.tSamples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)

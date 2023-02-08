@@ -5,7 +5,7 @@ using WignerD
 using Base.Threads
 
 "Sample provider which yields electron samples through WFAT formula, matching `IonRateMethod=:WFAT`"
-struct WFATSampleProvider <: ElectronSampleProvider
+struct WFATSampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::Molecule;     # WFAT only supports [Molecule]
     tSamples        ::AbstractVector;
@@ -20,19 +20,18 @@ struct WFATSampleProvider <: ElectronSampleProvider
     wfat_mMax       ::Int;
     wfat_lMax       ::Int;
 
-    function WFATSampleProvider(;
-                                laser               ::Laser,
-                                target              ::Molecule,
-                                sample_tSpan        ::Tuple{<:Real,<:Real},
-                                sample_tSampleNum   ::Int,
-                                rate_ionRatePrefix  ::Symbol,
-                                ss_pdMax            ::Real,
-                                ss_pdNum            ::Int,
-                                ss_pzMax            ::Real,
-                                ss_pzNum            ::Int,
-                                mol_ionOrbitRelHOMO ::Int,
-                                kwargs...   # kwargs are surplus params.
-                                )
+    function WFATSampler(;  laser               ::Laser,
+                            target              ::Molecule,
+                            sample_tSpan        ::Tuple{<:Real,<:Real},
+                            sample_tSampleNum   ::Int,
+                            rate_ionRatePrefix  ::Symbol,
+                            ss_pdMax            ::Real,
+                            ss_pdNum            ::Int,
+                            ss_pzMax            ::Real,
+                            ss_pzNum            ::Int,
+                            mol_ionOrbitRelHOMO ::Int,
+                            kwargs...   # kwargs are surplus params.
+                            )
         # check sampling parameters.
         @assert (sample_tSampleNum>0) "[WFATSampleProvider] Invalid time sample number $sample_tSampleNum."
         @assert (ss_pdNum>0 && ss_pzNum>0) "[WFATSampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
@@ -77,12 +76,12 @@ struct WFATSampleProvider <: ElectronSampleProvider
 end
 
 "Gets the total number of batches."
-function batchNum(sp::WFATSampleProvider)
+function batchNum(sp::WFATSampler)
     return length(sp.tSamples)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using WFAT method."
-function generateElectronBatch(sp::WFATSampleProvider, batchId::Int)
+function generateElectronBatch(sp::WFATSampler, batchId::Int)
     t = sp.tSamples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
@@ -155,7 +154,7 @@ function generateElectronBatch(sp::WFATSampleProvider, batchId::Int)
 end
 
 "Gets the structure factor g of the molecule target of a given channel under a specific Euler angle (β,γ)."
-function _getMolStructFactor_g(sp::WFATSampleProvider, nξ::Int, m::Int, β, γ)
+function _getMolStructFactor_g(sp::WFATSampler, nξ::Int, m::Int, β, γ)
     @assert nξ≥0 "[WFATSampleProvider] The nξ must be positive."
     sum = zero(ComplexF64)
     for l in abs(m):sp.wfat_lMax, m_ in -l:l
