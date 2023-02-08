@@ -4,9 +4,9 @@ using StaticArrays
 struct SAEAtom <: SAEAtomBase
 # should implement TargetPotential, TargetForce, TrajectoryFunction, ADKRateExp.
     "Ionization potential of the atom."
-    IonPotential;
+    Ip;
     "Asymptotic charge of the inner nucleus."
-    NuclCharge;
+    nucl_charge;
     "Atomic parameters used to fit the atomic potential. See [J. Phys. B 38 2593 (2005)]"
     a1;
     b1;
@@ -22,9 +22,9 @@ struct SAEAtom <: SAEAtomBase
 end
 
 "Gets the ionization potential of the atom."
-IonPotential(t::SAEAtom) = t.IonPotential
+IonPotential(t::SAEAtom) = t.Ip
 "Gets the asymptotic nuclear charge of the atom."
-AsympNuclCharge(t::SAEAtom) = t.NuclCharge
+AsympNuclCharge(t::SAEAtom) = t.nucl_charge
 "Gets the name of the atom."
 TargetName(t::SAEAtom) = t.name
 """
@@ -34,7 +34,7 @@ Expression: V(r) = - [Z + a1*exp(-b1*r) + a2*r*exp(-b2*r) + a3*exp(-b3*r)] / r.
 function TargetPotential(t::SAEAtom)
     return function(x,y,z)
         r = sqrt(x^2+y^2+z^2)
-        return - (t.NuclCharge + t.a1*exp(-t.b1*r) + t.a2*r*exp(-t.b2*r) + t.a3*exp(-t.b3*r)) / r
+        return - (t.nucl_charge + t.a1*exp(-t.b1*r) + t.a2*r*exp(-t.b2*r) + t.a3*exp(-t.b3*r)) / r
     end
 end
 """
@@ -44,13 +44,13 @@ Expression: F(rvec) = - rvec / r^3 * [ Z + a1*(1+b1*r)*exp(-b1*r) + a3*(1+b3*r)*
 function TargetForce(t::SAEAtom)
     return function(x,y,z)
         r = sqrt(x^2+y^2+z^2)
-        return (-x,-y,-z) .* (r^(-3) * (t.NuclCharge + t.a1*(1+t.b1*r)*exp(-t.b1*r) + t.a3*(1+t.b3*r)*exp(-t.b3*r)) + t.a2*t.b2/r * exp(-t.b2*r))
+        return (-x,-y,-z) .* (r^(-3) * (t.nucl_charge + t.a1*(1+t.b1*r)*exp(-t.b1*r) + t.a3*(1+t.b3*r)*exp(-t.b3*r)) + t.a2*t.b2/r * exp(-t.b2*r))
     end
 end
 "Gets the trajectory function according to given parameter."
 function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, phaseMethod::Symbol, nonDipole::Bool; kwargs...)
-    Z  = t.NuclCharge
-    Ip = t.IonPotential
+    Z  = t.nucl_charge
+    Ip = t.Ip
     a1,b1,a2,b2,a3,b3 = t.a1,t.b1,t.a2,t.b2,t.a3,t.b3
     return if ! nonDipole
         if phaseMethod == :CTMC
@@ -108,7 +108,7 @@ Azimuthal angle of field `φ`,
 momentum's transverse component `pd` (in xy plane),
 and propagation-direction (which is Z axis) component `pz`.
 """
-ADKRateExp(t::SAEAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.IonPotential)^1.5/3F)
+ADKRateExp(t::SAEAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.Ip)^1.5/3F)
 
 "Prints the information of the atom."
-Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.IonPotential), Z=$(t.NuclCharge)")
+Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge)")
