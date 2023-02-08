@@ -29,22 +29,22 @@ AsympNuclCharge(t::SAEAtom) = t.NuclCharge
 TargetName(t::SAEAtom) = t.name
 """
 Gets the potential function of the atom.
-Expression: V(r) = - [Z + a1*exp(-b1*r) + a2*exp(-b2*r) + a3*exp(-b3*r)] / r.
+Expression: V(r) = - [Z + a1*exp(-b1*r) + a2*r*exp(-b2*r) + a3*exp(-b3*r)] / r.
 """
 function TargetPotential(t::SAEAtom)
     return function(x,y,z)
         r = sqrt(x^2+y^2+z^2)
-        return - (t.NuclCharge + t.a1*exp(-t.b1*r) + t.a2*exp(-t.b2*r) + t.a3*exp(-t.b3*r)) / r
+        return - (t.NuclCharge + t.a1*exp(-t.b1*r) + t.a2*r*exp(-t.b2*r) + t.a3*exp(-t.b3*r)) / r
     end
 end
 """
 Gets the force exerted on the electron from the atom (which is the neg-grad of potential).
-Expression: F(rvec) = - rvec / r^3 * [ Z + a1*(1+b1*r)*exp(-b1*r) + a2*(1+b2*r)*exp(-b2*r) + a3*(1+b3*r)*exp(-b3*r) ]
+Expression: F(rvec) = - rvec / r^3 * [ Z + a1*(1+b1*r)*exp(-b1*r) + a3*(1+b3*r)*exp(-b3*r) ] - rvec * a2*b2/r * exp(-b2*r).
 """
 function TargetForce(t::SAEAtom)
     return function(x,y,z)
         r = sqrt(x^2+y^2+z^2)
-        return (-x,-y,-z) .* (r^(-3) * (t.NuclCharge + t.a1*(1+t.b1*r)*exp(-t.b1*r) + t.a2*(1+t.b2*r)*exp(-t.b2*r) + t.a3*(1+t.b3*r)*exp(-t.b3*r)))
+        return (-x,-y,-z) .* (r^(-3) * (t.NuclCharge + t.a1*(1+t.b1*r)*exp(-t.b1*r) + t.a3*(1+t.b3*r)*exp(-t.b3*r)) + t.a2*t.b2/r * exp(-t.b2*r))
     end
 end
 "Gets the trajectory function according to given parameter."
@@ -57,7 +57,7 @@ function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, ph
             function traj_dipole_ctmc(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 r = sqrt(u[1]^2+u[2]^2+u[3]^2)
-                tFx, tFy, tFz = (u[1],u[2],u[3]) .* -(r^(-3)*(Z+a1*(1+b1*r)*exp(-b1*r)+a2*(1+b2*r)*exp(-b2*r)+a3*(1+b3*r)*exp(-b3*r)))
+                tFx, tFy, tFz = (u[1],u[2],u[3]) .* -(r^(-3)*(Z+a1*(1+b1*r)*exp(-b1*r)+a3*(1+b3*r)*exp(-b3*r)) + a2*b2/r*exp(-b2*r))
                 du1 = u[4]
                 du2 = u[5]
                 du3 = u[6]
@@ -70,7 +70,7 @@ function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, ph
             function traj_dipole_qtmc(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 r = sqrt(u[1]^2+u[2]^2+u[3]^2)
-                tFx, tFy, tFz = (u[1],u[2],u[3]) .* -(r^(-3)*(Z+a1*(1+b1*r)*exp(-b1*r)+a2*(1+b2*r)*exp(-b2*r)+a3*(1+b3*r)*exp(-b3*r)))
+                tFx, tFy, tFz = (u[1],u[2],u[3]) .* -(r^(-3)*(Z+a1*(1+b1*r)*exp(-b1*r)+a3*(1+b3*r)*exp(-b3*r)) + a2*b2/r*exp(-b2*r))
                 du1 = u[4]
                 du2 = u[5]
                 du3 = u[6]
@@ -78,14 +78,14 @@ function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, ph
                 du5 = tFy-laserFy(t)
                 du6 = tFz
                 # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]))
-                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - (Z+a1*exp(-b1*r)+a2*exp(-b2*r)+a3*exp(-b3*r))/r)
+                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - (Z+a1*exp(-b1*r)+a2*r*exp(-b2*r)+a3*exp(-b3*r))/r)
                 @SVector [du1,du2,du3,du4,du5,du6,du7]
             end
         elseif phaseMethod == :SCTS
             function traj_dipole_scts(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 r = sqrt(u[1]^2+u[2]^2+u[3]^2)
-                tFx, tFy, tFz = (u[1],u[2],u[3]) .* -(r^(-3)*(Z+a1*(1+b1*r)*exp(-b1*r)+a2*(1+b2*r)*exp(-b2*r)+a3*(1+b3*r)*exp(-b3*r)))
+                tFx, tFy, tFz = (u[1],u[2],u[3]) .* -(r^(-3)*(Z+a1*(1+b1*r)*exp(-b1*r)+a3*(1+b3*r)*exp(-b3*r)) + a2*b2/r*exp(-b2*r))
                 du1 = u[4]
                 du2 = u[5]
                 du3 = u[6]
@@ -93,7 +93,7 @@ function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, ph
                 du5 = tFy-laserFy(t)
                 du6 = tFz
                 # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - (Z+a1*exp(-b1*r)+a2*exp(-b2*r)+a3*exp(-b3*r))/r + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - (Z+a1*exp(-b1*r)+a2*r*exp(-b2*r)+a3*exp(-b3*r))/r + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
                 @SVector [du1,du2,du3,du4,du5,du6,du7]
             end
         end
