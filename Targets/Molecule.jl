@@ -185,7 +185,7 @@ Gets the WFAT structure factor \$G_{n_ξ m}\$ according to the given Euler angle
 Note: the rotational Euler angles of the molecule would not be applied.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `nξ`  : Parabolic quantum number nξ=0,1,2,⋯ (nξ up to 5 is calculated by default).
-- `m`   : Parabolic quantum number nξ=⋯,-1,0,1,⋯ (|m| up to 5 is calculated by default).
+- `m`   : Parabolic quantum number m=⋯,-1,0,1,⋯ (|m| up to 5 is calculated by default).
 - `β`   : Euler angle β, can be passed as a `Real` value or a `Vector` of `Real`.
 - `γ`   : Euler angle γ, can be passed as a `Real` value or a `Vector` of `Real`.
 """
