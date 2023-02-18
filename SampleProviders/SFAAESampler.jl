@@ -1,7 +1,7 @@
 using ForwardDiff
 
 "Sample provider which yields electron samples through SFA-AE formula, matching `IonRateMethod=:SFA_AE`"
-struct SFAAESampleProvider <: ElectronSampleProvider
+struct SFAAESampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::SAEAtomBase;          # SFA-AE only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
@@ -9,38 +9,38 @@ struct SFAAESampleProvider <: ElectronSampleProvider
     ss_pzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
-    function SFAAESampleProvider(;  laser               ::Laser,
-                                    target              ::SAEAtomBase,
-                                    sample_tSpan        ::Tuple{<:Real,<:Real},
-                                    sample_tSampleNum   ::Int,
-                                    simu_phaseMethod    ::Symbol,
-                                    rate_ionRatePrefix  ::Symbol,
-                                    ss_pdMax            ::Real,
-                                    ss_pdNum            ::Int,
-                                    ss_pzMax            ::Real,
-                                    ss_pzNum            ::Int,
-                                    kwargs...   # kwargs are surplus params.
-                                    )
+    function SFAAESampler(; laser               ::Laser,
+                            target              ::SAEAtomBase,
+                            sample_tSpan        ::Tuple{<:Real,<:Real},
+                            sample_tSampleNum   ::Int,
+                            simu_phaseMethod    ::Symbol,
+                            rate_ionRatePrefix  ::Symbol,
+                            ss_pdMax            ::Real,
+                            ss_pdNum            ::Int,
+                            ss_pzMax            ::Real,
+                            ss_pzNum            ::Int,
+                            kwargs...   # kwargs are surplus params.
+                            )
         F0 = LaserF0(laser)
         Ip = IonPotential(target)
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         # check phase method support.
         if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
-            error("[SFAAESampleProvider] Undefined phase method [$simu_phaseMethod].")
+            error("[SFAAESampler] Undefined phase method [$simu_phaseMethod].")
             return
         end
         # check IonRate prefix support.
         if ! (rate_ionRatePrefix in [:ExpRate])
-            error("[SFAAESampleProvider] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+            error("[SFAAESampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
             return
         end
         # check Keldysh paramater.
         if γ0 ≥ 1.0
-            @warn "[SFAAESampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            @warn "[SFAAESampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "[SFAAESampleProvider] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "[SFAAESampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (sample_tSampleNum>0) "[SFAAESampler] Invalid time sample number $sample_tSampleNum."
+        @assert (ss_pdNum>0 && ss_pzNum>0) "[SFAAESampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
         # finish initialization.
         return new(laser, target,
                 range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
@@ -51,12 +51,12 @@ struct SFAAESampleProvider <: ElectronSampleProvider
 end
 
 "Gets the total number of batches."
-function batchNum(sp::SFAAESampleProvider)
+function batchNum(sp::SFAAESampler)
     return length(sp.tSamples)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA-AE method."
-function generateElectronBatch(sp::SFAAESampleProvider, batchId::Int)
+function generateElectronBatch(sp::SFAAESampler, batchId::Int)
     t = sp.tSamples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)

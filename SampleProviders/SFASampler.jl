@@ -4,7 +4,7 @@ using QuadGK
 using Base.Threads
 
 "Sample provider which yields electron samples through SFA formula, matching `IonRateMethod=:SFA`"
-struct SFASampleProvider <: ElectronSampleProvider
+struct SFASampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::SAEAtomBase;          # SFA only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
@@ -12,31 +12,31 @@ struct SFASampleProvider <: ElectronSampleProvider
     ss_pzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
-    function SFASampleProvider(;laser               ::Laser,
-                                target              ::SAEAtomBase,
-                                sample_tSpan        ::Tuple{<:Real,<:Real},
-                                sample_tSampleNum   ::Int,
-                                simu_phaseMethod    ::Symbol,
-                                rate_ionRatePrefix  ::Symbol,
-                                ss_pdMax            ::Real,
-                                ss_pdNum            ::Int,
-                                ss_pzMax            ::Real,
-                                ss_pzNum            ::Int,
-                                kwargs...   # kwargs are surplus params.
-                                )
+    function SFASampler(;   laser               ::Laser,
+                            target              ::SAEAtomBase,
+                            sample_tSpan        ::Tuple{<:Real,<:Real},
+                            sample_tSampleNum   ::Int,
+                            simu_phaseMethod    ::Symbol,
+                            rate_ionRatePrefix  ::Symbol,
+                            ss_pdMax            ::Real,
+                            ss_pdNum            ::Int,
+                            ss_pzMax            ::Real,
+                            ss_pzNum            ::Int,
+                            kwargs...   # kwargs are surplus params.
+                            )
         # check phase method support.
         if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
-            error("[SFASampleProvider] Undefined phase method [$simu_phaseMethod].")
+            error("[SFASampler] Undefined phase method [$simu_phaseMethod].")
             return
         end
         # check IonRate prefix support.
         if ! (rate_ionRatePrefix in [:ExpRate])
-            error("[SFASampleProvider] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+            error("[SFASampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
             return
         end
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "[SFASampleProvider] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "[SFASampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (sample_tSampleNum>0) "[SFASampler] Invalid time sample number $sample_tSampleNum."
+        @assert (ss_pdNum>0 && ss_pzNum>0) "[SFASampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
         # finish initialization.
         return new(laser, target,
                 range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
@@ -47,12 +47,12 @@ struct SFASampleProvider <: ElectronSampleProvider
 end
 
 "Gets the total number of batches."
-function batchNum(sp::SFASampleProvider)
+function batchNum(sp::SFASampler)
     return length(sp.tSamples)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA method."
-function generateElectronBatch(sp::SFASampleProvider, batchId::Int)
+function generateElectronBatch(sp::SFASampler, batchId::Int)
     tr   = sp.tSamples[batchId]  # real part of time
     Ax::Function = LaserAx(sp.laser)
     Ay::Function = LaserAy(sp.laser)
@@ -117,7 +117,7 @@ function generateElectronBatch(sp::SFASampleProvider, batchId::Int)
         return nothing
     end
     if sum(sample_count_thread) < pdNum*pzNum
-        @warn "[SFASampleProvider] Found no root in $(pdNum*pzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
+        @warn "[SFASampler] Found no root in $(pdNum*pzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
     end
     # collect electron samples from different threads.
     init = zeros(Float64, dim, sum(sample_count_thread))
