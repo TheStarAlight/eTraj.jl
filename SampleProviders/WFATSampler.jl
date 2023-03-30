@@ -58,11 +58,11 @@ struct WFATSampler <: ElectronSampleProvider
         end
         F_crit = Ip^2/4/(1-sqrt(Ip/2))
         tunExit = :Para
-        if F0 ≥ F_crit*2/3
-            @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
-        elseif F0 ≥ F_crit
+        if F0 ≥ F_crit
             @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied. Tunneling exit method switched from [Para] to [IpF]."
             tunExit = :IpF
+        elseif F0 ≥ F_crit*2/3
+            @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
         end
         # finish initialization.
         return new( laser, target,
@@ -100,8 +100,12 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
         return nothing
     end
 
-    # determining tunneling exit position (using ADK's parabolic tunneling exit method)
-    r_exit = (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
+    # determining tunneling exit position (using ADK's parabolic tunneling exit method if tunExit=:Para)
+    r_exit = if sp.tunExit == :Para
+        (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
+    else
+        Ip / Ft
+    end
 
     # determining Euler angles (β,γ) (α contributes nothing to Γ, thus is neglected)
     mα,mβ,mγ = MolRotation(sp.target)
