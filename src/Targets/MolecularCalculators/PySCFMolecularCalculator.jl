@@ -1,5 +1,4 @@
 using ..Targets
-using Base.Threads
 using SpecialFunctions
 using SphericalHarmonics
 using Folds
@@ -178,7 +177,7 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     dr   = r_grid[2]-r_grid[1]
     dθ   = θ_grid[2]-θ_grid[1]
     dϕ   = ϕ_grid[2]-ϕ_grid[1]
-    @threads for i in 1:N
+    Threads.@threads for i in 1:N
         ir,iθ,iϕ = ptIdx2sphCoordIdx(i)
         r,θ,ϕ = r_grid[ir],θ_grid[iθ],ϕ_grid[iϕ]
         pt_x[i] = r*sin(θ)*cos(ϕ)
@@ -213,7 +212,7 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     @einsum μ[i] := orbit_coeff[α] * orbit_coeff[β] * dip_int[i,α,β]
 
     #*  1.2 Calculate the asymptotic Coulomb potential Z/r
-    @threads for ir in 1:grid_rNum
+    Threads.@threads for ir in 1:grid_rNum
         Vc_ψ0[(ir-1)*grid_ϕNum*grid_θNum+1:ir*grid_ϕNum*grid_θNum] .+= Z / r_grid[ir]
     end
 
@@ -313,7 +312,7 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
                                     )::Cvoid
     end
     #TODO: add support for cintopt.
-    @threads for i in 1:batch_num
+    Threads.@threads for i in 1:batch_num
         pt_idx = if i < batch_num
             CartesianIndices((((i-1)*batch_size+1): i*batch_size,))
         else
@@ -407,7 +406,7 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     #*  2.2 Create pre-computation data to accelerate.
     R_precomp_data = zeros(sf_nξMax+1, 2*sf_mMax+1, sf_lMax+1, grid_rNum)
     # obtain the R_{nξ,m,l}(r) by indexing [nξ+1,m+mMax+1,l+1,r_idx].
-    @threads for l in 0:sf_lMax
+    Threads.@threads for l in 0:sf_lMax
         R_precomp_data[1,1,l+1,:] = map(r->R_(l,Z,κ,r), r_grid)
         for nξ in 0:sf_nξMax
         for m  in -sf_mMax:sf_mMax
@@ -421,7 +420,7 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     end
     Y_precomp_data = zeros(ComplexF64, sf_lMax+1, 2*sf_lMax+1, grid_θNum, grid_ϕNum)  # for given l, -l ≤ m' ≤ l.
     # obtain the Y_lm'(θ,ϕ) by indexing [l+1,m'+l+1,θ_idx,ϕ_idx].
-    @threads for l in 0:sf_lMax
+    Threads.@threads for l in 0:sf_lMax
     for m_ in -l:l
         for iθ in eachindex(θ_grid)
         for iϕ in eachindex(ϕ_grid)
