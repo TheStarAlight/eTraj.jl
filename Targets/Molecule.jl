@@ -444,7 +444,22 @@ function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function,
             #TODO: QTMC & SCTS can be added if any theory on phase comes out.
         end
     else
-        #TODO: Nondipole
+        if phase_method == :CTMC
+            function traj_nondipole_ctmc(u,p,t)
+                # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
+                c0 = 137.035999173
+                du1 = u[4] + u[3]*laserFx(t)/c0
+                du2 = u[5] + u[3]*laserFy(t)/c0
+                du3 = u[6]
+                du4 = tFx - laserFx(t)
+                du5 = tFy - laserFy(t)
+                du6 = tFz - (u[4]*laserFx(t)+u[5]*laserFy(t))/c0
+                @SVector [du1,du2,du3,du4,du5,du6]
+            end
+        else
+            #TODO: QTMC & SCTS can be added if any theory on phase comes out.
+        end
     end
 end
 
