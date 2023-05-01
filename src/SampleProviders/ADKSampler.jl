@@ -52,7 +52,7 @@ struct ADKSampler <: ElectronSampleProvider
             @warn "[ADKSampler] Tunneling exit method has changed from [Para] to [IpF] due to failure in tunneling exit determination of [Para] model."
         end
         # check IonRate prefix support.
-        if ! (rate_ionRatePrefix in [:ExpRate])
+        if ! (rate_ionRatePrefix in [:ExpRate, :ExpPre, :ExpJac, :Full])
             error("[ADKSampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
             return
         end
@@ -100,7 +100,10 @@ function generateElectronBatch(sp::ADKSampler, batchId::Int)
     Fxt = Fx(t)
     Fyt = Fy(t)
     Ft = hypot(Fxt,Fyt)
+    Ax::Function = LaserAx(sp.laser)
+    Ay::Function = LaserAy(sp.laser)
     φ  = atan(-Fyt,-Fxt)
+    Z  = AsympNuclCharge(sp.target)
     Ip = IonPotential(sp.target)
     if Ft == 0
         return nothing
@@ -119,7 +122,25 @@ function generateElectronBatch(sp::ADKSampler, batchId::Int)
         if      sp.ionRatePrefix == :ExpRate
             ADKRateExp(sp.target)
         else
-            #TODO: Add support for other prefixes.
+            ADKRate_Exp = ADKRateExp(sp.target)
+            α = 1.0+Z/sqrt(2Ip)
+            if  sp.ionRatePrefix == :ExpPre
+                function ADKRate_ExpPre(F,φ,pd,pz)
+                    return ADKRate_Exp(F,φ,pd,pz) / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                end
+            elseif  sp.ionRatePrefix == :ExpJac
+                function ADKRate_ExpJac(F,φ,pd,pz)
+                    transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
+                    return ADKRate_Exp(F,φ,pd,pz) * jac
+                end
+            elseif  sp.ionRatePrefix == :Full
+                function ADKRate_Full(F,φ,pd,pz)
+                    transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
+                    return ADKRate_Exp(F,φ,pd,pz) * jac / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                end
+            end
         end
     dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
     if ! sp.monteCarlo

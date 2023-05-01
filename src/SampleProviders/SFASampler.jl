@@ -30,7 +30,7 @@ struct SFASampler <: ElectronSampleProvider
             return
         end
         # check IonRate prefix support.
-        if ! (rate_ionRatePrefix in [:ExpRate])
+        if ! (rate_ionRatePrefix in [:ExpRate, :ExpPre])
             error("[SFASampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
             return
         end
@@ -63,7 +63,9 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
     Ftr  = hypot(Fxtr,Fytr)
     φ   = atan(-Fytr,-Fxtr)
     ω   = AngFreq(sp.laser)
+    Z   = AsympNuclCharge(sp.target)
     Ip  = IonPotential(sp.target)
+    α   = 1.0+Z/sqrt(2Ip)
     if Ftr == 0
         return nothing
     end
@@ -106,6 +108,9 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
             py0 = py+Ay(tr)
             pz0 = pz
             rate = exp(2*imag(S))
+            if sp.ionRatePrefix == :ExpPre
+                rate /= abs((px+Ax(tr+1im*ti))*Fx(tr+1im*ti)+(py+Ay(tr+1im*ti))*Fy(tr+1im*ti))^α
+            end
             init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,px0,py0,pz0,tr,rate]
             if sp.phaseMethod != :CTMC
                 init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0

@@ -4,6 +4,7 @@ module SampleProviders
 using ..Lasers
 using ..Targets
 using Base.Threads
+using LinearAlgebra
 
 export initSampleProvider, ElectronSampleProvider, batchNum, generateElectronBatch
 
