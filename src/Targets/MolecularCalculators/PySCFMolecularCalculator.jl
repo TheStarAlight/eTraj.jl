@@ -101,7 +101,7 @@ end
 Calculates the DATA used in structure factor calculation in WFAT of the given molecule.
 
 # Returns
-(μ, IntData): Orbital dipole momentum and the IntData which stores the integrals.
+`(μ, IntData)`  : Orbital dipole momentum and the IntData which stores the integrals.
 
 # Parameters
 - `molCalc`         : The molecular calculator.

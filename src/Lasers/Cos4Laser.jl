@@ -2,11 +2,11 @@
 "Represents a monochromatic elliptically polarized laser field with Cos4-shape envelope propagating in z direction."
 struct Cos4Laser <: MonochromaticLaser
     "Peak intensity of the laser field (in W/cm^2)."
-    peakInt;
+    peak_int;
     "Wavelength of the laser field (in NANOMETER)."
-    waveLen;
+    wave_len;
     "Cycle number of the laser field."
-    cycNum;
+    cyc_num;
     "Ellipticity of the laser field."
     ellip;
     "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
@@ -68,23 +68,23 @@ struct Cos4Laser <: MonochromaticLaser
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."
-PeakInt(l::Cos4Laser) = l.peakInt
+PeakInt(l::Cos4Laser) = l.peak_int
 "Gets the wave length of the laser field (in nm)."
-WaveLen(l::Cos4Laser) = l.waveLen
+WaveLen(l::Cos4Laser) = l.wave_len
 "Gets the cycle number of the laser field."
-CycNum(l::Cos4Laser) = l.cycNum
+CycNum(l::Cos4Laser) = l.cyc_num
 "Gets the ellipticity of the laser field."
 Ellipticity(l::Cos4Laser) = l.ellip
 "Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
 Azimuth(l::Cos4Laser) = l.azi
 "Gets the angular frequency (ω) of the laser field (in a.u.)."
-AngFreq(l::Cos4Laser) = 45.563352525 / l.waveLen
+AngFreq(l::Cos4Laser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::Cos4Laser) = 2π / AngFreq(l)
 "Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::Cos4Laser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."
-LaserF0(l::Cos4Laser) = sqrt(l.peakInt/(1.0+l.ellip^2)/3.50944521e16)
+LaserF0(l::Cos4Laser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::Cos4Laser) = LaserF0(l) / AngFreq(l)
 

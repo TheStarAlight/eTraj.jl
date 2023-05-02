@@ -1,6 +1,6 @@
 
 "Sample provider which yields electron samples through ADK rate formula, matching `IonRateMethod=:ADK`."
-struct ADKSampleProvider <: ElectronSampleProvider
+struct ADKSampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::SAEAtomBase;          # ADK only supports [SAEAtomBase].
     monteCarlo      ::Bool;
@@ -11,65 +11,65 @@ struct ADKSampleProvider <: ElectronSampleProvider
     mc_ptMax        ::Real;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
-    ADKTunExit      ::Symbol;           # currently supports :IpF, :FDM, :ADK.
-    function ADKSampleProvider(;laser               ::Laser,
-                                target              ::SAEAtomBase,
-                                sample_tSpan        ::Tuple{<:Real,<:Real},
-                                sample_tSampleNum   ::Int,
-                                rate_monteCarlo     ::Bool,
-                                simu_phaseMethod    ::Symbol,
-                                rate_ionRatePrefix  ::Symbol,
-                                adk_ADKTunExit      ::Symbol,
-                                    #* for step-sampling (!rate_monteCarlo)
-                                ss_pdMax            ::Real,
-                                ss_pdNum            ::Int,
-                                ss_pzMax            ::Real,
-                                ss_pzNum            ::Int,
-                                    #* for Monte-Carlo-sampling (rate_monteCarlo)
-                                mc_tBatchSize       ::Int,
-                                mc_ptMax            ::Real,
-                                kwargs...   # kwargs are surplus params.
-                                )
+    ADKTunExit      ::Symbol;           # currently supports :IpF, :FDM, :Para.
+    function ADKSampler(;   laser               ::Laser,
+                            target              ::SAEAtomBase,
+                            sample_tSpan        ::Tuple{<:Real,<:Real},
+                            sample_tSampleNum   ::Int,
+                            rate_monteCarlo     ::Bool,
+                            simu_phaseMethod    ::Symbol,
+                            rate_ionRatePrefix  ::Symbol,
+                            adk_ADKTunExit      ::Symbol,
+                                #* for step-sampling (!rate_monteCarlo)
+                            ss_pdMax            ::Real,
+                            ss_pdNum            ::Int,
+                            ss_pzMax            ::Real,
+                            ss_pzNum            ::Int,
+                                #* for Monte-Carlo-sampling (rate_monteCarlo)
+                            mc_tBatchSize       ::Int,
+                            mc_ptMax            ::Real,
+                            kwargs...   # kwargs are surplus params.
+                            )
         F0 = LaserF0(laser)
         Ip = IonPotential(target)
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         # check phase method support.
         if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
-            error("[ADKSampleProvider] Undefined phase method [$simu_phaseMethod].")
+            error("[ADKSampler] Undefined phase method [$simu_phaseMethod].")
             return
         end
         # check tunneling exit support.
         if ! (adk_ADKTunExit in [:IpF, :FDM, :Para])
-            error("[ADKSampleProvider] Undefined tunneling exit method [$adk_ADKTunExit].")
+            error("[ADKSampler] Undefined tunneling exit method [$adk_ADKTunExit].")
             return
         end
         # switch tunneling exit method if inappropriate.
         if adk_ADKTunExit == :FDM && Ip^2 < 4F0
             adk_ADKTunExit == :IpF
-            @warn "[ADKSampleProvider] Tunneling exit method has changed from [FDM] to [IpF] due to failure in tunneling exit determination of [FDM] model."
+            @warn "[ADKSampler] Tunneling exit method has changed from [FDM] to [IpF] due to failure in tunneling exit determination of [FDM] model."
         elseif adk_ADKTunExit == :Para && Ip^2 < 4*(1-sqrt(Ip/2))*F0
             adk_ADKTunExit == :IpF
-            @warn "[ADKSampleProvider] Tunneling exit method has changed from [Para] to [IpF] due to failure in tunneling exit determination of [Para] model."
+            @warn "[ADKSampler] Tunneling exit method has changed from [Para] to [IpF] due to failure in tunneling exit determination of [Para] model."
         end
         # check IonRate prefix support.
-        if ! (rate_ionRatePrefix in [:ExpRate])
-            error("[ADKSampleProvider] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+        if ! (rate_ionRatePrefix in [:ExpRate, :ExpPre, :ExpJac, :Full])
+            error("[ADKSampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
             return
         end
         # check Keldysh parameter.
         if γ0 ≥ 0.5
-            @warn "[ADKSampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+            @warn "[ADKSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
         elseif γ0 ≥ 1.0
-            @warn "[ADKSampleProvider] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            @warn "[ADKSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "[ADKSampleProvider] Invalid time sample number $sample_tSampleNum."
+        @assert (sample_tSampleNum>0) "[ADKSampler] Invalid time sample number $sample_tSampleNum."
         if ! rate_monteCarlo    # check SS sampling parameters.
-            @assert (ss_pdNum>0 && ss_pzNum>0) "[ADKSampleProvider] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+            @assert (ss_pdNum>0 && ss_pzNum>0) "[ADKSampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
         else                    # check MC sampling parameters.
-            @assert (sample_tSpan[1] < sample_tSpan[2]) "[ADKSampleProvider] Invalid sampling time span $sample_tSpan."
-            @assert (mc_tBatchSize>0) "[ADKSampleProvider] Invalid batch size $mc_tBatchSize."
-            @assert (mc_ptMax>0) "[ADKSampleProvider] Invalid sampling ptmax $mc_ptMax."
+            @assert (sample_tSpan[1] < sample_tSpan[2]) "[ADKSampler] Invalid sampling time span $sample_tSpan."
+            @assert (mc_tBatchSize>0) "[ADKSampler] Invalid batch size $mc_tBatchSize."
+            @assert (mc_ptMax>0) "[ADKSampler] Invalid sampling ptmax $mc_ptMax."
         end
         # finish initialization.
         return if ! rate_monteCarlo
@@ -89,18 +89,21 @@ struct ADKSampleProvider <: ElectronSampleProvider
     end
 end
 "Gets the total number of batches."
-function batchNum(sp::ADKSampleProvider)
+function batchNum(sp::ADKSampler)
     return length(sp.tSamples)
 end
 "Generates a batch of electrons of `batchId` from `sp` using ADK method."
-function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
+function generateElectronBatch(sp::ADKSampler, batchId::Int)
     t = sp.tSamples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
     Fxt = Fx(t)
     Fyt = Fy(t)
     Ft = hypot(Fxt,Fyt)
+    Ax::Function = LaserAx(sp.laser)
+    Ay::Function = LaserAy(sp.laser)
     φ  = atan(-Fyt,-Fxt)
+    Z  = AsympNuclCharge(sp.target)
     Ip = IonPotential(sp.target)
     if Ft == 0
         return nothing
@@ -119,7 +122,25 @@ function generateElectronBatch(sp::ADKSampleProvider, batchId::Int)
         if      sp.ionRatePrefix == :ExpRate
             ADKRateExp(sp.target)
         else
-            #TODO: Add support for other prefixes.
+            ADKRate_Exp = ADKRateExp(sp.target)
+            α = 1.0+Z/sqrt(2Ip)
+            if  sp.ionRatePrefix == :ExpPre
+                function ADKRate_ExpPre(F,φ,pd,pz)
+                    return ADKRate_Exp(F,φ,pd,pz) / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                end
+            elseif  sp.ionRatePrefix == :ExpJac
+                function ADKRate_ExpJac(F,φ,pd,pz)
+                    transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
+                    return ADKRate_Exp(F,φ,pd,pz) * jac
+                end
+            elseif  sp.ionRatePrefix == :Full
+                function ADKRate_Full(F,φ,pd,pz)
+                    transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
+                    return ADKRate_Exp(F,φ,pd,pz) * jac / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                end
+            end
         end
     dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
     if ! sp.monteCarlo

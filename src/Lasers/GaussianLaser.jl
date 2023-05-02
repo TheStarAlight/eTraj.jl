@@ -2,11 +2,11 @@
 "Represents a monochromatic elliptically polarized laser field with Gaussian-shape envelope propagating in z direction."
 struct GaussianLaser <: MonochromaticLaser
     "Peak intensity of the laser field (in W/cm^2)."
-    peakInt;
+    peak_int;
     "Wavelength of the laser field (in NANOMETER)."
-    waveLen;
+    wave_len;
     "Temporal width (converting to cycle numbers) of the laser field, namely σ."
-    spreadCycNum;
+    spread_cyc_num;
     "Ellipticity of the laser field."
     ellip;
     "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
@@ -73,27 +73,27 @@ struct GaussianLaser <: MonochromaticLaser
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."
-PeakInt(l::GaussianLaser) = l.peakInt
+PeakInt(l::GaussianLaser) = l.peak_int
 "Gets the wave length of the laser field (in nm)."
-WaveLen(l::GaussianLaser) = l.waveLen
+WaveLen(l::GaussianLaser) = l.wave_len
 "Gets the temporal width (converting to cycle numbers) of the laser field, namely σ."
-SpreadCycNum(l::GaussianLaser) = l.spreadCycNum
+SpreadCycNum(l::GaussianLaser) = l.spread_cyc_num
 "Gets the temporal width (in a.u.) of the laser field, namely σ."
-SpreadDuration(l::GaussianLaser) = l.spreadCycNum * Period(l)
+SpreadDuration(l::GaussianLaser) = l.spread_cyc_num * Period(l)
 "Gets the temporal FWHM(Full Width at Half Maxima) of the laser field (in a.u.)."
-FWHM_Duration(l::GaussianLaser) = l.spreadCycNum * Period(l) * (2*sqrt(2*log(2)))
+FWHM_Duration(l::GaussianLaser) = l.spread_cyc_num * Period(l) * (2*sqrt(2*log(2)))
 "Gets the ellipticity of the laser field."
 Ellipticity(l::GaussianLaser) = l.ellip
 "Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
 Azimuth(l::GaussianLaser) = l.azi
 "Gets the angular frequency (ω) of the laser field (in a.u.)."
-AngFreq(l::GaussianLaser) = 45.563352525 / l.waveLen
+AngFreq(l::GaussianLaser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::GaussianLaser) = 2π / AngFreq(l)
 "Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::GaussianLaser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."
-LaserF0(l::GaussianLaser) = sqrt(l.peakInt/(1.0+l.ellip^2)/3.50944521e16)
+LaserF0(l::GaussianLaser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::GaussianLaser) = LaserF0(l) / AngFreq(l)
 

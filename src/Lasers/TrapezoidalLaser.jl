@@ -2,15 +2,15 @@
 "Represents a monochromatic elliptically polarized laser field with Trapezoidal-shape envelope propagating in z direction."
 struct TrapezoidalLaser <: MonochromaticLaser
     "Peak intensity of the laser field (in W/cm^2)."
-    peakInt;
+    peak_int;
     "Wavelength of the laser field (in NANOMETER)."
-    waveLen;
+    wave_len;
     "Cycle number of the laser field in the turn-on."
-    cycNumTurnOn;
+    cyc_num_turn_on;
     "Cycle number of the laser field in the turn-off."
-    cycNumTurnOff;
+    cyc_num_turn_off;
     "Cycle number of the laser field in the constant-intensity."
-    cycNumConst;
+    cyc_num_const;
     "Ellipticity of the laser field."
     ellip;
     "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
@@ -67,13 +67,13 @@ struct TrapezoidalLaser <: MonochromaticLaser
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."
-PeakInt(l::TrapezoidalLaser) = l.peakInt
+PeakInt(l::TrapezoidalLaser) = l.peak_int
 "Gets the wave length of the laser field (in nm)."
-WaveLen(l::TrapezoidalLaser) = l.waveLen
+WaveLen(l::TrapezoidalLaser) = l.wave_len
 "Gets the total cycle number of the laser field."
-CycNumTotal(l::TrapezoidalLaser) = l.cycNumTurnOn + l.cycNumTurnOff + l.cycNumConst
+CycNumTotal(l::TrapezoidalLaser) = l.cyc_num_turn_on + l.cyc_num_turn_off + l.cyc_num_const
 "Gets the cycle number of the laser field in the turn-on."
-CycNumTurnOn(l::TrapezoidalLaser) = l.cycNumTurnOn
+CycNumTurnOn(l::TrapezoidalLaser) = l.cyc_num_turn_on
 "Gets the cycle number of the laser field in the turn-off."
 CycNumTurnOff(l::TrapezoidalLaser) = l.cycNumTurnOff
 "Gets the cycle number of the laser field in the constant-intensity."
@@ -83,13 +83,13 @@ Ellipticity(l::TrapezoidalLaser) = l.ellip
 "Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
 Azimuth(l::TrapezoidalLaser) = l.azi
 "Gets the angular frequency (ω) of the laser field (in a.u.)."
-AngFreq(l::TrapezoidalLaser) = 45.563352525 / l.waveLen
+AngFreq(l::TrapezoidalLaser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::TrapezoidalLaser) = 2π / AngFreq(l)
 "Gets the time shift relative to the beginning of TURN-ON (in a.u.)."
 TimeShift(l::TrapezoidalLaser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."
-LaserF0(l::TrapezoidalLaser) = sqrt(l.peakInt/(1.0+l.ellip^2)/3.50944521e16)
+LaserF0(l::TrapezoidalLaser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::TrapezoidalLaser) = LaserF0(l) / AngFreq(l)
 

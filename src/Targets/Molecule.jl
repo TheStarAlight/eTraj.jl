@@ -185,9 +185,9 @@ Gets the WFAT structure factor \$G_{n_ξ m}\$ according to the given Euler angle
 Note: the rotational Euler angles of the molecule would not be applied.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `nξ`  : Parabolic quantum number nξ=0,1,2,⋯ (nξ up to 5 is calculated by default).
-- `m`   : Parabolic quantum number nξ=⋯,-1,0,1,⋯ (|m| up to 5 is calculated by default).
-- `β`   : Euler angle β, can be passed as a `Real` value or a `Vector` of `Real`.
-- `γ`   : Euler angle γ, can be passed as a `Real` value or a `Vector` of `Real`.
+- `m`   : Parabolic quantum number m=⋯,-1,0,1,⋯ (|m| up to 5 is calculated by default).
+- `β`   : Euler angle β, can be passed as a `Real` value or an `AbstractVector` of `Real`.
+- `γ`   : Euler angle γ, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 """
 function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β,γ)
     if ! mol.energy_data_available
@@ -196,7 +196,7 @@ function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ:
     if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
         MolCalcWFATData!(mol, orbitIdx_relHOMO)
     end
-    @assert (typeof(β)<:Real && typeof(γ)<:Real) || ((typeof(β)<:Vector{T} where T<:Real) && (typeof(γ)<:Vector{T} where T<:Real) && size(β,1)==size(γ,1)) "[Molecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
+    @assert (typeof(β)<:Real && typeof(γ)<:Real) || ((typeof(β)<:AbstractVector{T} where T<:Real) && (typeof(γ)<:AbstractVector{T} where T<:Real) && size(β,1)==size(γ,1)) "[Molecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
     @assert nξ≥0 "[Molecule] nξ should be non-negative."
     intdata = mol.wfat_intdata[orbitIdx_relHOMO]
     nξMax = size(intdata,1) - 1
@@ -217,14 +217,14 @@ function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ:
         for l in abs(m):lMax, m_ in -l:l
             sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
         end
-        return real(sum)*exp(-sqrt(2IonPotential(mol,orbitIdx_relHOMO))*μz(β,γ))
+        return sum * exp(-sqrt(2IonPotential(mol,orbitIdx_relHOMO))*μz(β,γ))
     else    # passed as a Vector
         sum = zeros(ComplexF64,size(β))
         for l in abs(m):lMax, m_ in -l:l
             sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
         end
         κ = sqrt(2IonPotential(mol,orbitIdx_relHOMO))
-        return @. real(sum)*exp(-κ*μz(β,γ))
+        return @. sum * exp(-κ*μz(β,γ))
     end
 end
 "Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
@@ -444,7 +444,22 @@ function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function,
             #TODO: QTMC & SCTS can be added if any theory on phase comes out.
         end
     else
-        #TODO: Nondipole
+        if phase_method == :CTMC
+            function traj_nondipole_ctmc(u,p,t)
+                # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
+                c0 = 137.035999173
+                du1 = u[4] + u[3]*laserFx(t)/c0
+                du2 = u[5] + u[3]*laserFy(t)/c0
+                du3 = u[6]
+                du4 = tFx - laserFx(t)
+                du5 = tFy - laserFy(t)
+                du6 = tFz - (u[4]*laserFx(t)+u[5]*laserFy(t))/c0
+                @SVector [du1,du2,du3,du4,du5,du6]
+            end
+        else
+            #TODO: QTMC & SCTS can be added if any theory on phase comes out.
+        end
     end
 end
 
