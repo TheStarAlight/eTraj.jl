@@ -7,6 +7,7 @@ version = "1.3.0"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DiffEqGPU = "071ae1c0-96b5-11e9-1965-c90190d839ea"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Einsum = "b7d42ee7-0b51-5a75-98ca-779d3107e4c0"
 Folds = "41a02a25-b8f0-4f67-bc48-60067656b558"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -28,7 +29,6 @@ libcint_jll = "574b78ca-bebd-517c-801d-4735c93a9686"
 
 [compat]
 julia = "1.7"
-DiffEqGPU = "≥ 1.19"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
