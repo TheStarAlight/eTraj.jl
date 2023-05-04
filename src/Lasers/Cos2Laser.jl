@@ -154,10 +154,11 @@ Base.show(io::IO, l::Cos2Laser) = print(io,"[MonochromaticLaser] Envelope cos²,
                                            * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                            * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
 
-using Parameters
+using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(l::Cos2Laser)
-    dict = Dict{Symbol,Any}()
+    dict = OrderedDict{Symbol,Any}()
+    type        = typeof(l)
     peak_int    = l.peak_int
     wave_len    = l.wave_len
     cyc_num     = l.cyc_num
@@ -165,6 +166,6 @@ function Serialize(l::Cos2Laser)
     azi         = l.azi
     cep         = l.cep
     t_shift     = l.t_shift
-    @pack! dict = (peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
+    @pack! dict = (type, peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
     return dict
 end

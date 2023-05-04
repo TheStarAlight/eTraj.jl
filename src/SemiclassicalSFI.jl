@@ -12,7 +12,7 @@ using Parameters
 using HDF5
 using Dates
 using ProgressMeter
-using YAML
+using YAML, OrderedCollections
 using Pkg
 
 include("Lasers/Lasers.jl")
@@ -193,7 +193,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     end
     begin
         #TODO: add support to save simulation abstract.
-        dict_out = Dict{Symbol,Any}()
+        dict_out = OrderedDict{Symbol,Any}()
         # package version
         dep = Pkg.dependencies()
         for (k,v::Pkg.API.PackageInfo) in dep

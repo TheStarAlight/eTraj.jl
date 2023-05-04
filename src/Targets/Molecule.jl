@@ -470,10 +470,11 @@ function Base.show(io::IO, mol::Molecule)
     end
 end
 
-using Parameters
+using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(t::Molecule)
-    dict = Dict{Symbol,Any}()
+    dict = OrderedDict{Symbol,Any}()
+    type        = typeof(t)
     data_path   = t.data_path
     atoms       = t.atoms
     atom_coords = t.atom_coords
@@ -482,6 +483,6 @@ function Serialize(t::Molecule)
     rot_alp     = t.rot_α
     rot_bet     = t.rot_β
     rot_gam     = t.rot_γ
-    @pack! dict = (data_path, atoms, atom_coords, charge, name, rot_alp, rot_bet, rot_gam)
+    @pack! dict = (type, data_path, atoms, atom_coords, charge, name, rot_alp, rot_bet, rot_gam)
     return dict
 end

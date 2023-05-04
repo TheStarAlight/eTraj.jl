@@ -134,14 +134,15 @@ ADKRateExp(t::HydrogenLikeAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.Ip)^1.5/3
 "Prints the information of the atom."
 Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge), SoftCore=$(t.soft_core).")
 
-using Parameters
+using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(t::HydrogenLikeAtom)
-    dict = Dict{Symbol,Any}()
+    dict = OrderedDict{Symbol,Any}()
+    type        = typeof(t)
     Ip          = t.Ip
     nucl_charge = t.nucl_charge
     soft_core   = t.soft_core
     name        = t.name
-    @pack! dict = (Ip, nucl_charge, soft_core, name)
+    @pack! dict = (type, Ip, nucl_charge, soft_core, name)
     return dict
 end

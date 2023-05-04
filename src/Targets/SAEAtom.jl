@@ -159,19 +159,20 @@ ADKRateExp(t::SAEAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.Ip)^1.5/3F)
 "Prints the information of the atom."
 Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge)")
 
-using Parameters
+using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(t::SAEAtom)
-    dict = Dict{Symbol,Any}()
+    dict = OrderedDict{Symbol,Any}()
+    type        = typeof(t)
+    Ip          = t.Ip
+    nucl_charge = t.nucl_charge
+    name        = t.name
     a1 = t.a1
     b1 = t.b1
     a2 = t.a2
     b2 = t.b2
     a3 = t.a3
     b3 = t.b3
-    Ip          = t.Ip
-    nucl_charge = t.nucl_charge
-    name        = t.name
-    @pack! dict = (Ip, nucl_charge, a1,b1,a2,b2,a3,b3, name)
+    @pack! dict = (type, Ip, nucl_charge, a1,b1,a2,b2,a3,b3, name)
     return dict
 end
