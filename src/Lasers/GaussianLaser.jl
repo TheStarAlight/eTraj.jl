@@ -162,3 +162,18 @@ end
 Base.show(io::IO, l::GaussianLaser) = print(io,"[MonochromaticLaser] Envelope Gaussian, Wavelength=$(l.waveLen) nm, Temporal width $(l.spreadCycNum) cycle(s) [FWHM $(FWHM_Duration(l)*24.19e-3) fs], e=$(l.ellip)"
                                                 * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                                 * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+
+                                                using Parameters
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(l::GaussianLaser)
+    dict = Dict{Symbol,Any}()
+    peak_int        = l.peak_int
+    wave_len        = l.wave_len
+    spread_cyc_num  = l.spread_cyc_num
+    ellip           = l.ellip
+    azi             = l.azi
+    cep             = l.cep
+    t_shift         = l.t_shift
+    @pack! dict = (peak_int, wave_len, spread_cyc_num, ellip, azi, cep, t_shift)
+    return dict
+end

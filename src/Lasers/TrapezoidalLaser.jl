@@ -170,3 +170,20 @@ end
 Base.show(io::IO, l::TrapezoidalLaser) = print(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.waveLen) nm, TurnOn/Constant/TurnOff: $(l.cycNumTurnOn)/$(l.cycNumConst)/$(l.cycNumTurnOff) cycle(s), e=$(l.ellip)"
                                                 * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                                 * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Rises at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+
+using Parameters
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(l::TrapezoidalLaser)
+    dict = Dict{Symbol,Any}()
+    peak_int            = l.peak_int
+    wave_len            = l.wave_len
+    cyc_num_turn_on     = l.cyc_num_turn_on
+    cyc_num_turn_off    = l.cyc_num_turn_off
+    cyc_num_turn_const  = l.cyc_num_const
+    ellip               = l.ellip
+    azi                 = l.azi
+    cep                 = l.cep
+    t_shift             = l.t_shift
+    @pack! dict = (peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_turn_const, ellip, azi, cep, t_shift)
+    return dict
+end

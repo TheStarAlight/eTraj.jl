@@ -7,6 +7,7 @@ module Targets
 
 export Target
 export IonPotential, AsympNuclCharge, TargetName, TargetPotential, TargetForce, TrajectoryFunction
+export Serialize
 
 export SAEAtomBase, SAEAtom, HydrogenLikeAtom
 export HAtom, He1pAtom, Li2pAtom, HeAtom, NeAtom, Ne1pAtom, Ne2pAtom, ArAtom, Ar1pAtom, Ar2pAtom, VAtom, NiAtom, KrAtom, Kr1pAtom, RbAtom, NbAtom, PdAtom, XeAtom, Xe1pAtom, TaAtom
