@@ -90,7 +90,7 @@ LaserA0(l::Cos2Laser) = LaserF0(l) / AngFreq(l)
 
 "Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::Cos2Laser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
         function(t)
             t -= Δt
@@ -105,7 +105,7 @@ function LaserAx(l::Cos2Laser)
 end
 "Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::Cos2Laser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
         function(t)
             t -= Δt
@@ -120,7 +120,7 @@ function LaserAy(l::Cos2Laser)
 end
 "Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::Cos2Laser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
         function(t)
             t -= Δt
@@ -135,7 +135,7 @@ function LaserFx(l::Cos2Laser)
 end
 "Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::Cos2Laser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local N = l.cycNum; local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
         function(t)
             t -= Δt
@@ -150,6 +150,6 @@ function LaserFy(l::Cos2Laser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::Cos2Laser) = print(io,"[MonochromaticLaser] Envelope cos², Wavelength=$(l.waveLen) nm, $(l.cycNum) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::Cos2Laser) = print(io,"[MonochromaticLaser] Envelope cos², Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
                                            * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                            * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))

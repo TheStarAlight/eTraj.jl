@@ -95,8 +95,8 @@ LaserA0(l::TrapezoidalLaser) = LaserF0(l) / AngFreq(l)
 
 "Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::TrapezoidalLaser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = l.t_shift;
-    local N_on = l.cycNumTurnOn; local N_const = l.cycNumConst; local N_off = l.cycNumTurnOff;
+    local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
+    local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
     local t_on = N_on*T; local t_const = N_const*T; local t_off = N_off*T;
     local φ = l.cep; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -113,8 +113,8 @@ function LaserAx(l::TrapezoidalLaser)
 end
 "Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::TrapezoidalLaser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = l.t_shift;
-    local N_on = l.cycNumTurnOn; local N_const = l.cycNumConst; local N_off = l.cycNumTurnOff;
+    local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
+    local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
     local t_on = N_on*T; local t_const = N_const*T; local t_off = N_off*T;
     local φ = l.cep; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -131,8 +131,8 @@ function LaserAy(l::TrapezoidalLaser)
 end
 "Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::TrapezoidalLaser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local T = Period(l); local Δt = l.t_shift;
-    local N_on = l.cycNumTurnOn; local N_const = l.cycNumConst; local N_off = l.cycNumTurnOff;
+    local F0 = LaserF0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
+    local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
     local t_on = N_on*T; local t_const = N_const*T; local t_off = N_off*T;
     local φ = l.cep; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -149,8 +149,8 @@ function LaserFx(l::TrapezoidalLaser)
 end
 "Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::TrapezoidalLaser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local T = Period(l); local Δt = l.t_shift;
-    local N_on = l.cycNumTurnOn; local N_const = l.cycNumConst; local N_off = l.cycNumTurnOff;
+    local F0 = LaserF0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
+    local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
     local t_on = N_on*T; local t_const = N_const*T; local t_off = N_off*T;
     local φ = l.cep; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -167,6 +167,6 @@ function LaserFy(l::TrapezoidalLaser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::TrapezoidalLaser) = print(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.waveLen) nm, TurnOn/Constant/TurnOff: $(l.cycNumTurnOn)/$(l.cycNumConst)/$(l.cycNumTurnOff) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::TrapezoidalLaser) = print(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.wave_len) nm, TurnOn/Constant/TurnOff: $(l.cyc_num_turn_on)/$(l.cyc_num_const)/$(l.cyc_num_turn_off) cycle(s), e=$(l.ellip)"
                                                 * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                                 * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Rises at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
