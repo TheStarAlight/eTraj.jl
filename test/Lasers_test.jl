@@ -22,6 +22,7 @@ using Test
         @test Azimuth(l1)       == π/2
         @test AngFreq(l1)       == 45.563352525 / WaveLen(l1)
         @test Period(l1)        == 2π / AngFreq(l1)
+        @test CEP(l1)           == π
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
@@ -43,6 +44,7 @@ using Test
         @test Azimuth(l1)       == π/2
         @test AngFreq(l1)       == 45.563352525 / WaveLen(l1)
         @test Period(l1)        == 2π / AngFreq(l1)
+        @test CEP(l1)           == π
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
@@ -66,6 +68,7 @@ using Test
         @test Azimuth(l1)       == π/2
         @test AngFreq(l1)       == 45.563352525 / WaveLen(l1)
         @test Period(l1)        == 2π / AngFreq(l1)
+        @test CEP(l1)           == π
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
@@ -90,6 +93,7 @@ using Test
         @test Azimuth(l1)       == π/2
         @test AngFreq(l1)       == 45.563352525 / WaveLen(l1)
         @test Period(l1)        == 2π / AngFreq(l1)
+        @test CEP(l1)           == π
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
