@@ -81,6 +81,8 @@ Azimuth(l::Cos2Laser) = l.azi
 AngFreq(l::Cos2Laser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::Cos2Laser) = 2π / AngFreq(l)
+"Gets the Carrier-Envelope Phase (CEP) of the laser field."
+CEP(l::Cos2Laser) = l.cep
 "Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::Cos2Laser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."

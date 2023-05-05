@@ -86,6 +86,8 @@ Azimuth(l::TrapezoidalLaser) = l.azi
 AngFreq(l::TrapezoidalLaser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::TrapezoidalLaser) = 2π / AngFreq(l)
+"Gets the Carrier-Envelope Phase (CEP) of the laser field."
+CEP(l::TrapezoidalLaser) = l.cep
 "Gets the time shift relative to the beginning of TURN-ON (in a.u.)."
 TimeShift(l::TrapezoidalLaser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."
