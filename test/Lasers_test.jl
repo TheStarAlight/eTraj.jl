@@ -60,7 +60,7 @@ using Test
         @test PeakInt(l1)       == 4e14
         @test WaveLen(l1)       == 800.
         @test SpreadCycNum(l1)  == 2.
-        @test SpreadDuration(l1)== SpreadCycNum(l1) * Period(l)
+        @test SpreadDuration(l1)== SpreadCycNum(l1) * Period(l1)
         @test FWHM_Duration(l1) == SpreadDuration(l1) * (2*sqrt(2*log(2)))
         @test Ellipticity(l1)   == 1.
         @test Azimuth(l1)       == π/2
