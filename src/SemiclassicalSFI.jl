@@ -192,7 +192,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         save_fileName = "$(defaultFileName()).h5"
     end
     begin
-        #TODO: add support to save simulation abstract.
         dict_out = OrderedDict{Symbol,Any}()
         # package version
         dep = Pkg.dependencies()
