@@ -11,10 +11,11 @@ export Serialize
 
 export SAEAtomBase, SAEAtom, HydrogenLikeAtom
 export HAtom, He1pAtom, Li2pAtom, HeAtom, NeAtom, Ne1pAtom, Ne2pAtom, ArAtom, Ar1pAtom, Ar2pAtom, VAtom, NiAtom, KrAtom, Kr1pAtom, RbAtom, NbAtom, PdAtom, XeAtom, Xe1pAtom, TaAtom
+export SoftCore
 export ADKRateExp
 
 export Molecule
-export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolHOMOEnergy, MolHOMOIndex, MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolRotation, SetMolRotation, MolExportAtomInfo
+export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolEnergyDataAvailable, MolHOMOEnergy, MolHOMOIndex, MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolRotation, SetMolRotation, MolExportAtomInfo
 export MolCalcEnergyData!, MolCalcWFATData!, MolSaveDataAs
 
 export MolecularCalculators
