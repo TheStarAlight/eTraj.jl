@@ -167,6 +167,24 @@ function LaserFy(l::TrapezoidalLaser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::TrapezoidalLaser) = print(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.wave_len) nm, TurnOn/Constant/TurnOff: $(l.cyc_num_turn_on)/$(l.cyc_num_const)/$(l.cyc_num_turn_off) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::TrapezoidalLaser) = println(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.wave_len) nm, TurnOn/Constant/TurnOff: $(l.cyc_num_turn_on)/$(l.cyc_num_const)/$(l.cyc_num_turn_off) cycle(s), e=$(l.ellip)"
                                                 * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                                 * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Rises at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+
+using Parameters, OrderedCollections
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(l::TrapezoidalLaser)
+    dict = OrderedDict{Symbol,Any}()
+    type                = typeof(l)
+    peak_int            = l.peak_int
+    wave_len            = l.wave_len
+    cyc_num_turn_on     = l.cyc_num_turn_on
+    cyc_num_turn_off    = l.cyc_num_turn_off
+    cyc_num_turn_const  = l.cyc_num_const
+    ellip               = l.ellip
+    azi                 = l.azi
+    cep                 = l.cep
+    t_shift             = l.t_shift
+    @pack! dict = (type, peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_turn_const, ellip, azi, cep, t_shift)
+    return dict
+end

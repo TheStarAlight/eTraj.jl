@@ -150,6 +150,22 @@ function LaserFy(l::Cos4Laser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::Cos4Laser) = print(io,"[MonochromaticLaser] Envelope cos⁴, Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::Cos4Laser) = println(io,"[MonochromaticLaser] Envelope cos⁴, Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
                                            * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                            * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+
+using Parameters, OrderedCollections
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(l::Cos4Laser)
+    dict = OrderedDict{Symbol,Any}()
+    type        = typeof(l)
+    peak_int    = l.peak_int
+    wave_len    = l.wave_len
+    cyc_num     = l.cyc_num
+    ellip       = l.ellip
+    azi         = l.azi
+    cep         = l.cep
+    t_shift     = l.t_shift
+    @pack! dict = (type, peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
+    return dict
+end

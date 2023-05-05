@@ -12,6 +12,7 @@ using Parameters
 using HDF5
 using Dates
 using ProgressMeter
+using YAML, OrderedCollections
 using Pkg
 
 include("Lasers/Lasers.jl")
@@ -190,7 +191,57 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         @warn "File \"$save_fileName\" already exists. Saving at \"$(defaultFileName())\"."
         save_fileName = "$(defaultFileName()).h5"
     end
-    #TODO: add support to save simulation abstract.
+    begin
+        dict_out = OrderedDict{Symbol,Any}()
+        # package version
+        dep = Pkg.dependencies()
+        for (k,v::Pkg.API.PackageInfo) in dep
+            if v.name == "SemiclassicalSFI"
+                dict_out[:version] = v.version
+            end
+        end
+        # req. params. for all methods
+        dict_out[:ionRateMethod]        = ionRateMethod
+        dict_out[:laser]                = Lasers.Serialize(laser)
+        dict_out[:target]               = Targets.Serialize(target)
+        dict_out[:sample_tSpan]         = sample_tSpan
+        dict_out[:sample_tSampleNum]    = sample_tSampleNum
+        dict_out[:simu_tFinal]          = simu_tFinal
+        dict_out[:finalMomentum_pMax]   = finalMomentum_pMax
+        dict_out[:finalMomentum_pNum]   = finalMomentum_pNum
+        if ! rate_monteCarlo
+            # req. params. for step-sampling (ss) methods
+            dict_out[:ss_pdMax]         = ss_pdMax
+            dict_out[:ss_pdNum]         = ss_pdNum
+            dict_out[:ss_pzMax]         = ss_pzMax
+            dict_out[:ss_pzNum]         = ss_pzNum
+        else
+            # req. params. for Monte-Carlo (mc) methods
+            dict_out[:mc_tBatchSize]    = mc_tBatchSize
+            dict_out[:mc_ptMax]         = mc_ptMax
+        end
+        # opt. params. for all methods
+        dict_out[:save_fileName]        = save_fileName
+        dict_out[:save_3D_momentumSpec] = save_3D_momentumSpec
+        dict_out[:simu_phaseMethod]     = simu_phaseMethod
+        dict_out[:simu_relTol]          = simu_relTol
+        dict_out[:simu_nondipole]       = simu_nondipole
+        dict_out[:simu_GPU]             = simu_GPU
+        dict_out[:rate_monteCarlo]      = rate_monteCarlo
+        dict_out[:rate_ionRatePrefix]   = rate_ionRatePrefix
+        dict_out[:rydberg_collect]      = rydberg_collect
+        dict_out[:rydberg_prinQNMax]    = rydberg_prinQNMax
+        # opt. params. for target `Molecule`
+        if typeof(target) <: Targets.Molecule
+            dict_out[:mol_ionOrbitRelHOMO] = mol_ionOrbitRelHOMO
+        end
+        # opt. params. for atomic ADK method
+        if ionRateMethod == :ADK
+            dict_out[:adk_ADKTunExit]   = adk_ADKTunExit
+        end
+        yaml_out = YAML.write(dict_out)
+        h5write(save_fileName, "abstract", yaml_out)
+    end
     h5write(save_fileName, "px", collect(range(-finalMomentum_pMax[1],finalMomentum_pMax[1], length=finalMomentum_pNum[1])))
     h5write(save_fileName, "py", collect(range(-finalMomentum_pMax[2],finalMomentum_pMax[2], length=finalMomentum_pNum[2])))
     if save_3D_momentumSpec

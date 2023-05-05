@@ -466,6 +466,23 @@ end
 function Base.show(io::IO, mol::Molecule)
     print(io, "Molecule [$(mol.name)]")
     if mol.energy_data_available
-        print(io, ", HOMO energy: $(MolHOMOEnergy(mol))")
+        print(io, ", HOMO energy: $(MolHOMOEnergy(mol))\n")
     end
+end
+
+using Parameters, OrderedCollections
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(t::Molecule)
+    dict = OrderedDict{Symbol,Any}()
+    type        = typeof(t)
+    data_path   = t.data_path
+    atoms       = t.atoms
+    atom_coords = t.atom_coords
+    charge      = t.charge
+    name        = t.name
+    rot_alp     = t.rot_α
+    rot_bet     = t.rot_β
+    rot_gam     = t.rot_γ
+    @pack! dict = (type, data_path, atoms, atom_coords, charge, name, rot_alp, rot_bet, rot_gam)
+    return dict
 end

@@ -159,6 +159,22 @@ function LaserFy(l::GaussianLaser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::GaussianLaser) = print(io,"[MonochromaticLaser] Envelope Gaussian, Wavelength=$(l.wave_len) nm, Temporal width $(l.spread_cyc_num) cycle(s) [FWHM $(FWHM_Duration(l)*24.19e-3) fs], e=$(l.ellip)"
+Base.show(io::IO, l::GaussianLaser) = println(io,"[MonochromaticLaser] Envelope Gaussian, Wavelength=$(l.wave_len) nm, Temporal width $(l.spread_cyc_num) cycle(s) [FWHM $(FWHM_Duration(l)*24.19e-3) fs], e=$(l.ellip)"
                                                 * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                                 * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+
+using Parameters, OrderedCollections
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(l::GaussianLaser)
+    dict = OrderedDict{Symbol,Any}()
+    type            = typeof(l)
+    peak_int        = l.peak_int
+    wave_len        = l.wave_len
+    spread_cyc_num  = l.spread_cyc_num
+    ellip           = l.ellip
+    azi             = l.azi
+    cep             = l.cep
+    t_shift         = l.t_shift
+    @pack! dict = (type, peak_int, wave_len, spread_cyc_num, ellip, azi, cep, t_shift)
+    return dict
+end
