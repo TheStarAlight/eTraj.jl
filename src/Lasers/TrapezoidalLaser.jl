@@ -167,7 +167,7 @@ function LaserFy(l::TrapezoidalLaser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::TrapezoidalLaser) = print(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.wave_len) nm, TurnOn/Constant/TurnOff: $(l.cyc_num_turn_on)/$(l.cyc_num_const)/$(l.cyc_num_turn_off) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::TrapezoidalLaser) = println(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.wave_len) nm, TurnOn/Constant/TurnOff: $(l.cyc_num_turn_on)/$(l.cyc_num_const)/$(l.cyc_num_turn_off) cycle(s), e=$(l.ellip)"
                                                 * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                                 * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Rises at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
 

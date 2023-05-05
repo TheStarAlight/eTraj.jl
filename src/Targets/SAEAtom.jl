@@ -157,7 +157,7 @@ and propagation-direction (which is Z axis) component `pz`.
 ADKRateExp(t::SAEAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.Ip)^1.5/3F)
 
 "Prints the information of the atom."
-Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge)")
+Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge)\n")
 
 using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."

@@ -466,7 +466,7 @@ end
 function Base.show(io::IO, mol::Molecule)
     print(io, "Molecule [$(mol.name)]")
     if mol.energy_data_available
-        print(io, ", HOMO energy: $(MolHOMOEnergy(mol))")
+        print(io, ", HOMO energy: $(MolHOMOEnergy(mol))\n")
     end
 end
 

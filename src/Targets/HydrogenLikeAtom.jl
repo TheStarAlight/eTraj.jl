@@ -132,7 +132,7 @@ and propagation-direction (which is Z axis) component `pz`.
 ADKRateExp(t::HydrogenLikeAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.Ip)^1.5/3F)
 
 "Prints the information of the atom."
-Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge), SoftCore=$(t.soft_core).")
+Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge), SoftCore=$(t.soft_core)\n")
 
 using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."

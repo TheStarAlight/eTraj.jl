@@ -150,7 +150,7 @@ function LaserFy(l::Cos4Laser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::Cos4Laser) = print(io,"[MonochromaticLaser] Envelope cos⁴, Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::Cos4Laser) = println(io,"[MonochromaticLaser] Envelope cos⁴, Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
                                            * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                            * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
 
