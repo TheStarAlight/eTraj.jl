@@ -90,6 +90,8 @@ Azimuth(l::GaussianLaser) = l.azi
 AngFreq(l::GaussianLaser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::GaussianLaser) = 2π / AngFreq(l)
+"Gets the Carrier-Envelope Phase (CEP) of the laser field."
+CEP(l::GaussianLaser) = l.cep
 "Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::GaussianLaser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."
