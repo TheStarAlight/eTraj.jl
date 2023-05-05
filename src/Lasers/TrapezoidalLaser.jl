@@ -75,9 +75,9 @@ CycNumTotal(l::TrapezoidalLaser) = l.cyc_num_turn_on + l.cyc_num_turn_off + l.cy
 "Gets the cycle number of the laser field in the turn-on."
 CycNumTurnOn(l::TrapezoidalLaser) = l.cyc_num_turn_on
 "Gets the cycle number of the laser field in the turn-off."
-CycNumTurnOff(l::TrapezoidalLaser) = l.cycNumTurnOff
+CycNumTurnOff(l::TrapezoidalLaser) = l.cyc_num_turn_off
 "Gets the cycle number of the laser field in the constant-intensity."
-CycNumConst(l::TrapezoidalLaser) = l.cycNumConst
+CycNumConst(l::TrapezoidalLaser) = l.cyc_num_const
 "Gets the ellipticity of the laser field."
 Ellipticity(l::TrapezoidalLaser) = l.ellip
 "Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
