@@ -8,12 +8,16 @@
     <a href="#installation">Installation</a> •
     <a href="#usage">Usage</a> •
     <a href="#example">Example</a> •
+    <a href="#troubleshooting">Troubleshooting</a> •
     <a href="#contributors">Contributors</a> •
     <a href="#license">License</a>
 </p>
 
 <p align="center">
     Last updated: May 3, 2023
+</p>
+<p align="center">
+    Version 1.4.0
 </p>
 
 ---------------------------
@@ -156,6 +160,26 @@ SemiclassicalSFI.performSFI(
     save_fileName = filename
     )
 ```
+
+---------------------------
+
+## Troubleshooting
+
+### Precompilation failure
+Sometimes the precompilation of the package and its dependencies fails, which usually happens on SciML's packages, while no action in the pkg manager works.
+
+Under such circumstances, try to delete the compiled julia code (usually stored in ~/.julia/compiled/\<julia_version>) and precompile again.
+
+If the problem still exists after precompiling from scratch, you may try switching the SciML dependencies' versions in the julia.
+As for the author, *OrdinaryDiffEq@6.51* and *DiffEqGPU@1.26* runs well on Windows 10, while for OrdinaryDiffEq@6.20/37/41, the precompilation never succeeded.
+
+### Runtime warning: electrons with anomalous momentum
+Sometimes (or usually, for some unlucky users) you may encounter such warning during the simulation if you use GPU acceleration:
+```
+[Ensemble Simulation] Found electron (#<...> in the batch) with anomalous momentum <...>.
+```
+This is possibly resulted from the DiffEqGPU package for some unknown reasons.
+To solve this problem, try switching to another DiffEqGPU version (v1.26 is suggested).
 
 ---------------------------
 
