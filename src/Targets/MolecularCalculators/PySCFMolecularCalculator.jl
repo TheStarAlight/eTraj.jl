@@ -3,6 +3,7 @@ using SpecialFunctions
 using SphericalHarmonics
 using Folds
 using Einsum
+using LsqFit
 using PyCall
 using libcint_jll
 using HDF5
@@ -454,4 +455,105 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     finish!(prog21); finish!(prog22); println()
 
     return μ, IntData
+end
+
+function calcMOADKCoeff(;
+                        mc::PySCFMolecularCalculator,
+                        orbitIdx_relHOMO::Int = 0,
+                        grid_rNum::Int  = 200,
+                        grid_rReg::Tuple{<:Real,<:Real} = (3,8),
+                        grid_θNum::Int  = 60,
+                        grid_ϕNum::Int  = 60,
+                        l_max::Int      = 10,
+                        kwargs...)
+
+    @info "[PySCFMolecularCalculator] Running calculation of MOADK coefficients... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
+
+    #* Preprocess molecular information
+
+    pymol = mc._pymol   # storing the molecule's info and the basis's info.
+    task  = mc._pytask  # storing the calculation result.
+
+    mo_coeff    = task.mo_coeff     # Linear combination coefficients of AO to make up MO.
+    num_AO      = size(mo_coeff,1)  # Number of atomic orbits (aka AO) or Gaussian basis. (pymol.nao doesn't return an interger!)
+    HOMO_orbitIdx = HOMOIndex(mc)
+    orbitIdx = HOMO_orbitIdx + orbitIdx_relHOMO
+    @assert 0<orbitIdx<num_AO "[PySCFMolecularCalculator] Orbit index $(orbitIdx_relHOMO) out of range."
+
+    Z   = MolCharge(mc.mol)+1
+    Ip  = -task.mo_energy[orbitIdx]
+    if Ip ≤ 0
+        error("[PySCFMolecularCalculator] The energy of the selected molecular orbital is positive.")
+    end
+    κ   = sqrt(2Ip)
+
+    #* Define the spherical grids.
+    r_grid = range(start=grid_rReg[1], stop=grid_rReg[2], length=grid_rNum)
+    θ_grid = range(start=0., stop=π, length=grid_θNum)
+    ϕ_grid = range(start=0., stop=2π, length=grid_ϕNum)
+    N = grid_rNum*grid_θNum*grid_ϕNum
+
+    "Returns the spherical grid indices of the given index of the point."
+    function ptIdx2sphCoordIdx(i::Int)
+        iϕ = (i-1) % grid_ϕNum + 1
+        iθ = (ceil(Int, i/grid_ϕNum)-1) % grid_θNum + 1
+        ir = ceil(Int, i/grid_ϕNum/grid_θNum)
+        return (ir,iθ,iϕ)
+    end
+
+    # converting to cartesian grid points.
+    # x = r sinθ cosϕ, y = r sinθ sinϕ, z = r cosθ.
+    pt_x = zeros(N)
+    pt_y = zeros(N)
+    pt_z = zeros(N)
+    dΩ   = zeros(N) # dΩ = sinθ dθdϕ, used in the integration.
+    dr   = r_grid[2]-r_grid[1]
+    dθ   = θ_grid[2]-θ_grid[1]
+    dϕ   = ϕ_grid[2]-ϕ_grid[1]
+    Threads.@threads for i in 1:N
+        ir,iθ,iϕ = ptIdx2sphCoordIdx(i)
+        r,θ,ϕ = r_grid[ir],θ_grid[iθ],ϕ_grid[iϕ]
+        pt_x[i] = r*sin(θ)*cos(ϕ)
+        pt_y[i] = r*sin(θ)*sin(ϕ)
+        pt_z[i] = r*cos(θ)
+        # dV[i]   = r^2*sin(θ)*dr*dθ*dϕ
+        dΩ[i]   = sin(θ)*dθ*dϕ
+    end
+    pt_xyz = hcat(pt_x,pt_y,pt_z)
+
+    #* defines output
+    # C_lm stores the MOADK coefficients, l=0,⋯,lMax; m=-lMax,-lMax+1,⋯,lMax.
+    # to obtain C_lm, refer to index [l+1,m+l+1].
+    C_lm = zeros(ComplexF64, l_max+1, 2l_max+1)
+
+    #* Calculate the wavefunction ψ0
+    χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
+    orbit_coeff = @view mo_coeff[:,orbitIdx]    # Select the coefficients related to the interested MO.
+    ψ0 = χi * orbit_coeff                       # Calculate wavefunction of the interested MO (matmul operation).
+
+    #* Calculate F_lm(r) and fit C_lm.
+    #*  project ψ0 to spherical harmonics Y_lm, obtaining F_lm(r).
+    Threads.@threads for l in 0:l_max
+        for m in -l:l
+            F_lm = zeros(ComplexF64, grid_rNum)
+            Y_lm = SphericalHarmonics.sphericalharmonic.(θ_grid, ϕ_grid'; l=l, m=m)
+            # obtain F_lm(r)
+            for i in 1:N
+                ir,iθ,iϕ = ptIdx2sphCoordIdx(i)
+                F_lm[ir] += conj(Y_lm[iθ,iϕ]) * ψ0[i] * dΩ[i]
+            end
+            # fit C_lm
+            @. model(x,p) = p[1] * x^(Z/κ-1) * exp(-κ*x)
+            p0 = [1.0]
+            if sum(abs.(real.(F_lm))) > 1e-10
+                fit_re = curve_fit(model, r_grid, real.(F_lm), p0)
+                C_lm[l+1,m+l+1] += coef(fit_re)[1]
+            end
+            if sum(abs.(imag.(F_lm))) > 1e-10
+                fit_im = curve_fit(model, r_grid, imag.(F_lm), p0)
+                C_lm[l+1,m+l+1] += 1im*coef(fit_im)[1]
+            end
+        end
+    end
+    return C_lm
 end
