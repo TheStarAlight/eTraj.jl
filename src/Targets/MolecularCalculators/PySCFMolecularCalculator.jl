@@ -105,7 +105,7 @@ Calculates the DATA used in structure factor calculation in WFAT of the given mo
 `(μ, IntData)`  : Orbital dipole momentum and the IntData which stores the integrals.
 
 # Parameters
-- `molCalc`         : The molecular calculator.
+- `mc`              : The molecular calculator.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO and -1 indicates HOMO-1) (default 0).
 - `grid_rNum`       : The number of radial grid (default 200).
 - `grid_rMax`       : The maximum radius of the radial grid (default 10.0).
@@ -457,6 +457,19 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     return μ, IntData
 end
 
+"""
+Calculates the MOADK coefficients of the given molecule.
+
+# Parameters
+- `mc`              : The molecular calculator.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO and -1 indicates HOMO-1) (default 0).
+- `grid_rNum`       : The number of radial grid (default 200).
+- `grid_rReg`       : The region of radial distance to fit the wavefunction to obtain the coefficients (default (3,8)).
+- `grid_θNum`       : The number of angular grid in the θ direction (default 60).
+- `grid_ϕNum`       : The number of angular grid in the ϕ direction (default 60).
+- `l_max`           : The maximum number of l calculated (default 6).
+- `m_max`           : The maximum number of m calculated (default 3).
+"""
 function calcMOADKCoeff(;
                         mc::PySCFMolecularCalculator,
                         orbitIdx_relHOMO::Int = 0,
@@ -464,11 +477,13 @@ function calcMOADKCoeff(;
                         grid_rReg::Tuple{<:Real,<:Real} = (3,8),
                         grid_θNum::Int  = 60,
                         grid_ϕNum::Int  = 60,
-                        l_max::Int      = 10,
+                        l_max::Int      = 6,
+                        m_max::Int      = 3,
                         kwargs...)
 
     @info "[PySCFMolecularCalculator] Running calculation of MOADK coefficients... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
 
+    @assert l_max ≥ m_max "[PySCFMolecularCalculator] l_max ≥ m_max is required."
     #* Preprocess molecular information
 
     pymol = mc._pymol   # storing the molecule's info and the basis's info.
@@ -522,9 +537,9 @@ function calcMOADKCoeff(;
     pt_xyz = hcat(pt_x,pt_y,pt_z)
 
     #* defines output
-    # C_lm stores the MOADK coefficients, l=0,⋯,lMax; m=-lMax,-lMax+1,⋯,lMax.
-    # to obtain C_lm, refer to index [l+1,m+l+1].
-    C_lm = zeros(ComplexF64, l_max+1, 2l_max+1)
+    # C_lm stores the MOADK coefficients, l=0,⋯,lMax; m=0,⋯,mMax.
+    # to obtain C_lm, refer to index [l+1,m+1].
+    C_lm = zeros(l_max+1, m_max+1)
 
     #* Calculate the wavefunction ψ0
     χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
@@ -533,8 +548,8 @@ function calcMOADKCoeff(;
 
     #* Calculate F_lm(r) and fit C_lm.
     #*  project ψ0 to spherical harmonics Y_lm, obtaining F_lm(r).
-    Threads.@threads for l in 0:l_max
-        for m in -l:l
+    Threads.@threads for m in 0:m_max
+        for l in m:l_max
             F_lm = zeros(ComplexF64, grid_rNum)
             Y_lm = SphericalHarmonics.sphericalharmonic.(θ_grid, ϕ_grid'; l=l, m=m)
             # obtain F_lm(r)
@@ -547,11 +562,15 @@ function calcMOADKCoeff(;
             p0 = [1.0]
             if sum(abs.(real.(F_lm))) > 1e-10
                 fit_re = curve_fit(model, r_grid, real.(F_lm), p0)
-                C_lm[l+1,m+l+1] += coef(fit_re)[1]
-            end
-            if sum(abs.(imag.(F_lm))) > 1e-10
-                fit_im = curve_fit(model, r_grid, imag.(F_lm), p0)
-                C_lm[l+1,m+l+1] += 1im*coef(fit_im)[1]
+                coeff = coef(fit_re)[1]     # the fitted C_lm
+                conf_int = confidence_interval(fit_re)[1]   # confidence interval (95%)
+                if coeff == 1.0   # returning the original guess means the fit is unsuccessful.
+                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
+                elseif abs((conf_int[2]-conf_int[1])/coeff) > 0.5   # the error is too large
+                    @warn "[PySCFMolecularCalculator] The fit result of molecular wavefunction (l=$l, m=$m) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
+                else
+                    C_lm[l+1,m+1] += coeff
+                end
             end
         end
     end
