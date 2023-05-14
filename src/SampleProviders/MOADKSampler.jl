@@ -9,8 +9,8 @@ struct MOADKSampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::Molecule;     # WFAT only supports [Molecule]
     tSamples        ::AbstractVector;
-    ss_pdSamples    ::AbstractVector;
-    ss_pzSamples    ::AbstractVector;
+    ss_kdSamples    ::AbstractVector;
+    ss_kzSamples    ::AbstractVector;
     ionRatePrefix   ::Symbol;       # currently supports :ExpRate.
     tunExit         ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     ionOrbitRelHOMO ::Integer;
@@ -21,17 +21,17 @@ struct MOADKSampler <: ElectronSampleProvider
                             sample_tSpan        ::Tuple{<:Real,<:Real},
                             sample_tSampleNum   ::Integer,
                             rate_ionRatePrefix  ::Symbol,
-                            ss_pdMax            ::Real,
-                            ss_pdNum            ::Integer,
-                            ss_pzMax            ::Real,
-                            ss_pzNum            ::Integer,
+                            ss_kdMax            ::Real,
+                            ss_kdNum            ::Integer,
+                            ss_kzMax            ::Real,
+                            ss_kzNum            ::Integer,
                             mol_ionOrbitRelHOMO ::Integer,
                             moadk_ionOrbit_m    ::Integer,
                             kwargs...   # kwargs are surplus params.
                             )
         # check sampling parameters.
         @assert (sample_tSampleNum>0) "[MOADKSampler] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "[MOADKSampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (ss_kdNum>0 && ss_kzNum>0) "[MOADKSampler] Invalid kd/kz sample number $ss_kdNum/$ss_kzNum."
         # if coefficients are not available, calculate it.
         if ! (mol_ionOrbitRelHOMO in MolMOADKAvailableIndices(target))
             MolCalcMOADKCoeff!(target, mol_ionOrbitRelHOMO)
@@ -62,7 +62,7 @@ struct MOADKSampler <: ElectronSampleProvider
         # finish initialization
         return new( laser, target,
                     range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
-                    range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum), range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
+                    range(-abs(ss_kdMax),abs(ss_kdMax);length=ss_kdNum), range(-abs(ss_kzMax),abs(ss_kzMax);length=ss_kzNum),
                     rate_ionRatePrefix, tunExit,
                     mol_ionOrbitRelHOMO, moadk_ionOrbit_m)
     end
@@ -112,10 +112,10 @@ function generateElectronBatch(sp::MOADKSampler, batchId::Int)
     lMax = size(MolMOADKCoeffs(sp.target, sp.ionOrbitRelHOMO), 1) - 1
     ionRate::Function =
         if sp.ionRatePrefix == :ExpRate || sp.ionRatePrefix == :ExpPre
-            function (F,pd,pz)
+            function (F,kd,kz)
                 Γsum = 0.
                 for m_ in -lMax:lMax
-                    Γsum += abs2(B(m_))/(2^abs(m_)*factorial(abs(m_))) * κ^(-abs(m_)) * (2κ^2/F)^(2Z/κ-abs(m_)-1) * exp(-2(κ^2+pd^2+pz^2)^1.5/3F)
+                    Γsum += abs2(B(m_))/(2^abs(m_)*factorial(abs(m_))) * κ^(-abs(m_)) * (2κ^2/F)^(2Z/κ-abs(m_)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)
                 end
                 return Γsum
             end
@@ -124,18 +124,18 @@ function generateElectronBatch(sp::MOADKSampler, batchId::Int)
         end
     # generating samples
     dim = 8
-    pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
-    init = zeros(Float64, dim, pdNum, pzNum) # initial condition
+    kdNum, kzNum = length(sp.ss_kdSamples), length(sp.ss_kzSamples)
+    init = zeros(Float64, dim, kdNum, kzNum) # initial condition
     x0 = r_exit*cos(φ_exit)
     y0 = r_exit*sin(φ_exit)
     z0 = 0.
-    @threads for ipd in 1:pdNum
-        pd0 = sp.ss_pdSamples[ipd]
-        px0 = pd0*-sin(φ_exit)
-        py0 = pd0* cos(φ_exit)
-        for ipz in 1:pzNum
-            pz0 = sp.ss_pzSamples[ipz]
-            init[1:8,ipd,ipz] = [x0,y0,z0,px0,py0,pz0,t,ionRate(Ft,pd0,pz0)]
+    @threads for ikd in 1:kdNum
+        kd0 = sp.ss_kdSamples[ikd]
+        kx0 = kd0*-sin(φ_exit)
+        ky0 = kd0* cos(φ_exit)
+        for ikz in 1:kzNum
+            kz0 = sp.ss_kzSamples[ikz]
+            init[1:8,ikd,ikz] = [x0,y0,z0,kx0,ky0,kz0,t,ionRate(Ft,kd0,kz0)]
         end
     end
     return reshape(init,dim,:)
