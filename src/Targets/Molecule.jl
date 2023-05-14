@@ -270,14 +270,15 @@ function MolMOADKCoeffs(mol::Molecule, orbitIdx_relHOMO::Integer=0)
     return mol.moadk_coeff[orbitIdx_relHOMO]
 end
 """
-Gets the MOADK structure factor \$B_m\$ according to the given Euler angles `β` and `γ` (ZYZ convention).
+Gets the MOADK structure factor \$B_m(m')\$ according to the given Euler angles `β` and `γ` (ZYZ convention).
 Note: the rotational Euler angles of the molecule would not be applied.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
-- `m`   : Magnetic quantum number m=⋯,-1,0,1,⋯ (|m| up to 6 is calculated by default).
+- `m`   : Magnetic quantum number m=0,1,⋯ depending on the orbital symmetry (|m| up to 6 is calculated by default).
+- `m_`  : Magnetic quantum number m'=⋯,-1,0,1,⋯.
 - `β`   : Euler angle β, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 - `γ`   : Euler angle γ, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 """
-function MolMOADKStructureFactor_B(mol::Molecule, orbitIdx_relHOMO::Integer, m::Integer, β,γ)
+function MolMOADKStructureFactor_B(mol::Molecule, orbitIdx_relHOMO::Integer, m::Integer, m_::Integer, β,γ)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
@@ -295,14 +296,14 @@ function MolMOADKStructureFactor_B(mol::Molecule, orbitIdx_relHOMO::Integer, m::
 
     if typeof(β)<:Real  # passed as a `Real` value
         sum = zero(ComplexF64)
-        for l in 0:l_max, m_ in -l:l
-            sum += moadk_coeff[l+1,m_+l+1] * Q_lm(l,m_) * WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        for l in abs(m_):l_max
+            sum += moadk_coeff[l+1,m+1] * Q_lm(l,m_) * WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
         end
         return sum
     else    # passed as a Vector
         sum = zeros(ComplexF64, size(β))
-        for l in 0:l_max, m_ in -l:l
-            sum .+= moadk_coeff[l+1,m_+l+1] * Q_lm(l,m_) * @. WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        for l in abs(m_):l_max
+            sum .+= moadk_coeff[l+1,m+1] * Q_lm(l,m_) * @. WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
         end
         return sum
     end
@@ -446,6 +447,12 @@ function MolCalcMOADKCoeff!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType
             error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
         mol.mol_calc = MCType(;mol=mol, kwargs...)
+    end
+    # MOADK is applicable for diatomic molecules with molecular axis along z axis.
+    if size(mol.atoms,1) != 2
+        @warn "[Molecule] MOADK is applicable for diatomic molecules, while this Molecule has $(size(mol.atoms,1)) atom(s)."
+    elseif sum(abs.(mol.atom_coords[:,1:2])) != 0.0 # the molecular axis is not along z axis
+        @warn "[Molecule] MOADK coefficient calculation requires the molecular axis to be along z axis, while this Molecule's molecular axis is not."
     end
     if ! mol.energy_data_available  # won't replace if the data exists.
         mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
