@@ -2,7 +2,7 @@ using SemiclassicalSFI
 using SemiclassicalSFI.Targets
 using Test
 
-@info "# Testing targets ..."
+@info "# Testing Targets ..."
 
 @testset verbose=true "Targets" begin
 
@@ -78,6 +78,9 @@ using Test
             @test IntData[1,1,3,1] ≈ -4.240521134419741e-5 - 2.6425097195784973e-19im
         end
         @test reduce(*, abs2.(MolWFATStructureFactor_G(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.662226956020088, 2.761095365444768])
+        @test MolMOADKAvailableIndices(m3) == Set([0])
+        @test MolMOADKCoeffs(m3, 0)[1,1] ≈ 2.47486649
+        @test reduce(*, abs2.(MolMOADKStructureFactor_B(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [4.90607965289471, 2.36850621912187])
         begin
             @test begin
                 SetMolRotation(m3,π,π/2,π/3)
