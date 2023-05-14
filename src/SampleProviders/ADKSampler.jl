@@ -5,10 +5,10 @@ struct ADKSampler <: ElectronSampleProvider
     target          ::SAEAtomBase;          # ADK only supports [SAEAtomBase].
     monteCarlo      ::Bool;
     tSamples        ::AbstractVector;
-    ss_pdSamples    ::AbstractVector;
-    ss_pzSamples    ::AbstractVector;
+    ss_kdSamples    ::AbstractVector;
+    ss_kzSamples    ::AbstractVector;
     mc_tBatchSize   ::Int;
-    mc_ptMax        ::Real;
+    mc_ktMax        ::Real;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     ADKTunExit      ::Symbol;           # currently supports :IpF, :FDM, :Para.
@@ -21,10 +21,10 @@ struct ADKSampler <: ElectronSampleProvider
                             rate_ionRatePrefix  ::Symbol,
                             adk_ADKTunExit      ::Symbol,
                                 #* for step-sampling (!rate_monteCarlo)
-                            ss_pdMax            ::Real,
-                            ss_pdNum            ::Int,
-                            ss_pzMax            ::Real,
-                            ss_pzNum            ::Int,
+                            ss_kdMax            ::Real,
+                            ss_kdNum            ::Int,
+                            ss_kzMax            ::Real,
+                            ss_kzNum            ::Int,
                                 #* for Monte-Carlo-sampling (rate_monteCarlo)
                             mc_tBatchSize       ::Int,
                             mc_ptMax            ::Real,
@@ -65,7 +65,7 @@ struct ADKSampler <: ElectronSampleProvider
         # check sampling parameters.
         @assert (sample_tSampleNum>0) "[ADKSampler] Invalid time sample number $sample_tSampleNum."
         if ! rate_monteCarlo    # check SS sampling parameters.
-            @assert (ss_pdNum>0 && ss_pzNum>0) "[ADKSampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+            @assert (ss_kdNum>0 && ss_kzNum>0) "[ADKSampler] Invalid kd/kz sample number $ss_kdNum/$ss_kzNum."
         else                    # check MC sampling parameters.
             @assert (sample_tSpan[1] < sample_tSpan[2]) "[ADKSampler] Invalid sampling time span $sample_tSpan."
             @assert (mc_tBatchSize>0) "[ADKSampler] Invalid batch size $mc_tBatchSize."
@@ -75,7 +75,7 @@ struct ADKSampler <: ElectronSampleProvider
         return if ! rate_monteCarlo
             new(laser,target,rate_monteCarlo,
                 range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
-                range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum), range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
+                range(-abs(ss_kdMax),abs(ss_kdMax);length=ss_kdNum), range(-abs(ss_kzMax),abs(ss_kzMax);length=ss_kzNum),
                 0,0,    # for MC params. pass meaningless values
                 simu_phaseMethod,rate_ionRatePrefix,adk_ADKTunExit)
         else
@@ -117,7 +117,7 @@ function generateElectronBatch(sp::ADKSampler, batchId::Int)
         elseif  sp.ADKTunExit == :Para
             (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
         end
-    # determining ADK rate. ADKRate(F,φ,pd,pz)
+    # determining ADK rate. ADKRate(F,φ,kd,kz)
     ADKRate::Function =
         if      sp.ionRatePrefix == :ExpRate
             ADKRateExp(sp.target)
@@ -125,58 +125,58 @@ function generateElectronBatch(sp::ADKSampler, batchId::Int)
             ADKRate_Exp = ADKRateExp(sp.target)
             α = 1.0+Z/sqrt(2Ip)
             if  sp.ionRatePrefix == :ExpPre
-                function ADKRate_ExpPre(F,φ,pd,pz)
-                    return ADKRate_Exp(F,φ,pd,pz) / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                function ADKRate_ExpPre(F,φ,kd,kz)
+                    return ADKRate_Exp(F,φ,kd,kz) / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             elseif  sp.ionRatePrefix == :ExpJac
-                function ADKRate_ExpJac(F,φ,pd,pz)
+                function ADKRate_ExpJac(F,φ,kd,kz)
                     transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
-                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
-                    return ADKRate_Exp(F,φ,pd,pz) * jac
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
+                    return ADKRate_Exp(F,φ,kd,kz) * jac
                 end
             elseif  sp.ionRatePrefix == :Full
-                function ADKRate_Full(F,φ,pd,pz)
+                function ADKRate_Full(F,φ,kd,kz)
                     transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
-                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
-                    return ADKRate_Exp(F,φ,pd,pz) * jac / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
+                    return ADKRate_Exp(F,φ,kd,kz) * jac / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             end
         end
-    dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
+    dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
     if ! sp.monteCarlo
-        pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
-        init = zeros(Float64, dim, pdNum, pzNum) # initial condition
+        kdNum, kzNum = length(sp.ss_kdSamples), length(sp.ss_kzSamples)
+        init = zeros(Float64, dim, kdNum, kzNum) # initial condition
         x0 = r_exit*cos(φ)
         y0 = r_exit*sin(φ)
         z0 = 0.
-        @threads for ipd in 1:pdNum
-            pd0 = sp.ss_pdSamples[ipd]
-            px0 = pd0*-sin(φ)
-            py0 = pd0* cos(φ)
-            for ipz in 1:pzNum
-                pz0 = sp.ss_pzSamples[ipz]
-                init[1:8,ipd,ipz] = [x0,y0,z0,px0,py0,pz0,t,ADKRate(Ft,φ,pd0,pz0)]
+        @threads for ikd in 1:kdNum
+            kd0 = sp.ss_kdSamples[ikd]
+            kx0 = kd0*-sin(φ)
+            ky0 = kd0* cos(φ)
+            for ikz in 1:kzNum
+                kz0 = sp.ss_kzSamples[ikz]
+                init[1:8,ikd,ikz] = [x0,y0,z0,kx0,ky0,kz0,t,ADKRate(Ft,φ,kd0,kz0)]
                 if sp.phaseMethod != :CTMC
-                    init[9,ipd,ipz] = 0
+                    init[9,ikd,ikz] = 0
                 end
             end
         end
         return reshape(init,dim,:)
     else
         init = zeros(Float64, dim, sp.mc_tBatchSize)
-        ptMax = sp.mc_ptMax
+        ptMax = sp.mc_ktMax
         x0 = r_exit*cos(φ)
         y0 = r_exit*sin(φ)
         z0 = 0.
         @threads for i in 1:sp.mc_tBatchSize
-            # generates random (pd0,pz0) inside circle pd0^2+pz0^2=ptMax^2.
-            pd0, pz0 = (rand()-0.5)*2ptMax, (rand()-0.5)*2ptMax
-            while pd0^2+pz0^2 > ptMax^2
-                pd0, pz0 = (rand()-0.5)*2ptMax, (rand()-0.5)*2ptMax
+            # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
+            kd0, kz0 = (rand()-0.5)*2ptMax, (rand()-0.5)*2ptMax
+            while kd0^2+kz0^2 > ptMax^2
+                kd0, kz0 = (rand()-0.5)*2ptMax, (rand()-0.5)*2ptMax
             end
-            px0 = pd0*-sin(φ)
-            py0 = pd0* cos(φ)
-            init[1:8,i] = [x0,y0,z0,px0,py0,pz0,t,ADKRate(Ft,φ,pd0,pz0)]
+            kx0 = kd0*-sin(φ)
+            ky0 = kd0* cos(φ)
+            init[1:8,i] = [x0,y0,z0,kx0,ky0,kz0,t,ADKRate(Ft,φ,kd0,kz0)]
             if sp.phaseMethod != :CTMC
                 init[9,i] = 0
             end

@@ -9,8 +9,8 @@ struct WFATSampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::Molecule;     # WFAT only supports [Molecule]
     tSamples        ::AbstractVector;
-    ss_pdSamples    ::AbstractVector;
-    ss_pzSamples    ::AbstractVector;
+    ss_kdSamples    ::AbstractVector;
+    ss_kzSamples    ::AbstractVector;
     ionRatePrefix   ::Symbol;       # currently supports :ExpRate.
     tunExit         ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     mol_Ip          ::Real;
@@ -25,16 +25,16 @@ struct WFATSampler <: ElectronSampleProvider
                             sample_tSpan        ::Tuple{<:Real,<:Real},
                             sample_tSampleNum   ::Int,
                             rate_ionRatePrefix  ::Symbol,
-                            ss_pdMax            ::Real,
-                            ss_pdNum            ::Int,
-                            ss_pzMax            ::Real,
-                            ss_pzNum            ::Int,
+                            ss_kdMax            ::Real,
+                            ss_kdNum            ::Int,
+                            ss_kzMax            ::Real,
+                            ss_kzNum            ::Int,
                             mol_ionOrbitRelHOMO ::Int,
                             kwargs...   # kwargs are surplus params.
                             )
         # check sampling parameters.
         @assert (sample_tSampleNum>0) "[WFATSampler] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "[WFATSampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (ss_kdNum>0 && ss_kzNum>0) "[WFATSampler] Invalid kd/kz sample number $ss_kdNum/$ss_kzNum."
         # load WFAT IntData.
         if ! (mol_ionOrbitRelHOMO in MolWFATAvailableIndices(target))
             MolCalcWFATData!(target, mol_ionOrbitRelHOMO)
@@ -67,7 +67,7 @@ struct WFATSampler <: ElectronSampleProvider
         # finish initialization.
         return new( laser, target,
                     range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
-                    range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum), range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
+                    range(-abs(ss_kdMax),abs(ss_kdMax);length=ss_kdNum), range(-abs(ss_kzMax),abs(ss_kzMax);length=ss_kzNum),
                     rate_ionRatePrefix, tunExit,
                     Ip, μ, # Ionizing Orbit Energy (-Ip), orbital dipole moment μ
                     intdata, nξMax, mMax, lMax
@@ -127,11 +127,11 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
     g(nξ,m) = g_data[nξ+1, m+mMax+1]
     ionRate::Function =
         if sp.ionRatePrefix == :ExpRate
-            function (F,pd,pz)
+            function (F,kd,kz)
                 Γsum = 0.
                 for nξ in 0:nξMax, m in -mMax:mMax
                     G2 = ( exp(-κ*μ_field)*g(nξ,m) )^2  # G², structural part
-                    WF = (κ/2) * (4κ^2/F)^(2Z/κ-2nξ-abs(m)-1) * exp(-2(κ^2+pd^2+pz^2)^1.5/3F)   # W_F, field part
+                    WF = (κ/2) * (4κ^2/F)^(2Z/κ-2nξ-abs(m)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)   # W_F, field part
                     Γsum += G2*WF
                 end
                 return Γsum
@@ -140,18 +140,18 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
             #TODO: Add support for full prefixes.
         end
     dim = 8
-    pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
-    init = zeros(Float64, dim, pdNum, pzNum) # initial condition
+    kdNum, kzNum = length(sp.ss_kdSamples), length(sp.ss_kzSamples)
+    init = zeros(Float64, dim, kdNum, kzNum) # initial condition
     x0 = r_exit*cos(φ_exit)
     y0 = r_exit*sin(φ_exit)
     z0 = 0.
-    @threads for ipd in 1:pdNum
-        pd0 = sp.ss_pdSamples[ipd]
-        px0 = pd0*-sin(φ_exit)
-        py0 = pd0* cos(φ_exit)
-        for ipz in 1:pzNum
-            pz0 = sp.ss_pzSamples[ipz]
-            init[1:8,ipd,ipz] = [x0,y0,z0,px0,py0,pz0,t,ionRate(Ft,pd0,pz0)]
+    @threads for ikd in 1:kdNum
+        kd0 = sp.ss_kdSamples[ikd]
+        kx0 = kd0*-sin(φ_exit)
+        ky0 = kd0* cos(φ_exit)
+        for ikz in 1:kzNum
+            kz0 = sp.ss_kzSamples[ikz]
+            init[1:8,ikd,ikz] = [x0,y0,z0,kx0,ky0,kz0,t,ionRate(Ft,kd0,kz0)]
         end
     end
     return reshape(init,dim,:)

@@ -40,10 +40,10 @@ Performs a semiclassical simulation with given parameters.
 - `finalMomentum_pNum = (pxNum,pyNum,pzNum)`    : Numbers of final momentum spectrum collecting in three dimensions.
 
 ## Required params. for step-sampling methods:
-- `ss_pdMax`    : Boundary of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pdNum`    : Number of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pzMax`    : Boundary of pz (momentum's component along propagation direction (z ax.)) samples.
-- `ss_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kdMax`    : Boundary of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kdNum`    : Number of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kzMax`    : Boundary of kz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kzNum`    : Number of kz (momentum's component along propagation direction (z ax.)) samples.
 
 ## Required params. for Monte-Carlo-sampling methods:
 - `mc_tBatchSize`   : Number of electron samples in a single time sample.
@@ -82,10 +82,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     finalMomentum_pMax  ::Tuple{<:Real,<:Real,<:Real},
                     finalMomentum_pNum  ::Tuple{<:Int,<:Int,<:Int},
                         #* req. params. for step-sampling (ss) methods
-                    ss_pdMax            ::Real = 0.,
-                    ss_pdNum            ::Int  = 0 ,
-                    ss_pzMax            ::Real = 0.,
-                    ss_pzNum            ::Int  = 0 ,
+                    ss_kdMax            ::Real = 0.,
+                    ss_kdNum            ::Int  = 0 ,
+                    ss_kzMax            ::Real = 0.,
+                    ss_kzNum            ::Int  = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
                     mc_tBatchSize       ::Int  = 0 ,
                     mc_ptMax            ::Real = 0.,
@@ -110,7 +110,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #* pack up all parameters.
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, sample_tSampleNum, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
-                    ss_pdMax, ss_pdNum, ss_pzMax, ss_pzNum,
+                    ss_kdMax, ss_kdNum, ss_kzMax, ss_kzNum,
                     mc_tBatchSize, mc_ptMax,
                     simu_phaseMethod, simu_relTol, simu_nondipole, simu_GPU, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     mol_ionOrbitRelHOMO,
@@ -217,10 +217,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         dict_out[:finalMomentum_pNum]   = finalMomentum_pNum
         if ! rate_monteCarlo
             # req. params. for step-sampling (ss) methods
-            dict_out[:ss_pdMax]         = ss_pdMax
-            dict_out[:ss_pdNum]         = ss_pdNum
-            dict_out[:ss_pzMax]         = ss_pzMax
-            dict_out[:ss_pzNum]         = ss_pzNum
+            dict_out[:ss_kdMax]         = ss_kdMax
+            dict_out[:ss_kdNum]         = ss_kdNum
+            dict_out[:ss_kzMax]         = ss_kzMax
+            dict_out[:ss_kzNum]         = ss_kzNum
         else
             # req. params. for Monte-Carlo (mc) methods
             dict_out[:mc_tBatchSize]    = mc_tBatchSize

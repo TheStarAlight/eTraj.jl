@@ -8,8 +8,8 @@ struct SFASampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::SAEAtomBase;          # SFA only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
-    ss_pdSamples    ::AbstractVector;
-    ss_pzSamples    ::AbstractVector;
+    ss_kdSamples    ::AbstractVector;
+    ss_kzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     function SFASampler(;   laser               ::Laser,
@@ -18,10 +18,10 @@ struct SFASampler <: ElectronSampleProvider
                             sample_tSampleNum   ::Int,
                             simu_phaseMethod    ::Symbol,
                             rate_ionRatePrefix  ::Symbol,
-                            ss_pdMax            ::Real,
-                            ss_pdNum            ::Int,
-                            ss_pzMax            ::Real,
-                            ss_pzNum            ::Int,
+                            ss_kdMax            ::Real,
+                            ss_kdNum            ::Int,
+                            ss_kzMax            ::Real,
+                            ss_kzNum            ::Int,
                             kwargs...   # kwargs are surplus params.
                             )
         # check phase method support.
@@ -36,11 +36,11 @@ struct SFASampler <: ElectronSampleProvider
         end
         # check sampling parameters.
         @assert (sample_tSampleNum>0) "[SFASampler] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "[SFASampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (ss_kdNum>0 && ss_kzNum>0) "[SFASampler] Invalid kd/kz sample number $ss_kdNum/$ss_kzNum."
         # finish initialization.
         return new(laser, target,
                 range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
-                range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum), range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
+                range(-abs(ss_kdMax),abs(ss_kdMax);length=ss_kdNum), range(-abs(ss_kzMax),abs(ss_kzMax);length=ss_kzNum),
                 simu_phaseMethod, rate_ionRatePrefix
                 )
     end
@@ -69,10 +69,10 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
     if Ftr == 0
         return nothing
     end
-    pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
-    dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
+    kdNum, kzNum = length(sp.ss_kdSamples), length(sp.ss_kzSamples)
+    dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
     sample_count_thread = zeros(Int,nthreads())
-    init_thread = zeros(Float64, dim, nthreads(), pdNum*pzNum) # initial condition (support for multi-threading)
+    init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
 
     "Saddle-point equation."
     function saddle_point_equation(AxF,AyF,tr,ti,kd,kz)
@@ -83,9 +83,9 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
         return SVector(real(((px+Axt)^2+(py+Ayt)^2+kz^2)/2 + Ip))
     end
 
-    @threads for ikd in 1:pdNum
-        for ikz in 1:pzNum
-            kd, kz = sp.ss_pdSamples[ikd], sp.ss_pzSamples[ikz]
+    @threads for ikd in 1:kdNum
+        for ikz in 1:kzNum
+            kd, kz = sp.ss_kdSamples[ikd], sp.ss_kzSamples[ikz]
             spe((ti,)) = saddle_point_equation(Ax,Ay,tr,ti,kd,kz)
             ti_sol = nlsolve(spe, [asinh(ω/Ftr*sqrt(kd^2+kz^2+2Ip))/ω])
             ti = 0.0
@@ -149,8 +149,8 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
     if sum(sample_count_thread) == 0
         return nothing
     end
-    if sum(sample_count_thread) < pdNum*pzNum
-        @warn "[SFASampler] Found no root in $(pdNum*pzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
+    if sum(sample_count_thread) < kdNum*kzNum
+        @warn "[SFASampler] Found no root in $(kdNum*kzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
     end
     # collect electron samples from different threads.
     init = zeros(Float64, dim, sum(sample_count_thread))
