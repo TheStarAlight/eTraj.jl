@@ -15,8 +15,8 @@ export SoftCore
 export ADKRateExp
 
 export Molecule
-export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolEnergyDataAvailable, MolHOMOEnergy, MolHOMOIndex, MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolRotation, SetMolRotation, MolExportAtomInfo
-export MolCalcEnergyData!, MolCalcWFATData!, MolSaveDataAs
+export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolEnergyDataAvailable, MolHOMOEnergy, MolHOMOIndex, MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolMOADKAvailableIndices, MolMOADKCoeffs, MolMOADKStructureFactor_B, MolRotation, SetMolRotation, MolExportAtomInfo
+export MolCalcEnergyData!, MolCalcWFATData!, MolCalcMOADKCoeff!, MolSaveDataAs
 
 export MolecularCalculators
 export PySCFMolecularCalculator

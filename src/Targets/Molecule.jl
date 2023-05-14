@@ -43,6 +43,13 @@ mutable struct Molecule <: Target
     "Orbital dipole moment of the molecule's molecular orbitals."
     wfat_μ::Dict;
 
+    # MOADK Coeff
+    moadk_data_available::Bool;
+    "Available orbital indices of MOADK coefficients."
+    moadk_orbital_indices::Set;
+    "MOADK coefficients of the molecule's molecular orbitals."
+    moadk_coeff::Dict;
+
     #* properties that would not be stored in data
 
     "Euler angles (ZYZ convention) specifying the molecule's orientation."  # not stored in data
@@ -71,6 +78,7 @@ mutable struct Molecule <: Target
                     atoms, atom_coords, charge, name,
                     false, nothing, -1,             # energy_data
                     false, Set(), Dict(), Dict(),   # wfat_data
+                    false, Set(), Dict(),           # moadk_data
                     rot_α,rot_β,rot_γ)
         if ! (data_path=="")
             MolSaveDataAs(mol, data_path)
@@ -115,12 +123,25 @@ mutable struct Molecule <: Target
                 wfat_μ[idx] = read_dataset(wfat, "μ_$idx")
             end
         end
+        # reads MOADK
+        moadk_data_available = haskey(file, "MOADK")
+        moadk_orbital_indices = Set()
+        moadk_coeff = Dict()
+        if moadk_data_available
+            moadk = open_group(file, "MOADK")
+            moadk_orbital_indices = Set(read_dataset(moadk, "orbital_indices"))
+            for idx in moadk_orbital_indices
+                moadk_coeff[idx] = read_dataset(moadk, "coeff_$idx")
+            end
+        end
+
         close(file)
         return new( data_path,
                     nothing,
                     atoms, atom_coords, charge, name,
                     energy_data_available, energy_levels, HOMO_index,
                     wfat_data_available, wfat_orbital_indices, wfat_intdata, wfat_μ,
+                    moadk_data_available, moadk_orbital_indices, moadk_coeff,
                     rot_α,rot_β,rot_γ)
     end
 end
@@ -227,6 +248,67 @@ function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ:
         return @. sum * exp(-κ*μz(β,γ))
     end
 end
+"Gets the available orbital indices (relative to HOMO) of the molecule's MOADK coefficients."
+function MolMOADKAvailableIndices(mol::Molecule)
+    return if mol.moadk_data_available
+        mol.moadk_orbital_indices
+    else
+        Set()
+    end
+end
+"""
+Gets the MOADK coefficients.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+"""
+function MolMOADKCoeffs(mol::Molecule, orbitIdx_relHOMO::Integer=0)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    if ! (mol.moadk_data_available || (orbitIdx_relHOMO in mol.moadk_orbital_indices))
+        MolCalcMOADKCoeff!(mol, orbitIdx_relHOMO)
+    end
+    return mol.moadk_coeff[orbitIdx_relHOMO]
+end
+"""
+Gets the MOADK structure factor \$B_m(m')\$ according to the given Euler angles `β` and `γ` (ZYZ convention).
+Note: the rotational Euler angles of the molecule would not be applied.
+- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `m`   : Magnetic quantum number m=0,1,⋯ depending on the orbital symmetry (|m| up to 6 is calculated by default).
+- `m_`  : Magnetic quantum number m'=⋯,-1,0,1,⋯.
+- `β`   : Euler angle β, can be passed as a `Real` value or an `AbstractVector` of `Real`.
+- `γ`   : Euler angle γ, can be passed as a `Real` value or an `AbstractVector` of `Real`.
+"""
+function MolMOADKStructureFactor_B(mol::Molecule, orbitIdx_relHOMO::Integer, m::Integer, m_::Integer, β,γ)
+    if ! mol.energy_data_available
+        MolCalcEnergyData!(mol)
+    end
+    if ! (mol.moadk_data_available || (orbitIdx_relHOMO in mol.moadk_orbital_indices))
+        MolCalcMOADKCoeff!(mol, orbitIdx_relHOMO)
+    end
+    @assert (typeof(β)<:Real && typeof(γ)<:Real) || ((typeof(β)<:AbstractVector{T} where T<:Real) && (typeof(γ)<:AbstractVector{T} where T<:Real) && size(β,1)==size(γ,1)) "[Molecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
+    moadk_coeff = mol.moadk_coeff[orbitIdx_relHOMO]
+    l_max = size(moadk_coeff, 1) - 1
+    if abs(m)>l_max
+        @error "[Molecule] The given |m|=$(abs(m)) is larger than the maximum value $(l_max), zero value would be returned."
+        return typeof(β)<:Real ? 0.0 : repeat([0.0],size(β,1))
+    end
+    Q_lm(l,m) = (-1)^m * sqrt((2l+1)*factorial(l+abs(m))/2/factorial(l-abs(m)))
+
+    if typeof(β)<:Real  # passed as a `Real` value
+        sum = zero(ComplexF64)
+        for l in abs(m_):l_max
+            sum += moadk_coeff[l+1,m+1] * Q_lm(l,m_) * WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
+        end
+        return sum
+    else    # passed as a Vector
+        sum = zeros(ComplexF64, size(β))
+        for l in abs(m_):l_max
+            sum .+= moadk_coeff[l+1,m+1] * Q_lm(l,m_) * @. WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
+        end
+        return sum
+    end
+end
+
 "Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
 MolRotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
 "Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
@@ -353,6 +435,70 @@ function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Integer)
     close(file)
     @info "[Molecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
+"""
+Calculates the MOADK coefficients of the molecule and saves the data.
+- `MCType`              : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+- `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator`, e.g. `grid_rNum`, `l_max`.
+"""
+function MolCalcMOADKCoeff!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
+    if isnothing(mol.mol_calc)
+        if ! (MCType<:MolecularCalculatorBase)
+            error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
+        end
+        mol.mol_calc = MCType(;mol=mol, kwargs...)
+    end
+    # MOADK is applicable for diatomic molecules with molecular axis along z axis.
+    if size(mol.atoms,1) != 2
+        @warn "[Molecule] MOADK is applicable for diatomic molecules, while this Molecule has $(size(mol.atoms,1)) atom(s)."
+    elseif sum(abs.(mol.atom_coords[:,1:2])) != 0.0 # the molecular axis is not along z axis
+        @warn "[Molecule] MOADK coefficient calculation requires the molecular axis to be along z axis, while this Molecule's molecular axis is not."
+    end
+    if ! mol.energy_data_available  # won't replace if the data exists.
+        mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
+        mol.HOMO_index = MolecularCalculators.HOMOIndex(mol.mol_calc)
+        mol.energy_data_available = true
+    end
+    if isnothing(mol.moadk_orbital_indices)
+        mol.moadk_orbital_indices = Set()
+        mol.moadk_coeff = Dict()
+    end
+    push!(mol.moadk_orbital_indices, orbitIdx_relHOMO)
+    mol.moadk_coeff[orbitIdx_relHOMO] = MolecularCalculators.calcMOADKCoeff(; mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    mol.moadk_data_available = true
+    _MolSaveMOADKCoeff(mol, orbitIdx_relHOMO)
+end
+function _MolSaveMOADKCoeff(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
+    # this method will not close the file handle!
+    if ! mol.moadk_data_available
+        return
+    end
+    if ! haskey(file, "MOADK")
+        create_group(file, "MOADK")
+    end
+    g = open_group(file, "MOADK")
+    if ! haskey(g, "orbital_indices")
+        write_dataset(g,"orbital_indices",Vector{Int32}())     # directly passing an empty array [] results in error.
+    end
+    indices = sort!(collect(push!(read_dataset(g,"orbital_indices"),orbitIdx_relHOMO)))
+    haskey(g,"orbital_indices") && delete_object(g,"orbital_indices")   # HDF5 doesn't support overwriting.
+    haskey(g,"coeff_$(orbitIdx_relHOMO)") && delete_object(g,"coeff_$(orbitIdx_relHOMO)")
+    write_dataset(g,"orbital_indices", indices)
+    write_dataset(g,"coeff_$(orbitIdx_relHOMO)", mol.moadk_coeff[orbitIdx_relHOMO])
+end
+function _MolSaveMOADKCoeff(mol::Molecule, orbitIdx_relHOMO::Integer)
+    # open, write and close.
+    if mol.data_path==""    # would not save if data_path is empty.
+        return
+    end
+    if ! isfile(mol.data_path)
+        error("[Molecule] Destination file \"$(mol.data_path)\" not exists.")
+    end
+    file = h5open(mol.data_path,"r+")
+    _MolSaveMOADKCoeff(mol,file,orbitIdx_relHOMO)
+    close(file)
+    @info "[Molecule] MOADK coefficients of orbital index $(orbitIdx_relHOMO) saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+end
 
 "Saves the data of the `Molecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`)."
 function MolSaveDataAs(mol::Molecule, data_path::String)
@@ -388,6 +534,13 @@ function MolSaveDataAs(mol::Molecule, data_path::String)
             _MolSaveWFATData(mol,file,idx)
         end
     end
+    #* writes MOADK
+    if mol.moadk_data_available
+        for idx in mol.moadk_orbital_indices
+            _MolSaveMOADKCoeff(mol,file,idx)
+        end
+    end
+
     close(file)
     @info "[Molecule] Data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end

@@ -30,7 +30,7 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all methods:
-- `ionRateMethod = <:ADK|:SFA|:SFA_AE|:WFAT>`   : Method of determining ionization rate. Currently supports `:ADK`, `:SFA`, `:SFA_AE` for atoms and `:WFAT` for molecules.
+- `ionRateMethod = <:ADK|:SFA|:SFA_AE|:WFAT>`   : Method of determining ionization rate. Currently supports `:ADK`, `:SFA`, `:SFA_AE` for atoms and `:WFAT`, `:MOADK` for molecules.
 - `laser::Laser`                                : Parameters of the laser field.
 - `target::Target`                              : Parameters of the target.
 - `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.
@@ -62,7 +62,10 @@ Performs a semiclassical simulation with given parameters.
 - `rydberg_prinQNMax`                                       : Maximum principle quantum number n to be collected.
 
 ## Optional params. for target `Molecule`:
-- `mol_ionOrbitRelHOMO`                     : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `mol_ionOrbitRelHOMO = 0` : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+
+## Optional params. for MOADK method:
+- `moadk_ionOrbit_m = 0`    : Magnetic quantum number m of the ionizing orbital along the z axis. m = 0,1,2 indicate σ, π and δ respectively.
 
 ## Optional params. for ADK method:
 - `adk_ADKTunExit = <:IpF|:FDM|:Para>`      : Tunneling exit method for ADK methods (when `ionRateMethod==:ADK`).
@@ -99,6 +102,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     rydberg_prinQNMax   ::Int    = 0,
                         #* opt. params. for target `Molecule`
                     mol_ionOrbitRelHOMO ::Int    = 0,
+                        #* opt. params. for molecular MOADK method
+                    moadk_ionOrbit_m    ::Int    = 0,
                         #* opt. params. for atomic ADK method
                     adk_ADKTunExit      ::Symbol = :IpF
                     )
@@ -109,6 +114,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     mc_tBatchSize, mc_ptMax,
                     simu_phaseMethod, simu_relTol, simu_nondipole, simu_GPU, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     mol_ionOrbitRelHOMO,
+                    moadk_ionOrbit_m,
                     adk_ADKTunExit)
     #* compatibility check
     # GPU acceleration requires [DiffEqGPU] up to v1.18
@@ -234,6 +240,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         # opt. params. for target `Molecule`
         if typeof(target) <: Targets.Molecule
             dict_out[:mol_ionOrbitRelHOMO] = mol_ionOrbitRelHOMO
+        end
+        # opt. params. for molecular MOADK method
+        if ionRateMethod == :MOADK
+            dict_out[:moadk_ionOrbit_m] = moadk_ionOrbit_m
         end
         # opt. params. for atomic ADK method
         if ionRateMethod == :ADK
