@@ -87,10 +87,10 @@ The following are parameters of the method `performSFI` (the more detailed docum
 - `finalMomentum_pNum = (pxNum,pyNum,pzNum)`    : Numbers of final momentum spectrum collecting in three dimensions.
 
 ### Required params. for step-sampling methods
-- `ss_pdMax`    : Boundary of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pdNum`    : Number of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pzMax`    : Boundary of pz (momentum's component along propagation direction (z ax.)) samples.
-- `ss_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kdMax`    : Boundary of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kdNum`    : Number of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kzMax`    : Boundary of kz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kzNum`    : Number of kz (momentum's component along propagation direction (z ax.)) samples.
 
 ### Required params. for Monte-Carlo-sampling methods
 - `mc_tBatchSize`   : Number of electron samples in a single time sample.
@@ -109,7 +109,10 @@ The following are parameters of the method `performSFI` (the more detailed docum
 - `rydberg_prinQNMax`                                       : Maximum principle quantum number n to be collected.
 
 ### Optional params. for target `Molecule`
-- `mol_ionOrbitRelHOMO`                     : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `mol_ionOrbitRelHOMO = 0` : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+
+### Optional params. for MOADK method:
+- `moadk_ionOrbit_m = 0`    : Magnetic quantum number m of the ionizing orbital along the z axis. m = 0,1,2 indicate σ, π and δ respectively.
 
 ### Optional params. for ADK method
 - `adk_ADKTunExit = <:IpF|:FDM|:Para>`      : Tunneling exit method for ADK methods (when `ionRateMethod==:ADK`).
@@ -147,11 +150,11 @@ SemiclassicalSFI.performSFI(
     finalMomentum_pMax = (3,3,3),
     finalMomentum_pNum = (800,800,1),
     save_3D_momentumSpec = false,
-    # Step-sampling parameters of electrons' initial momentum. `pd` refers to the momentum's component along transverse direction (in xy plane), while `pz` refers to the momentum's component along propagation direction (z ax.).
-    ss_pdMax = 2.,
-    ss_pdNum = 500,
-    ss_pzMax = 2.,
-    ss_pzNum = 150,
+    # Step-sampling parameters of electrons' initial momentum. `kd` refers to the momentum's component along transverse direction (in xy plane), while `kz` refers to the momentum's component along propagation direction (z ax.).
+    ss_kdMax = 2.,
+    ss_kdNum = 500,
+    ss_kzMax = 2.,
+    ss_kzNum = 150,
     # Classical Trajectory Monte-Carlo (CTMC), which indicates no account of phase.
     simu_phaseMethod = :CTMC,
     # GPU acceleration in trajectory simulation is enabled.
