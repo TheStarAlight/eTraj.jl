@@ -47,17 +47,17 @@ Performs a semiclassical simulation with given parameters.
 
 ## Required params. for Monte-Carlo-sampling methods:
 - `mc_tBatchSize`   : Number of electron samples in a single time sample.
-- `mc_ptMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_ktMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Optional params. for all methods:
 - `save_fileName`                                           : Output HDF5 file name.
 - `save_3D_momentumSpec = false`                            : Determines whether 3D momentum spectrum is saved.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`                  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                                      : Relative error tolerance when solving classical trajectories.
-- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
-- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.19.
+- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation.
+- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used.
 - `rate_monteCarlo = false`                                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
-- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate.
+- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate. For MOADK & WFAT, `:ExpRate` & `:ExpPre` are the same.
 - `rydberg_collect = false`                                 : Determines whether rydberg final states are collected.
 - `rydberg_prinQNMax`                                       : Maximum principle quantum number n to be collected.
 
@@ -88,7 +88,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     ss_kzNum            ::Int  = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
                     mc_tBatchSize       ::Int  = 0 ,
-                    mc_ptMax            ::Real = 0.,
+                    mc_ktMax            ::Real = 0.,
                         #* opt. params. for all methods
                     save_fileName       ::String = defaultFileName(),
                     save_3D_momentumSpec::Bool   = false,
@@ -111,7 +111,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, sample_tSampleNum, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
                     ss_kdMax, ss_kdNum, ss_kzMax, ss_kzNum,
-                    mc_tBatchSize, mc_ptMax,
+                    mc_tBatchSize, mc_ktMax,
                     simu_phaseMethod, simu_relTol, simu_nondipole, simu_GPU, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     mol_ionOrbitRelHOMO,
                     moadk_ionOrbit_m,
@@ -224,7 +224,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         else
             # req. params. for Monte-Carlo (mc) methods
             dict_out[:mc_tBatchSize]    = mc_tBatchSize
-            dict_out[:mc_ptMax]         = mc_ptMax
+            dict_out[:mc_ktMax]         = mc_ktMax
         end
         # opt. params. for all methods
         dict_out[:save_fileName]        = save_fileName

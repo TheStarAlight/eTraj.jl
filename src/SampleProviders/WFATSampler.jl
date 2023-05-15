@@ -11,7 +11,7 @@ struct WFATSampler <: ElectronSampleProvider
     tSamples        ::AbstractVector;
     ss_kdSamples    ::AbstractVector;
     ss_kzSamples    ::AbstractVector;
-    ionRatePrefix   ::Symbol;       # currently supports :ExpRate.
+    ionRatePrefix   ::Symbol;       # currently supports :ExpRate(would be treated as :ExpPre) & :ExpPre.
     tunExit         ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     mol_Ip          ::Real;
     mol_μ           ::Vector;
@@ -45,7 +45,7 @@ struct WFATSampler <: ElectronSampleProvider
         mMax = round(Int,(size(intdata,2)-1)/2)
         lMax = size(intdata,3) - 1
         # check IonRate prefix support.
-        if ! (rate_ionRatePrefix in [:ExpRate])
+        if ! (rate_ionRatePrefix in [:ExpRate, :ExpPre])
             error("[WFATSampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
         end
         # check Keldysh parameter & over-barrier condition.
@@ -126,7 +126,7 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
     end
     g(nξ,m) = g_data[nξ+1, m+mMax+1]
     ionRate::Function =
-        if sp.ionRatePrefix == :ExpRate
+        if sp.ionRatePrefix == :ExpRate || sp.ionRatePrefix == :ExpPre
             function (F,kd,kz)
                 Γsum = 0.
                 for nξ in 0:nξMax, m in -mMax:mMax
