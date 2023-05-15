@@ -11,7 +11,7 @@ struct MOADKSampler <: ElectronSampleProvider
     tSamples        ::AbstractVector;
     ss_kdSamples    ::AbstractVector;
     ss_kzSamples    ::AbstractVector;
-    ionRatePrefix   ::Symbol;       # currently supports :ExpRate.
+    ionRatePrefix   ::Symbol;       # currently supports :ExpRate(would be treated as :ExpPre) & :ExpPre.
     tunExit         ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     ionOrbitRelHOMO ::Integer;
     ionOrbit_m      ::Integer;
