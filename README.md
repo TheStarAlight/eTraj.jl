@@ -94,17 +94,17 @@ The following are parameters of the method `performSFI` (the more detailed docum
 
 ### Required params. for Monte-Carlo-sampling methods
 - `mc_tBatchSize`   : Number of electron samples in a single time sample.
-- `mc_ptMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_ktMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ### Optional params. for all methods
 - `save_fileName`                                           : Output HDF5 file name.
 - `save_3D_momentumSpec = false`                            : Determines whether 3D momentum spectrum is saved.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`                  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                                      : Relative error tolerance when solving classical trajectories.
-- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
-- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.19.
+- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation.
+- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used.
 - `rate_monteCarlo = false`                                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
-- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate.
+- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate. For MOADK & WFAT, `:ExpRate` & `:ExpPre` are the same.
 - `rydberg_collect = false`                                 : Determines whether rydberg final states are collected.
 - `rydberg_prinQNMax`                                       : Maximum principle quantum number n to be collected.
 
