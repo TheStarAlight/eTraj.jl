@@ -27,7 +27,7 @@ struct ADKSampler <: ElectronSampleProvider
                             ss_kzNum            ::Int,
                                 #* for Monte-Carlo-sampling (rate_monteCarlo)
                             mc_tBatchSize       ::Int,
-                            mc_ptMax            ::Real,
+                            mc_ktMax            ::Real,
                             kwargs...   # kwargs are surplus params.
                             )
         F0 = LaserF0(laser)
@@ -69,7 +69,7 @@ struct ADKSampler <: ElectronSampleProvider
         else                    # check MC sampling parameters.
             @assert (sample_tSpan[1] < sample_tSpan[2]) "[ADKSampler] Invalid sampling time span $sample_tSpan."
             @assert (mc_tBatchSize>0) "[ADKSampler] Invalid batch size $mc_tBatchSize."
-            @assert (mc_ptMax>0) "[ADKSampler] Invalid sampling ptmax $mc_ptMax."
+            @assert (mc_ktMax>0) "[ADKSampler] Invalid sampling ptmax $mc_ktMax."
         end
         # finish initialization.
         return if ! rate_monteCarlo
@@ -83,7 +83,7 @@ struct ADKSampler <: ElectronSampleProvider
             new(laser,target,rate_monteCarlo,
                 tSamples,
                 0:0,0:0,    # for SS params. pass meaningless values
-                mc_tBatchSize, mc_ptMax,
+                mc_tBatchSize, mc_ktMax,
                 simu_phaseMethod,rate_ionRatePrefix,adk_ADKTunExit)
         end
     end
@@ -164,15 +164,15 @@ function generateElectronBatch(sp::ADKSampler, batchId::Int)
         return reshape(init,dim,:)
     else
         init = zeros(Float64, dim, sp.mc_tBatchSize)
-        ptMax = sp.mc_ktMax
+        ktMax = sp.mc_ktMax
         x0 = r_exit*cos(φ)
         y0 = r_exit*sin(φ)
         z0 = 0.
         @threads for i in 1:sp.mc_tBatchSize
             # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
-            kd0, kz0 = (rand()-0.5)*2ptMax, (rand()-0.5)*2ptMax
-            while kd0^2+kz0^2 > ptMax^2
-                kd0, kz0 = (rand()-0.5)*2ptMax, (rand()-0.5)*2ptMax
+            kd0, kz0 = (rand()-0.5)*2ktMax, (rand()-0.5)*2ktMax
+            while kd0^2+kz0^2 > ktMax^2
+                kd0, kz0 = (rand()-0.5)*2ktMax, (rand()-0.5)*2ktMax
             end
             kx0 = kd0*-sin(φ)
             ky0 = kd0* cos(φ)

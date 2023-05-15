@@ -88,7 +88,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     ss_kzNum            ::Int  = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
                     mc_tBatchSize       ::Int  = 0 ,
-                    mc_ptMax            ::Real = 0.,
+                    mc_ktMax            ::Real = 0.,
                         #* opt. params. for all methods
                     save_fileName       ::String = defaultFileName(),
                     save_3D_momentumSpec::Bool   = false,
@@ -111,7 +111,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, sample_tSampleNum, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
                     ss_kdMax, ss_kdNum, ss_kzMax, ss_kzNum,
-                    mc_tBatchSize, mc_ptMax,
+                    mc_tBatchSize, mc_ktMax,
                     simu_phaseMethod, simu_relTol, simu_nondipole, simu_GPU, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     mol_ionOrbitRelHOMO,
                     moadk_ionOrbit_m,
@@ -224,7 +224,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         else
             # req. params. for Monte-Carlo (mc) methods
             dict_out[:mc_tBatchSize]    = mc_tBatchSize
-            dict_out[:mc_ptMax]         = mc_ktMax
+            dict_out[:mc_ktMax]         = mc_ktMax
         end
         # opt. params. for all methods
         dict_out[:save_fileName]        = save_fileName
