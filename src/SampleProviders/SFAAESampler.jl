@@ -1,3 +1,5 @@
+
+using Base.Threads
 using ForwardDiff
 
 "Sample provider which yields electron samples through SFA-AE formula, matching `IonRateMethod=:SFA_AE`"
@@ -12,13 +14,13 @@ struct SFAAESampler <: ElectronSampleProvider
     function SFAAESampler(; laser               ::Laser,
                             target              ::SAEAtomBase,
                             sample_tSpan        ::Tuple{<:Real,<:Real},
-                            sample_tSampleNum   ::Int,
+                            sample_tSampleNum   ::Integer,
                             simu_phaseMethod    ::Symbol,
                             rate_ionRatePrefix  ::Symbol,
                             ss_kdMax            ::Real,
-                            ss_kdNum            ::Int,
+                            ss_kdNum            ::Integer,
                             ss_kzMax            ::Real,
-                            ss_kzNum            ::Int,
+                            ss_kzNum            ::Integer,
                             kwargs...   # kwargs are surplus params.
                             )
         F0 = LaserF0(laser)

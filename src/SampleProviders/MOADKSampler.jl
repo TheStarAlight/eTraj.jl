@@ -1,8 +1,6 @@
-using ..Targets
 using HDF5
 using Rotations
 using WignerD
-using Base.Threads
 
 "Sample provider which yields electron samples through MOADK formula, matching `IonRateMethod=:MOADK`."
 struct MOADKSampler <: ElectronSampleProvider
@@ -109,7 +107,7 @@ function generateElectronBatch(sp::MOADKSampler, batchId::Int)
     # the total tunneling rate consists of partial rates of different m' : Γ = ∑ Γ_m'
     # the partial rate consists of a structural part |B_m'|²/(2^|m'|*|m'|!) and a field part W_m'(F) = κ^(-|m'|) * (2κ²/F)^(2Z/κ-|m'|-1) * exp(-2κ³/3F)
     B(m_) = MolMOADKStructureFactor_B(sp.target, sp.ionOrbitRelHOMO, sp.ionOrbit_m, m_, β, γ)
-    lMax = size(MolMOADKCoeffs(sp.target, sp.ionOrbitRelHOMO), 1) - 1
+    lMax = MolMOADKCoeff_lMax(sp.target, sp.ionOrbitRelHOMO)
     ionRate::Function =
         if sp.ionRatePrefix == :ExpRate || sp.ionRatePrefix == :ExpPre
             function (F,kd,kz)

@@ -77,18 +77,18 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     laser               ::Laser,
                     target              ::Target,
                     sample_tSpan        ::Tuple{<:Real,<:Real},
-                    sample_tSampleNum   ::Int,
+                    sample_tSampleNum   ::Integer,
                     simu_tFinal         ::Real,
                     finalMomentum_pMax  ::Tuple{<:Real,<:Real,<:Real},
                     finalMomentum_pNum  ::Tuple{<:Int,<:Int,<:Int},
                         #* req. params. for step-sampling (ss) methods
-                    ss_kdMax            ::Real = 0.,
-                    ss_kdNum            ::Int  = 0 ,
-                    ss_kzMax            ::Real = 0.,
-                    ss_kzNum            ::Int  = 0 ,
+                    ss_kdMax            ::Real      = 0.,
+                    ss_kdNum            ::Integer   = 0 ,
+                    ss_kzMax            ::Real      = 0.,
+                    ss_kzNum            ::Integer   = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
-                    mc_tBatchSize       ::Int  = 0 ,
-                    mc_ktMax            ::Real = 0.,
+                    mc_tBatchSize       ::Integer   = 0 ,
+                    mc_ktMax            ::Real      = 0.,
                         #* opt. params. for all methods
                     save_fileName       ::String = defaultFileName(),
                     save_3D_momentumSpec::Bool   = false,
@@ -99,11 +99,11 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     rate_monteCarlo     ::Bool   = false,
                     rate_ionRatePrefix  ::Symbol = :ExpRate,
                     rydberg_collect     ::Bool   = false,
-                    rydberg_prinQNMax   ::Int    = 0,
+                    rydberg_prinQNMax   ::Integer= 0,
                         #* opt. params. for target `Molecule`
-                    mol_ionOrbitRelHOMO ::Int    = 0,
+                    mol_ionOrbitRelHOMO ::Integer= 0,
                         #* opt. params. for molecular MOADK method
-                    moadk_ionOrbit_m    ::Int    = 0,
+                    moadk_ionOrbit_m    ::Integer= 0,
                         #* opt. params. for atomic ADK method
                     adk_ADKTunExit      ::Symbol = :IpF
                     )

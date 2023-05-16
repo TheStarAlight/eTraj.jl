@@ -1,4 +1,6 @@
 
+using LinearAlgebra
+
 "Sample provider which yields electron samples through ADK rate formula, matching `IonRateMethod=:ADK`."
 struct ADKSampler <: ElectronSampleProvider
     laser           ::Laser;
@@ -7,7 +9,7 @@ struct ADKSampler <: ElectronSampleProvider
     tSamples        ::AbstractVector;
     ss_kdSamples    ::AbstractVector;
     ss_kzSamples    ::AbstractVector;
-    mc_tBatchSize   ::Int;
+    mc_tBatchSize   ::Integer;
     mc_ktMax        ::Real;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
