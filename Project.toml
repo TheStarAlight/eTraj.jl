@@ -1,7 +1,7 @@
 name = "SemiclassicalSFI"
 uuid = "e84e9fd6-fb60-4a95-a359-99d9c5aa2ce0"
 authors = ["Mingyu Zhu <myzhu@stu.ecnu.edu.cn> and contributors"]
-version = "1.4.0-dev"
+version = "1.4.0"
 
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
