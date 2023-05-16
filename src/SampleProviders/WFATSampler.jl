@@ -105,12 +105,16 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
     # The total rate Γ consists of partial rates of different channels ν=(nξ,m): Γ = ∑ Γ_ν
     # The partial rate consists of structure factor part |G_ν(β,γ)|² and field factor W_ν(F): Γ_ν = |G_ν(β,γ)|²*W_ν(F)
     nξMax, mMax = MolWFATMaxChannels(sp.target, sp.ionOrbitRelHOMO)
+    G_data = zeros(ComplexF64, nξMax+1, 2mMax+1)    # to obtain G_nξ,m, call G_data[nξ+1, m+mMax+1]
+    for nξ in 0:nξMax, m in -mMax:mMax
+        G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.ionOrbitRelHOMO,nξ,m,β,γ)
+    end
     ionRate::Function =
         if sp.ionRatePrefix == :ExpRate || sp.ionRatePrefix == :ExpPre
             function (F,kd,kz)
                 Γsum = 0.
                 for nξ in 0:nξMax, m in -mMax:mMax
-                    G2 = abs2(MolWFATStructureFactor_G(sp.target,sp.ionOrbitRelHOMO,nξ,m,β,γ))  # G², structural part
+                    G2 = abs2(G_data[nξ+1, m+mMax+1])  # G², structural part
                     WF = (κ/2) * (4κ^2/F)^(2Z/κ-2nξ-abs(m)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)   # W_F, field part
                     Γsum += G2*WF
                 end
