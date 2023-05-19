@@ -75,9 +75,9 @@ CycNumTotal(l::TrapezoidalLaser) = l.cyc_num_turn_on + l.cyc_num_turn_off + l.cy
 "Gets the cycle number of the laser field in the turn-on."
 CycNumTurnOn(l::TrapezoidalLaser) = l.cyc_num_turn_on
 "Gets the cycle number of the laser field in the turn-off."
-CycNumTurnOff(l::TrapezoidalLaser) = l.cycNumTurnOff
+CycNumTurnOff(l::TrapezoidalLaser) = l.cyc_num_turn_off
 "Gets the cycle number of the laser field in the constant-intensity."
-CycNumConst(l::TrapezoidalLaser) = l.cycNumConst
+CycNumConst(l::TrapezoidalLaser) = l.cyc_num_const
 "Gets the ellipticity of the laser field."
 Ellipticity(l::TrapezoidalLaser) = l.ellip
 "Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
@@ -86,6 +86,8 @@ Azimuth(l::TrapezoidalLaser) = l.azi
 AngFreq(l::TrapezoidalLaser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::TrapezoidalLaser) = 2π / AngFreq(l)
+"Gets the Carrier-Envelope Phase (CEP) of the laser field."
+CEP(l::TrapezoidalLaser) = l.cep
 "Gets the time shift relative to the beginning of TURN-ON (in a.u.)."
 TimeShift(l::TrapezoidalLaser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."
@@ -167,6 +169,24 @@ function LaserFy(l::TrapezoidalLaser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::TrapezoidalLaser) = print(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.wave_len) nm, TurnOn/Constant/TurnOff: $(l.cyc_num_turn_on)/$(l.cyc_num_const)/$(l.cyc_num_turn_off) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::TrapezoidalLaser) = println(io,"[MonochromaticLaser] Envelope Trapezoidal, Wavelength=$(l.wave_len) nm, TurnOn/Constant/TurnOff: $(l.cyc_num_turn_on)/$(l.cyc_num_const)/$(l.cyc_num_turn_off) cycle(s), e=$(l.ellip)"
                                                 * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                                 * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Rises at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+
+using Parameters, OrderedCollections
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(l::TrapezoidalLaser)
+    dict = OrderedDict{Symbol,Any}()
+    type                = typeof(l)
+    peak_int            = l.peak_int
+    wave_len            = l.wave_len
+    cyc_num_turn_on     = l.cyc_num_turn_on
+    cyc_num_turn_off    = l.cyc_num_turn_off
+    cyc_num_turn_const  = l.cyc_num_const
+    ellip               = l.ellip
+    azi                 = l.azi
+    cep                 = l.cep
+    t_shift             = l.t_shift
+    @pack! dict = (type, peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_turn_const, ellip, azi, cep, t_shift)
+    return dict
+end

@@ -8,12 +8,16 @@
     <a href="#installation">Installation</a> •
     <a href="#usage">Usage</a> •
     <a href="#example">Example</a> •
+    <a href="#troubleshooting">Troubleshooting</a> •
     <a href="#contributors">Contributors</a> •
     <a href="#license">License</a>
 </p>
 
 <p align="center">
     Last updated: May 3, 2023
+</p>
+<p align="center">
+    Version 1.4.0
 </p>
 
 ---------------------------
@@ -83,29 +87,32 @@ The following are parameters of the method `performSFI` (the more detailed docum
 - `finalMomentum_pNum = (pxNum,pyNum,pzNum)`    : Numbers of final momentum spectrum collecting in three dimensions.
 
 ### Required params. for step-sampling methods
-- `ss_pdMax`    : Boundary of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pdNum`    : Number of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pzMax`    : Boundary of pz (momentum's component along propagation direction (z ax.)) samples.
-- `ss_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kdMax`    : Boundary of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kdNum`    : Number of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kzMax`    : Boundary of kz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kzNum`    : Number of kz (momentum's component along propagation direction (z ax.)) samples.
 
 ### Required params. for Monte-Carlo-sampling methods
 - `mc_tBatchSize`   : Number of electron samples in a single time sample.
-- `mc_ptMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_ktMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ### Optional params. for all methods
 - `save_fileName`                                           : Output HDF5 file name.
 - `save_3D_momentumSpec = false`                            : Determines whether 3D momentum spectrum is saved.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`                  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                                      : Relative error tolerance when solving classical trajectories.
-- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
-- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.19.
+- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation.
+- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used.
 - `rate_monteCarlo = false`                                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
-- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate.
+- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate. For MOADK & WFAT, `:ExpRate` & `:ExpPre` are the same.
 - `rydberg_collect = false`                                 : Determines whether rydberg final states are collected.
 - `rydberg_prinQNMax`                                       : Maximum principle quantum number n to be collected.
 
 ### Optional params. for target `Molecule`
-- `mol_ionOrbitRelHOMO`                     : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `mol_ionOrbitRelHOMO = 0` : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+
+### Optional params. for MOADK method:
+- `moadk_ionOrbit_m = 0`    : Magnetic quantum number m of the ionizing orbital along the z axis. m = 0,1,2 indicate σ, π and δ respectively.
 
 ### Optional params. for ADK method
 - `adk_ADKTunExit = <:IpF|:FDM|:Para>`      : Tunneling exit method for ADK methods (when `ionRateMethod==:ADK`).
@@ -143,11 +150,11 @@ SemiclassicalSFI.performSFI(
     finalMomentum_pMax = (3,3,3),
     finalMomentum_pNum = (800,800,1),
     save_3D_momentumSpec = false,
-    # Step-sampling parameters of electrons' initial momentum. `pd` refers to the momentum's component along transverse direction (in xy plane), while `pz` refers to the momentum's component along propagation direction (z ax.).
-    ss_pdMax = 2.,
-    ss_pdNum = 500,
-    ss_pzMax = 2.,
-    ss_pzNum = 150,
+    # Step-sampling parameters of electrons' initial momentum. `kd` refers to the momentum's component along transverse direction (in xy plane), while `kz` refers to the momentum's component along propagation direction (z ax.).
+    ss_kdMax = 2.,
+    ss_kdNum = 500,
+    ss_kzMax = 2.,
+    ss_kzNum = 150,
     # Classical Trajectory Monte-Carlo (CTMC), which indicates no account of phase.
     simu_phaseMethod = :CTMC,
     # GPU acceleration in trajectory simulation is enabled.
@@ -156,6 +163,26 @@ SemiclassicalSFI.performSFI(
     save_fileName = filename
     )
 ```
+
+---------------------------
+
+## Troubleshooting
+
+### Precompilation failure
+Sometimes the precompilation of the package and its dependencies fails, which usually happens on SciML's packages, while no action in the pkg manager works.
+
+Under such circumstances, try to delete the compiled julia code (usually stored in ~/.julia/compiled/\<julia_version>) and precompile again.
+
+If the problem still exists after precompiling from scratch, you may try switching the SciML dependencies' versions in the julia.
+As for the author, *OrdinaryDiffEq@6.51* and *DiffEqGPU@1.26* runs well on Windows 10, while for OrdinaryDiffEq@6.20/37/41, the precompilation never succeeded.
+
+### Runtime warning: electrons with anomalous momentum
+Sometimes (or usually, for some unlucky users) you may encounter such warning during the simulation if you use GPU acceleration:
+```
+[Ensemble Simulation] Found electron (#<...> in the batch) with anomalous momentum <...>.
+```
+This is possibly resulted from the DiffEqGPU package for some unknown reasons.
+To solve this problem, try switching to another DiffEqGPU version (v1.26 is suggested).
 
 ---------------------------
 

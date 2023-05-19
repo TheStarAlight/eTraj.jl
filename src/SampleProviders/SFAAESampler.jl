@@ -1,3 +1,5 @@
+
+using Base.Threads
 using ForwardDiff
 
 "Sample provider which yields electron samples through SFA-AE formula, matching `IonRateMethod=:SFA_AE`"
@@ -5,20 +7,20 @@ struct SFAAESampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::SAEAtomBase;          # SFA-AE only supports [SAEAtomBase].
     tSamples        ::AbstractVector;
-    ss_pdSamples    ::AbstractVector;
-    ss_pzSamples    ::AbstractVector;
+    ss_kdSamples    ::AbstractVector;
+    ss_kzSamples    ::AbstractVector;
     phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
     function SFAAESampler(; laser               ::Laser,
                             target              ::SAEAtomBase,
                             sample_tSpan        ::Tuple{<:Real,<:Real},
-                            sample_tSampleNum   ::Int,
+                            sample_tSampleNum   ::Integer,
                             simu_phaseMethod    ::Symbol,
                             rate_ionRatePrefix  ::Symbol,
-                            ss_pdMax            ::Real,
-                            ss_pdNum            ::Int,
-                            ss_pzMax            ::Real,
-                            ss_pzNum            ::Int,
+                            ss_kdMax            ::Real,
+                            ss_kdNum            ::Integer,
+                            ss_kzMax            ::Real,
+                            ss_kzNum            ::Integer,
                             kwargs...   # kwargs are surplus params.
                             )
         F0 = LaserF0(laser)
@@ -40,11 +42,11 @@ struct SFAAESampler <: ElectronSampleProvider
         end
         # check sampling parameters.
         @assert (sample_tSampleNum>0) "[SFAAESampler] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_pdNum>0 && ss_pzNum>0) "[SFAAESampler] Invalid pd/pz sample number $ss_pdNum/$ss_pzNum."
+        @assert (ss_kdNum>0 && ss_kzNum>0) "[SFAAESampler] Invalid kd/kz sample number $ss_kdNum/$ss_kzNum."
         # finish initialization.
         return new(laser, target,
                 range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
-                range(-abs(ss_pdMax),abs(ss_pdMax);length=ss_pdNum), range(-abs(ss_pzMax),abs(ss_pzMax);length=ss_pzNum),
+                range(-abs(ss_kdMax),abs(ss_kdMax);length=ss_kdNum), range(-abs(ss_kzMax),abs(ss_kzMax);length=ss_kzNum),
                 simu_phaseMethod, rate_ionRatePrefix
                 )
     end
@@ -73,8 +75,8 @@ function generateElectronBatch(sp::SFAAESampler, batchId::Int)
     if Ft == 0
         return nothing
     end
-    pdNum, pzNum = length(sp.ss_pdSamples), length(sp.ss_pzSamples)
-    dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,px,py,pz,t0,rate[,phase]
+    kdNum, kzNum = length(sp.ss_kdSamples), length(sp.ss_kzSamples)
+    dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
     rate::Function =
         if  sp.ionRatePrefix == :ExpRate
             ADKRateExp(sp.target)
@@ -82,44 +84,44 @@ function generateElectronBatch(sp::SFAAESampler, batchId::Int)
             ADKRate_Exp = ADKRateExp(sp.target)
             α = 1.0+Z/sqrt(2Ip)
             if  sp.ionRatePrefix == :ExpPre
-                function ADKRate_ExpPre(F,φ,pd,pz)
-                    return ADKRate_Exp(F,φ,pd,pz) / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                function ADKRate_ExpPre(F,φ,kd,kz)
+                    return ADKRate_Exp(F,φ,kd,kz) / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             elseif  sp.ionRatePrefix == :ExpJac
-                function ADKRate_ExpJac(F,φ,pd,pz)
-                    transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
-                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
-                    return ADKRate_Exp(F,φ,pd,pz) * jac
+                function ADKRate_ExpJac(F,φ,kd,kz)
+                    transform((tr,kd_)) = SVector(kd_*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd_*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
+                    return ADKRate_Exp(F,φ,kd,kz) * jac
                 end
             elseif  sp.ionRatePrefix == :Full
-                function ADKRate_Full(F,φ,pd,pz)
-                    transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
-                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,pd))))
-                    return ADKRate_Exp(F,φ,pd,pz) * jac / ((pd^2+pz^2+2Ip)*Ft^2)^(0.5α)
+                function ADKRate_Full(F,φ,kd,kz)
+                    transform((tr,kd_)) = SVector(kd_*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd_*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
+                    jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
+                    return ADKRate_Exp(F,φ,kd,kz) * jac / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             end
         end
-    F2eff(px,py) = Ft^2 - (px*dFxt+py*dFyt)  # F2eff=F²-p⟂⋅F'
-    r_exit(px,py) = Ft/2*(px^2+py^2+2Ip)/F2eff(px,py)
+    F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-p⟂⋅F'
+    r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
     sample_count_thread = zeros(Int,nthreads())
-    init_thread = zeros(Float64, dim, nthreads(), pdNum*pzNum) # initial condition (support for multi-threading)
+    init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
 
-    @threads for ipd in 1:pdNum
-        for ipz in 1:pzNum
-            pd0, pz0 = sp.ss_pdSamples[ipd], sp.ss_pzSamples[ipz]
-            px0 = pd0*-sin(φ)
-            py0 = pd0* cos(φ)
-            F2eff_ = F2eff(px0,py0)
+    @threads for ikd in 1:kdNum
+        for ikz in 1:kzNum
+            kd0, kz0 = sp.ss_kdSamples[ikd], sp.ss_kzSamples[ikz]
+            kx0 = kd0*-sin(φ)
+            ky0 = kd0* cos(φ)
+            F2eff_ = F2eff(kx0,ky0)
             if F2eff_ > 0
                 sample_count_thread[threadid()] += 1
             else
                 continue
             end
-            r0 = r_exit(px0,py0)
+            r0 = r_exit(kx0,ky0)
             x0 = r0*cos(φ)
             y0 = r0*sin(φ)
             z0 = 0.
-            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,px0,py0,pz0,t,rate(sqrt(F2eff_),φ,pd0,pz0)]
+            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate(sqrt(F2eff_),φ,kd0,kz0)]
             if sp.phaseMethod != :CTMC
                 init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0
             end

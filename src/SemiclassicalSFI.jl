@@ -12,6 +12,7 @@ using Parameters
 using HDF5
 using Dates
 using ProgressMeter
+using YAML, OrderedCollections
 using Pkg
 
 include("Lasers/Lasers.jl")
@@ -29,7 +30,7 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all methods:
-- `ionRateMethod = <:ADK|:SFA|:SFA_AE|:WFAT>`   : Method of determining ionization rate. Currently supports `:ADK`, `:SFA`, `:SFA_AE` for atoms and `:WFAT` for molecules.
+- `ionRateMethod = <:ADK|:SFA|:SFA_AE|:WFAT>`   : Method of determining ionization rate. Currently supports `:ADK`, `:SFA`, `:SFA_AE` for atoms and `:WFAT`, `:MOADK` for molecules.
 - `laser::Laser`                                : Parameters of the laser field.
 - `target::Target`                              : Parameters of the target.
 - `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.
@@ -39,29 +40,32 @@ Performs a semiclassical simulation with given parameters.
 - `finalMomentum_pNum = (pxNum,pyNum,pzNum)`    : Numbers of final momentum spectrum collecting in three dimensions.
 
 ## Required params. for step-sampling methods:
-- `ss_pdMax`    : Boundary of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pdNum`    : Number of pd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_pzMax`    : Boundary of pz (momentum's component along propagation direction (z ax.)) samples.
-- `ss_pzNum`    : Number of pz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kdMax`    : Boundary of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kdNum`    : Number of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kzMax`    : Boundary of kz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kzNum`    : Number of kz (momentum's component along propagation direction (z ax.)) samples.
 
 ## Required params. for Monte-Carlo-sampling methods:
 - `mc_tBatchSize`   : Number of electron samples in a single time sample.
-- `mc_ptMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_ktMax`        : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Optional params. for all methods:
 - `save_fileName`                                           : Output HDF5 file name.
 - `save_3D_momentumSpec = false`                            : Determines whether 3D momentum spectrum is saved.
 - `simu_phaseMethod = <:CTMC|:QTMC|:SCTS>`                  : Method of classical trajectories' phase.
 - `simu_relTol = 1e-6`                                      : Relative error tolerance when solving classical trajectories.
-- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation (currently not supported).
-- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used, requires `DiffEqGPU` up to v1.19.
+- `simu_nondipole = false`                                  : Determines whether non-dipole effect is taken account in the simulation.
+- `simu_GPU = false`                                        : Determines whether GPU acceleration in trajectory simulation is used.
 - `rate_monteCarlo = false`                                 : Determines whether Monte-Carlo sampling is used when generating electron samples.
-- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate.
+- `rate_ionRatePrefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`   : Prefix of the exponential term in the ionization rate. For MOADK & WFAT, `:ExpRate` & `:ExpPre` are the same.
 - `rydberg_collect = false`                                 : Determines whether rydberg final states are collected.
 - `rydberg_prinQNMax`                                       : Maximum principle quantum number n to be collected.
 
 ## Optional params. for target `Molecule`:
-- `mol_ionOrbitRelHOMO`                     : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `mol_ionOrbitRelHOMO = 0` : Index of the ionizing orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+
+## Optional params. for MOADK method:
+- `moadk_ionOrbit_m = 0`    : Magnetic quantum number m of the ionizing orbital along the z axis. m = 0,1,2 indicate σ, π and δ respectively.
 
 ## Optional params. for ADK method:
 - `adk_ADKTunExit = <:IpF|:FDM|:Para>`      : Tunneling exit method for ADK methods (when `ionRateMethod==:ADK`).
@@ -73,18 +77,18 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     laser               ::Laser,
                     target              ::Target,
                     sample_tSpan        ::Tuple{<:Real,<:Real},
-                    sample_tSampleNum   ::Int,
+                    sample_tSampleNum   ::Integer,
                     simu_tFinal         ::Real,
                     finalMomentum_pMax  ::Tuple{<:Real,<:Real,<:Real},
                     finalMomentum_pNum  ::Tuple{<:Int,<:Int,<:Int},
                         #* req. params. for step-sampling (ss) methods
-                    ss_pdMax            ::Real = 0.,
-                    ss_pdNum            ::Int  = 0 ,
-                    ss_pzMax            ::Real = 0.,
-                    ss_pzNum            ::Int  = 0 ,
+                    ss_kdMax            ::Real      = 0.,
+                    ss_kdNum            ::Integer   = 0 ,
+                    ss_kzMax            ::Real      = 0.,
+                    ss_kzNum            ::Integer   = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
-                    mc_tBatchSize       ::Int  = 0 ,
-                    mc_ptMax            ::Real = 0.,
+                    mc_tBatchSize       ::Integer   = 0 ,
+                    mc_ktMax            ::Real      = 0.,
                         #* opt. params. for all methods
                     save_fileName       ::String = defaultFileName(),
                     save_3D_momentumSpec::Bool   = false,
@@ -95,19 +99,22 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     rate_monteCarlo     ::Bool   = false,
                     rate_ionRatePrefix  ::Symbol = :ExpRate,
                     rydberg_collect     ::Bool   = false,
-                    rydberg_prinQNMax   ::Int    = 0,
+                    rydberg_prinQNMax   ::Integer= 0,
                         #* opt. params. for target `Molecule`
-                    mol_ionOrbitRelHOMO ::Int    = 0,
+                    mol_ionOrbitRelHOMO ::Integer= 0,
+                        #* opt. params. for molecular MOADK method
+                    moadk_ionOrbit_m    ::Integer= 0,
                         #* opt. params. for atomic ADK method
                     adk_ADKTunExit      ::Symbol = :IpF
                     )
     #* pack up all parameters.
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (ionRateMethod, laser, target, sample_tSpan, sample_tSampleNum, simu_tFinal, finalMomentum_pMax, finalMomentum_pNum,
-                    ss_pdMax, ss_pdNum, ss_pzMax, ss_pzNum,
-                    mc_tBatchSize, mc_ptMax,
+                    ss_kdMax, ss_kdNum, ss_kzMax, ss_kzNum,
+                    mc_tBatchSize, mc_ktMax,
                     simu_phaseMethod, simu_relTol, simu_nondipole, simu_GPU, rate_monteCarlo, rate_ionRatePrefix, rydberg_collect, rydberg_prinQNMax,
                     mol_ionOrbitRelHOMO,
+                    moadk_ionOrbit_m,
                     adk_ADKTunExit)
     #* compatibility check
     # GPU acceleration requires [DiffEqGPU] up to v1.18
@@ -190,7 +197,61 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         @warn "File \"$save_fileName\" already exists. Saving at \"$(defaultFileName())\"."
         save_fileName = "$(defaultFileName()).h5"
     end
-    #TODO: add support to save simulation abstract.
+    begin
+        dict_out = OrderedDict{Symbol,Any}()
+        # package version
+        dep = Pkg.dependencies()
+        for (k,v::Pkg.API.PackageInfo) in dep
+            if v.name == "SemiclassicalSFI"
+                dict_out[:version] = v.version
+            end
+        end
+        # req. params. for all methods
+        dict_out[:ionRateMethod]        = ionRateMethod
+        dict_out[:laser]                = Lasers.Serialize(laser)
+        dict_out[:target]               = Targets.Serialize(target)
+        dict_out[:sample_tSpan]         = sample_tSpan
+        dict_out[:sample_tSampleNum]    = sample_tSampleNum
+        dict_out[:simu_tFinal]          = simu_tFinal
+        dict_out[:finalMomentum_pMax]   = finalMomentum_pMax
+        dict_out[:finalMomentum_pNum]   = finalMomentum_pNum
+        if ! rate_monteCarlo
+            # req. params. for step-sampling (ss) methods
+            dict_out[:ss_kdMax]         = ss_kdMax
+            dict_out[:ss_kdNum]         = ss_kdNum
+            dict_out[:ss_kzMax]         = ss_kzMax
+            dict_out[:ss_kzNum]         = ss_kzNum
+        else
+            # req. params. for Monte-Carlo (mc) methods
+            dict_out[:mc_tBatchSize]    = mc_tBatchSize
+            dict_out[:mc_ktMax]         = mc_ktMax
+        end
+        # opt. params. for all methods
+        dict_out[:save_fileName]        = save_fileName
+        dict_out[:save_3D_momentumSpec] = save_3D_momentumSpec
+        dict_out[:simu_phaseMethod]     = simu_phaseMethod
+        dict_out[:simu_relTol]          = simu_relTol
+        dict_out[:simu_nondipole]       = simu_nondipole
+        dict_out[:simu_GPU]             = simu_GPU
+        dict_out[:rate_monteCarlo]      = rate_monteCarlo
+        dict_out[:rate_ionRatePrefix]   = rate_ionRatePrefix
+        dict_out[:rydberg_collect]      = rydberg_collect
+        dict_out[:rydberg_prinQNMax]    = rydberg_prinQNMax
+        # opt. params. for target `Molecule`
+        if typeof(target) <: Targets.Molecule
+            dict_out[:mol_ionOrbitRelHOMO] = mol_ionOrbitRelHOMO
+        end
+        # opt. params. for molecular MOADK method
+        if ionRateMethod == :MOADK
+            dict_out[:moadk_ionOrbit_m] = moadk_ionOrbit_m
+        end
+        # opt. params. for atomic ADK method
+        if ionRateMethod == :ADK
+            dict_out[:adk_ADKTunExit]   = adk_ADKTunExit
+        end
+        yaml_out = YAML.write(dict_out)
+        h5write(save_fileName, "abstract", yaml_out)
+    end
     h5write(save_fileName, "px", collect(range(-finalMomentum_pMax[1],finalMomentum_pMax[1], length=finalMomentum_pNum[1])))
     h5write(save_fileName, "py", collect(range(-finalMomentum_pMax[2],finalMomentum_pMax[2], length=finalMomentum_pNum[2])))
     if save_3D_momentumSpec

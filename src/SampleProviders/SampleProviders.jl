@@ -4,7 +4,6 @@ module SampleProviders
 using ..Lasers
 using ..Targets
 using Base.Threads
-using LinearAlgebra
 
 export initSampleProvider, ElectronSampleProvider, batchNum, generateElectronBatch
 
@@ -17,6 +16,8 @@ function initSampleProvider(;kwargs...)
         SFAAESampler(;kwargs...)
     elseif kwargs[:ionRateMethod] == :WFAT
         WFATSampler(;kwargs...)
+    elseif kwargs[:ionRateMethod] == :MOADK
+        MOADKSampler(;kwargs...)
     else
         error("[SampleProviders] Undefined tunneling rate method [$(kwargs[:ionRateMethod])].")
         return
@@ -29,5 +30,6 @@ include("ADKSampler.jl")
 include("SFASampler.jl")
 include("SFAAESampler.jl")
 include("WFATSampler.jl")
+include("MOADKSampler.jl")
 
 end

@@ -81,6 +81,8 @@ Azimuth(l::Cos2Laser) = l.azi
 AngFreq(l::Cos2Laser) = 45.563352525 / l.wave_len
 "Gets the period of the laser field (in a.u.)."
 Period(l::Cos2Laser) = 2π / AngFreq(l)
+"Gets the Carrier-Envelope Phase (CEP) of the laser field."
+CEP(l::Cos2Laser) = l.cep
 "Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::Cos2Laser) = l.t_shift
 "Gets the peak electric field intensity of the laser field (in a.u.)."
@@ -150,6 +152,22 @@ function LaserFy(l::Cos2Laser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::Cos2Laser) = print(io,"[MonochromaticLaser] Envelope cos², Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::Cos2Laser) = println(io,"[MonochromaticLaser] Envelope cos², Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
                                            * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                            * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+
+using Parameters, OrderedCollections
+"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function Serialize(l::Cos2Laser)
+    dict = OrderedDict{Symbol,Any}()
+    type        = typeof(l)
+    peak_int    = l.peak_int
+    wave_len    = l.wave_len
+    cyc_num     = l.cyc_num
+    ellip       = l.ellip
+    azi         = l.azi
+    cep         = l.cep
+    t_shift     = l.t_shift
+    @pack! dict = (type, peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
+    return dict
+end
