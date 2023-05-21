@@ -46,10 +46,55 @@ This package is currently not in julia's general registry, but can be added thro
 ```julia
 using Pkg
 Pkg.add(url="https://github.com/TheStarAlight/SemiclassicalSFI.jl.git")
+# In pkg mode of REPL:
+# (@v1.8) pkg> add https://github.com/TheStarAlight/SemiclassicalSFI.jl.git
 ```
 
 It is suggested to test the package to check if the functions of the package run properly:
 
 ```julia
 Pkg.test("SemiclassicalSFI")
+# In pkg mode of REPL:
+# (@v1.8) pkg> test SemiclassicalSFI
 ```
+
+!!! note "Possible solution to precompilation failure"
+
+    Sometimes the precompilation of the package and its dependencies fails, which usually happens on SciML's packages.
+    Under such circumstances, try to delete the compiled julia code (usually stored in `~/.julia/compiled/<julia_version>`) and precompile again.
+    If the problem still exists after precompiling from scratch, you may try switching the SciML dependencies' versions in the julia, which is done by specifying the version when adding the packages:
+    ```julia
+    using Pkg
+    Pkg.add(name="package_name", version="1.0")
+    # In pkg mode of REPL:
+    # (@v1.8) pkg> add package_name@1.0
+    ```
+
+    It is shown that *OrdinaryDiffEq@6.51* and *DiffEqGPU@1.26* runs well on Windows 10 and Manjaro Linux.
+
+### Configuring Python and pyscf
+
+Currently the MOADK and WFAT features related to molecules rely on the [pyscf](https://github.com/pyscf/pyscf) python package, which doesn't support Windows platform. *SemiclassicalSFI.jl* calls the pyscf using the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package. There are two ways to set up the Python environment used by PyCall, here we suggest using your local Python environment for convenience.
+
+To correctly set up the configuration of PyCall, first, set the `PYTHON` environment variable to your Python executable, and build the PyCall package:
+
+```julia
+ENV["PYTHON"] = "path/to/python_exec"
+using Pkg
+Pkg.build("PyCall")
+```
+
+And don't forget to install pyscf in your Python via pip:
+
+```
+$ pip3 install pyscf
+```
+
+## Contributors
+
+- [Mingyu Zhu](https://github.com/TheStarAlight) @ ECNU
+- Hongcheng Ni @ ECNU
+
+## License
+
+This package is licensed under the Apache 2.0 license, and is copyrighted by Mingyu Zhu and the other contributors.
