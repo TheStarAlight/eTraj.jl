@@ -99,6 +99,7 @@ The probablity density (in the final momentum space) carried by the electron sam
 \mathrm{d}W/\mathrm{d}\bm{p} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(-2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}).
 ```
 
+
 ## SFA with Adiabatic Expansion (SFA-AE)
 
 For small Keldysh parameter ``\gamma``, the non-adiabatic effect is not significant, thus an adiabatic expansion scheme can be carried out to develop a modified theory based on the SFA, which is named after the SFA with adiabatic expansion (SFA-AE). It partially includes the non-adiabatic effect and is competent to give similar results compared with that given by the SFA under small Keldysh parameters.
@@ -139,7 +140,17 @@ The initial position has the expression
 
 ## Ammosov-Delone-Krainov (ADK)
 
+The Ammosov-Delone-Krainov (ADK) theory is used to study the adiabatic tunneling in the strong-field ionization, and is, in a sense, the adiabatic limit of the SFA.
 
+In the adiabatic limit, the laser field can be treated as static, thus we have ``\bm{F}'(t)=\bm{0}`` (higher order derivatives of ``\bm{F}(t)`` remains zero as well).
+Substuting it into the expressions of SFA-AE yields the ADK rate
+```math
+\mathrm{d}W/\mathrm{d}\bm{k}_{\perp} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp \left[ -\frac23 \frac{[k_\perp^2+2I_{\mathrm{p}}]^{3/2}}{F} \right],
+```
+and the tunneling exit position
+```math
+\bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
+```
 
 ## Molecular ADK (MOADK)
 
