@@ -97,4 +97,4 @@ $ pip3 install pyscf
 
 ## License
 
-This package is licensed under the Apache 2.0 license, and is copyrighted by Mingyu Zhu and the other contributors.
+This package is licensed under the Apache 2.0 license, and is copyrighted by Mingyu Zhu, Hongcheng Ni and the other contributors.
