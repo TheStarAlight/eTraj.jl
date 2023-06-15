@@ -6,7 +6,7 @@ A number of theories can be adapted to provide initial conditions of the classic
 The initial condition usually consists of three properties:
 
 - Initial position ``\bm{r}_0`` (i.e., the tunneling exit position);
-- Initial momentum ``\bm{p}_0``, we note that in the trajectory simulation schemes, initial momentum are usually denoted using symbol ``k``;
+- Initial momentum ``\bm{p}_0``, we note that in the trajectory simulation schemes, initial momentum are usually denoted using ``\bm{k}_0``;
 - The corresponding ionization probability ``W`` carried by each electron sample, depending on the time-dependent laser field and the properties of the target atoms/molecules.
 
 In the following we will give a brief review on the available theories we implemented in *SemiclassicalSFI.jl*.
@@ -26,22 +26,22 @@ Considering the electron evolving under a combined field of the Coulomb field ``
 ```math
 H = \frac12 \bm{p}^2 + V(\bm{r}) + \bm{F}(t)\cdot\bm{r}.
 ```
-Denoting ``\mathinner{|\Psi_0\rangle} = \mathinner{|\psi_0\rangle} \mathrm{e}^{\mathrm{i}I_{\mathrm{p}}t}`` as the unperturbed initial state with ionization potential of ``I_{\mathrm{p}}``, ``\mathinner{|\Psi_{\bm{p}}\rangle}`` as the continuum state of momentum ``\bm{p}``, and
+Denoting ``\ket{\Psi_0} = \ket{\psi_0} \mathrm{e}^{\mathrm{i}I_{\mathrm{p}}t}`` as the unperturbed initial state with ionization potential of ``I_{\mathrm{p}}``, ``\ket{\Psi_{\bm{p}}}`` as the continuum state of momentum ``\bm{p}``, and
 ```math
 U(t_{\mathrm{f}},t_{\mathrm{i}}) = \exp \left[ -\mathrm{i} \int_{t_{\mathrm{i}}}^{t_{\mathrm{f}}} H(\tau) \mathrm{d}\tau \right]
 ```
 the time-evolution operator, the transition amplitude between the initial state and the final state of momentum ``\bm{p}`` is written as
 ```math
-M_{\bm{p}} = \mathinner{\langle \Psi_{\bm{p}} | U(t_{\mathrm{f}},t_{\mathrm{i}}) | \Psi_0 \rangle}.
+M_{\bm{p}} = \braket{ \Psi_{\bm{p}} | U(t_{\mathrm{f}},t_{\mathrm{i}}) | \Psi_0 }.
 ```
 
-Here lies the key idea of SFA: when the influence of the Coulomb field to the ionized electrons is weak compared with that of the external laser field, we may neglect the influence of the Coulomb field in the expression of ``M_{\bm{p}}`` by replacing the time-evolution operator with a Coulomb-free one ``U_{\mathrm{f}}``, and meanwhile replacing the continuum state with the Volkov state ``\mathinner{| \Psi^{\mathrm{V}}_{\bm{p}} \rangle}`` which represents a free electron evolving under the same laser field:
+Here lies the key idea of SFA: when the influence of the Coulomb field to the ionized electrons is weak compared with that of the external laser field, we may neglect the influence of the Coulomb field in the expression of ``M_{\bm{p}}`` by replacing the time-evolution operator with a Coulomb-free one ``U_{\mathrm{f}}``, and meanwhile replacing the continuum state with the Volkov state ``\ket{\Psi^{\mathrm{V}}_{\bm{p}}}`` which represents a free electron evolving under the same laser field:
 ```math
-M_{\bm{p}} = \mathinner{\langle \Psi^{\mathrm{V}}_{\bm{p}} | U_{\mathrm{f}}(t_{\mathrm{f}},t_{\mathrm{i}}) | \Psi_0 \rangle},
+M_{\bm{p}} = \braket{ \Psi^{\mathrm{V}}_{\bm{p}} | U_{\mathrm{f}}(t_{\mathrm{f}},t_{\mathrm{i}}) | \Psi_0 },
 ```
 where the Volkov state under the LG is the product of a plane wave and a phase factor:
 ```math
-\mathinner{| \Psi^{\mathrm{V}}_{\bm{p}} \rangle} = \mathinner{| \bm{p}+\bm{A}(t) \rangle} \mathrm{e}^{-\mathrm{i}S_{\bm{p}}(t)},
+\ket{ \Psi^{\mathrm{V}}_{\bm{p}} } = \ket{ \bm{p}+\bm{A}(t) } \mathrm{e}^{-\mathrm{i}S_{\bm{p}}(t)},
 ```
 and the phase has the expression:
 ```math
@@ -49,15 +49,15 @@ S_{\bm{p}}(t) = \int^{t} \frac12 [\bm{p}+\bm{A}(\tau)]^2 \mathrm{d}\tau.
 ```
 In this way the ``M_{\bm{p}}`` is expressed as
 ```math
-M_{\bm{p}} = -\mathrm{i} \int_{t_{\mathrm{i}}}^{t_{\mathrm{f}}} \mathinner{\langle \bm{p}+\bm{A}(\tau) | \bm{F}(\tau)\cdot\bm{r} | \psi_0 \rangle} \mathrm{e}^{\mathrm{i}\tilde{S}_{\bm{p}}(\tau)} \mathrm{d}\tau,
+M_{\bm{p}} = -\mathrm{i} \int_{t_{\mathrm{i}}}^{t_{\mathrm{f}}} \braket{ \bm{p}+\bm{A}(\tau) | \bm{F}(\tau)\cdot\bm{r} | \psi_0 } \mathrm{e}^{\mathrm{i}\tilde{S}_{\bm{p}}(\tau)} \mathrm{d}\tau,
 ```
-and we note that here we have extracted the phase factor of ``\mathinner{|\Psi_0\rangle}`` and combined it with the former ``\mathrm{e}^{\mathrm{i}S_{\bm{p}}(t)}``, giving
+and we note that here we have extracted the phase factor of ``\ket{\Psi_0}`` and combined it with the former ``\mathrm{e}^{\mathrm{i}S_{\bm{p}}(t)}``, giving
 ```math
 \tilde{S}_{\bm{p}}(t) = \int^{t} \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau.
 ```
 
 Utilizing the saddle-point approximation (SPA) would give a more consise expression of ``M_{\bm{p}}``.
-The variation of ``\tilde{S}_{\bm{p}}(t)`` is much more sensitive than that of ``\mathinner{\langle \bm{p}+\bm{A}(t) | \bm{F}(t)\cdot\bm{r} | \psi_0 \rangle}`` as ``t`` varies, which leads to a fact that the whole integrand in our latest expression of ``M_{\bm{p}}`` oscillates in its complex phase and its values cancel out each other in most cases, except when the variation of the phase ``\tilde{S}_{\bm{p}}(t)`` becomes stable, i.e., at the saddle points of ``\tilde{S}_{\bm{p}}(t)``. The saddle points ``t_{\mathrm{s}}=t_{\mathrm{r}}+\mathrm{i}t_{\mathrm{i}}`` are the zeroes of the derivative of the complex function ``\tilde{S}_{\bm{p}}(t)``, which satisfy
+The variation of ``\tilde{S}_{\bm{p}}(t)`` is much more sensitive than that of ``\braket{ \bm{p}+\bm{A}(t) | \bm{F}(t)\cdot\bm{r} | \psi_0 }`` as ``t`` varies, which leads to a fact that the whole integrand in our latest expression of ``M_{\bm{p}}`` oscillates in its complex phase and its values cancel out each other in most cases, except when the variation of the phase ``\tilde{S}_{\bm{p}}(t)`` becomes stable, i.e., at the saddle points of ``\tilde{S}_{\bm{p}}(t)``. The saddle points ``t_{\mathrm{s}}=t_{\mathrm{r}}+\mathrm{i}t_{\mathrm{i}}`` are the zeroes of the derivative of the complex function ``\tilde{S}_{\bm{p}}(t)``, which satisfy
 ```math
 \partial_t \tilde{S}_{\bm{p}}(t) |_{t=t_{\mathrm{s}}} = \frac12 [\bm{p}+\bm{A}(t_{\mathrm{s}})]^2 + I_{\mathrm{p}} = 0.
 ```
@@ -118,14 +118,14 @@ and
 t_{\mathrm{i}} = \sqrt{\frac{k^2(t_{\mathrm{r}})+2I_{\mathrm{p}}}{F^2(t_{\mathrm{r}})-\bm{k}(t_{\mathrm{r}}) \cdot \bm{F}'(t_{\mathrm{r}})}}.
 ```
 
-The ``\mathrm{Im}\ \Phi_{\mathrm{tun}}`` related to the ionization probability, in the SFA-AE, is
+The ``\mathrm{Im}\ \Phi_{\mathrm{tun}}`` related to the ionization rate, in the SFA-AE, is
 ```math
 \mathrm{Im}\ \Phi_{\mathrm{tun}} \approx -\frac13 \sqrt{\frac{[k^2(t_{\mathrm{r}})+2I_{\mathrm{p}}]^3}{F^2(t_{\mathrm{r}})-\bm{k}(t_{\mathrm{r}}) \cdot \bm{F}'(t_{\mathrm{r}})}},
 ```
 and we obtain
 ```math
 \begin{aligned}
-    \mathrm{d}W/\mathrm{d}\bm{k}_{\perp}
+    \mathrm{d}W/\mathrm{d}\bm{p}
     &= \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(-2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}) \\
     &= \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp \left[ -\frac23 \sqrt{\frac{[k_\perp^2+2I_{\mathrm{p}}]^3}{F^2-\bm{k}_\perp \cdot \bm{F}'}} \right],
 \end{aligned}
@@ -145,13 +145,119 @@ The Ammosov-Delone-Krainov (ADK) theory is used to study the adiabatic tunneling
 In the adiabatic limit, the laser field can be treated as static, thus we have ``\bm{F}'(t)=\bm{0}`` (higher order derivatives of ``\bm{F}(t)`` remains zero as well).
 Substuting it into the expressions of SFA-AE yields the ADK rate
 ```math
-\mathrm{d}W/\mathrm{d}\bm{k}_{\perp} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp \left[ -\frac23 \frac{[k_\perp^2+2I_{\mathrm{p}}]^{3/2}}{F} \right],
+\mathrm{d}W/\mathrm{d}\bm{p} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp \left[ -\frac23 \frac{[k_\perp^2+2I_{\mathrm{p}}]^{3/2}}{F} \right],
 ```
 and the tunneling exit position
 ```math
 \bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
 ```
 
-## Molecular ADK (MOADK)
+
+## Molecular ADK (MO-ADK)
+
+The molecular ADK (MO-ADK) theory generalizes the original ADK theory by extending the application scope from atomic to simple linear molecules.
+
+In the MO-ADK theory, the wavefunction of a linear molecule's ionizing orbital behaves asymptotically as
+```math
+\psi_0^{(m)}(\bm{r}) \sim \sum_l C_l F_l(r) Y_{lm}(\theta,\phi)
+```
+in the molecular frame (MF) when ``r\rightarrow\infty``, where ``m`` denotes the magnetic quantum number along the molecular axis (``m=0,1,2`` denotes ``\sigma,\pi`` and ``\delta`` symmetries respectively).
+Assigning ``\kappa=\sqrt{2I_{\mathrm{p}}}``, the ``F_l(r)`` has the following asymptotic behavior when ``r\rightarrow\infty``:
+```math
+F_l(r) \sim r^{Z/\kappa-1} \mathrm{e}^{-\kappa r}.
+```
+
+We assume the electric field is pointing towards the ``z`` axis in the laboratory frame (LF).
+The angle-dependent tunneling ionization rate in the MO-ADK theory reads
+```math
+\Gamma(\beta,\gamma) = \mathrm{d}W/\mathrm{d}t = \sum_{m'} \frac{|B_{m'}(\beta,\gamma)|^2}{2^{|m'|}|m'|!} \kappa^{-|m'|} \left(\frac{2\kappa^2}{F}\right)^{2Z/\kappa-|m'|-1} \mathrm{e}^{-2\kappa^3/3F},
+```
+where the molecule's orientation is described using a set of Euler angles ``\hat{\bm{R}} = (\alpha,\beta,\gamma)`` (``z-y'-z''`` convention), which represents the rotational transformation from the MF to the LF; ``B_{m'}(\beta,\gamma)`` are the structural parameters which depend on the molecule's orbital wavefunction (here we omitted the ``\alpha`` dependence because the structural parameters are independent of ``\alpha``).
+The structural parameters ``B_{m'}(\beta,\gamma)`` have the following expression:
+```math
+B_{m'}(\beta,\gamma) = C_l d_{m' m}^{l}(\beta) \mathrm{e}^{-\mathrm{i}m\gamma} Q_{l m'},
+```
+with ``d_{m' m}^{l}(\beta)`` being the Wigner-``d`` rotation matrix, and
+```math
+Q_{l m'} = (-1)^{m'} \sqrt{\frac{(2l+1)(l+|m'|)!}{2(l-|m'|)!}}.
+```
+
+To ultilize the MO-ADK theory to provide the initial conditions in the trajectory simulation, we simply adopt the result of the atomic ADK theory:
+```math
+\bm{r}_0 = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
+```
+As for the ionization probability, we include the influence of the initial kinetic energy ``k_\perp^2/2`` by replacing the ``\kappa=\sqrt{2I_{\mathrm{p}}}`` with ``\kappa'(k_\perp)=\sqrt{2I_{\mathrm{p}}+k_\perp^2}`` in the exponential term of the ionization probability in the MO-ADK theory, giving
+```math
+\mathrm{d}W/\mathrm{d}\bm{k}_\perp \mathrm{d}t = \sum_{m'} \frac{|B_{m'}(\beta,\gamma)|^2}{2^{|m'|}|m'|!} \kappa^{-|m'|} \left(\frac{2\kappa^2}{F}\right)^{2Z/\kappa-|m'|-1} \mathrm{e}^{-2\kappa'^3(k_\perp)/3F}.
+```
+
+[[[Question: The normalization coefficient?]]]
+
 
 ## Weak-Field Asymptotic Theory (WFAT)
+
+The weak-field asymptotic theory (WFAT) generalizes the tunneling ionization from isotropic atomic potentials to arbitrary molecular potentials. Compared with the MO-ADK theory, the WFAT accounts for the influence of the molecules' permanent dipole moment, and is applicable for complex molecules other than simple linear molecules.
+
+The formulation of the WFAT is based on the expansion in the parabolic coordinates.
+The total ionization rate ``\Gamma(\beta,\gamma) = \mathrm{d}W/\mathrm{d}t``, is split into different parabolic channels:
+```math
+\Gamma(\beta,\gamma) = \sum_\nu \Gamma_\nu(\beta,\gamma),
+```
+where ``\Gamma_\nu(\beta,\gamma)`` are partial rates of parabolic quantum number indices ``\nu=(n_\xi,m)``, and ``n_\xi=0,1,2,\cdots``, ``m=0,\pm 1,\pm 2,\cdots``.
+In the leading-order approximation of the WFAT, the partial rates can be separated into two factors, namely the structural part ``|G_\nu(\beta,\gamma)|^2`` and the field part ``W_\nu(F)``:
+```math
+\Gamma_\nu(\beta,\gamma) = |G_\nu(\beta,\gamma)|^2 W_\nu(F).
+```
+The field factor is expressed as
+```math
+W_\nu(F) = \frac{\kappa}{2} \left(\frac{4\kappa^2}{F}\right)^{2Z/\kappa-2n_\xi-|m|-1} \mathrm{e}^{-2\kappa^3/3F}.
+```
+The structure factor, in the integral representation of the WFAT, is given as an integral:
+```math
+G_\nu (\beta,\gamma) = \mathrm{e}^{-\kappa\mu_z} \int \Omega_\nu^* \left(\hat{\bm{R}}^{-1} \bm{r}\right) \hat{V}_{\mathrm{c}}(\bm{r}) \psi_0(\bm{r}) \mathrm{d} \bm{r},
+```
+where ``\psi_0`` is the wavefunction of the ionizing orbital,
+```math
+\bm{\mu} = \int \psi_0^*(\bm{r}) \bm{r} \psi_0(\bm{r}) \mathrm{d} \bm{r}
+```
+denotes the orbital dipole moment in the LF, with ``\mu_z`` being its component along the field direction;
+```math
+\Omega_\nu(\bm{r}) = \sum_{l=|m|}^{\infty} \Omega^\nu_{lm}(\bm{r}) = \sum_{l=|m|}^{\infty} R_l^\nu(r) Y_{lm}(\theta, \phi)
+```
+is a reference function which can be expanded into spherical harmonics, its radial part is expressed as
+```math
+R_l^\nu(r)=\omega_l^\nu \ (\kappa r)^l \ \mathrm{e}^{-\kappa r} \ \mathrm{M}(l+1-Z/\kappa, 2l+2, 2 \kappa r),
+```
+with ``\mathrm{M}(a,b,x)`` being the confluent hyper-geometric function and
+```math
+\begin{aligned}
+    \omega_l^\nu = & \      (-1)^{l+(|m|-m)/2+1}\ 2^{l+3/2}\ \kappa^{Z/\kappa-(|m|+1)/2-n_\xi} \\
+                   & \times \sqrt{(2l+1)(l+m)!(l-m)!(|m|+n_\xi)!n_\xi!}\ \frac{l!}{(2l+1)!} \\
+                   & \times \!\!\!\!\!\! \sum_{k=0}^{\min{(n_\xi,l-|m|)}} \!\!\!\!\!\!\!\!\!\! \frac{\Gamma(l+1-Z/\kappa+n_\xi-k)}{k!(l-k)!(|m|+k)!(l-|m|-k)!(n_\xi-k)!}
+\end{aligned}
+```
+the normalization coefficient;
+``\hat{V}_{\mathrm{c}}(\bm{r})=\hat{V}(\bm{r})+Z/r`` is the core potential with the Coulomb tail removed, where ``Z`` is the asymptotic charge of the residual ion.
+
+The effective potential ``\hat{V}(\bm{r})`` describes the interaction between the ionizing electron and the residual parent ion.
+Under the framework of the Hartree-Fock method, the effective potential consists of three parts, namely the nuclear Coulomb potential (``V_{\mathrm{nuc}}``), the direct (``V_{\mathrm{d}}``) and exchange (``V_{\mathrm{ex}}``) parts of inter-electron interactions:
+```math
+\hat{V}(\bm{r}) = V_{\mathrm{nuc}}(\bm{r}) + V_{\mathrm{d}}(\bm{r}) + \hat{V}_{\mathrm{ex}}(\bm{r}),
+```
+and
+```math
+\begin{aligned}
+    V_{\mathrm{nuc}}(\bm{r}) &= -\sum_{A=1}^{N_{\mathrm{atm}}} \frac{Z_A}{\left|\bm{r}-\bm{R}_A\right|}, \\
+    V_{\mathrm{d}}(\bm{r}) &= \sum_{i=1}^N \int \frac{\psi_i^*(\bm{r}') \psi_i(\bm{r}')}{|\bm{r}-\bm{r}'|} \mathrm{d} \bm{r}', \\
+    \hat{V}_{\mathrm{ex}}(\bm{r}) \psi_0(\bm{r}) &= -\sum_{i=1}^N \psi_i(\bm{r}) \int \frac{\psi_i^*(\bm{r}') \psi_0(\bm{r}')}{|\bm{r}-\bm{r}'|} \braket{\sigma_i | \sigma_0} \mathrm{d} \bm{r}',
+\end{aligned}
+```
+where ``N`` is the number of electrons, ``N_{\mathrm{atm}}`` is the number of nuclei, ``\psi_i(\bm{r})`` and ``\sigma_i`` denote the molecular orbital and the spin state of the electron of index ``i`` (``\braket{\sigma_i|\sigma_j}=1`` if electrons of index ``i`` and ``j`` have the same spin, and ``\braket{\sigma_i|\sigma_j}=0`` otherwise), ``Z_A`` and ``\bm{R}_A`` are the nuclear charge and position of atom of index ``A``.
+
+As the WFAT provides only the ionization rate ``\Gamma = \mathrm{d}W/\mathrm{d}t`` as the MO-ADK does, we adopt the same procedure as we did in the MO-ADK theory to provide the initial conditions for the trajectory simulation.
+The initial position ``\bm{r}_0`` is the same as that in the MO-ADK theory, and the ionization rate reads
+```math
+\mathrm{d}W/\mathrm{d}\bm{k}_\perp \mathrm{d}t = \sum_\nu |G_\nu(\beta,\gamma)|^2 \cdot \frac{\kappa}{2} \left(\frac{4\kappa^2}{F}\right)^{2Z/\kappa-2n_\xi-|m|-1} \mathrm{e}^{-2\kappa'^3(k_\perp)/3F}.
+```
+
+[[[Question: The normalization coefficient?]]]
