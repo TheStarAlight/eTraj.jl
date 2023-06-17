@@ -37,10 +37,20 @@ where ``\bm{r},\bm{p}`` are quantities of the electron at any time after the las
 This scheme applies for electrons with positive energy, which are able to finally escape the parent ion and reach the detector.
 For electrons with negative energy, we assume that they finally become rydberg states.
 
-Finally, electrons with similar final momenta would be collected by summing up the probabilities they carry: ``W_{\bm{p}} = \sum_i{W_i}``, and the final momentum spectrum is given by ``W_{\bm{p}}``.
-
+Finally, electrons with similar final momenta (i.e., in the same small box of the final momentum grid) would be collected by summing up the probabilities they carry: ``W_{\bm{p}} = \sum_i{W_i}``, and the final momentum spectrum is given by ``W_{\bm{p}}``.
 
 
 ## Quantum Trajectory Monte Carlo (QTMC)
+
+Compared with the CTMC, the QTMC scheme endows each electron trajectory with a quantum phase ``\Phi`` based on the Feynman path-integral approach.
+The phase gets acculmulated during the electron's excursion and is expressed as
+```math
+\Phi = - \int_{t_0}^\infty \left[ \frac{p^2}{2} + V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t.
+```
+where ``t_0`` is the time when the electron tunneled.
+Finally the momentum spectrum is given by coherently summing up the probability amplitude, and taking the square modulus of the summation result:
+```math
+W_{\bm{p}} = \left| \sum_i \sqrt{W_i}\ \mathrm{e}^{\mathrm{i}\Phi_i} \right|^2.
+```
 
 ## Semiclassical Two-Step Model (SCTS)

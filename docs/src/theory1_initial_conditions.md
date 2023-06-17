@@ -6,7 +6,7 @@ A number of theories can be adapted to provide initial conditions of the classic
 The initial condition usually consists of three properties:
 
 - Initial position ``\bm{r}_0`` (i.e., the tunneling exit position);
-- Initial momentum ``\bm{p}_0``, we note that in the trajectory simulation schemes, initial momentum are usually denoted using ``\bm{k}_0``;
+- Initial momentum ``\bm{p}_0``, we note that in the trajectory simulation schemes, initial momenta are usually denoted using ``\bm{k}_0``;
 - The corresponding ionization probability ``W`` carried by each electron sample, depending on the time-dependent laser field and the properties of the target atoms/molecules.
 
 In the following we will give a brief review on the available theories we implemented in *SemiclassicalSFI.jl*.
