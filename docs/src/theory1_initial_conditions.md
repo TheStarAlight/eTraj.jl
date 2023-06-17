@@ -1,4 +1,4 @@
-# Initial Conditions
+# Theory: Initial Conditions
 
 *This section reviews commonly-used theories used to provide initial conditions in the trajectory simulations.*
 
@@ -13,7 +13,7 @@ In the following we will give a brief review on the available theories we implem
 Atomic units (a.u.) are used throughout unless stated otherwise.
 
 ```@contents
-Pages = ["theory_initial_conditions.md"]
+Pages = ["theory1_initial_conditions.md"]
 ```
 
 ## Strong-Field Approximation (SFA)
