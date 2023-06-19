@@ -19,9 +19,9 @@ The essence of the trajectory simulation scheme lies in two aspects:
 
 After decades of accumulation of research and development, the trajectory simulation has grown to a complete solution of research on strong-field ionization of atoms and molecules. Developing a library with implementation of existing methods, efficiency of calculation, extensibility for future development and ease of maintenance would provide great convenience for theoretical research on strong-field ionization. With such aim, here we present *SemiclassicalSFI.jl*, a program package written in julia language, which provides a general, efficient and out-of-box solution of performing trajectory simulations.
 
-[^Corkum_1989]: Corkum, P. B. *et al.* Above-Threshold Ionization in the Long-Wavelength Limit. *Phys. Rev. Lett.* **62**(11), 1259–1262 (1989). DOI: [10.1103/PhysRevLett.62.1259](http://dx.doi.org/10.1103/PhysRevLett.62.1259)
+[^Corkum_1989]: P. B. Corkum *et al.*, Above-Threshold Ionization in the Long-Wavelength Limit. *Phys. Rev. Lett.* **62**(11), 1259–1262 (1989). DOI: [10.1103/PhysRevLett.62.1259](https://dx.doi.org/10.1103/PhysRevLett.62.1259)
 
-[^Hu_1997]: Hu, B. *et al.* Plateau in Above-Threshold-Ionization Spectra and Chaotic Behavior in Rescattering Processes. *Phys. Lett. A* **236**(5–6), 533–542 (1997). DOI: [10.1016/S0375-9601(97)00811-6](http://dx.doi.org/10.1016/S0375-9601(97)00811-6)
+[^Hu_1997]: B. Hu *et al.*, Plateau in Above-Threshold-Ionization Spectra and Chaotic Behavior in Rescattering Processes. *Phys. Lett. A* **236**, 533–542 (1997). DOI: [10.1016/S0375-9601(97)00811-6](https://dx.doi.org/10.1016/S0375-9601(97)00811-6)
 
 ## Features
 

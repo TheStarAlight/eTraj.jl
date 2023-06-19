@@ -18,7 +18,7 @@ Pages = ["theory1_initial_conditions.md"]
 
 ## Strong-Field Approximation (SFA)
 
-The Strong-Field Approximation (SFA) is originated from the Keldysh theory of strong-field ionization.
+The Strong-Field Approximation (SFA) [^Popruzhenko_2014] is originated from the Keldysh theory of strong-field ionization.
 Compared with the pertubative methods and adiabatic tunneling theories, the SFA is able to predict both the multi-photon and the tunneling process during the laser-atom interaction, as well as high-order non-pertubative phenomenona such as the above-threshold ionization (ATI) because it fully includes the non-adiabatic effect of the laser-atom interaction.
 The broad scope of SFA has contributed to its widespread application in theoretical investigations of strong-field ionization.
 
@@ -66,7 +66,7 @@ The integral can be approximated by a summation over the saddle points:
 M_{\bm{p}} \approx \sum_{t_{\mathrm{s}}} P_{\bm{p}}(t_{\mathrm{s}}) \mathrm{e}^{\mathrm{i}\tilde{S}_{\bm{p}}(t_{\mathrm{s}})},
 ```
 where ``P_{\bm{p}}(t_{\mathrm{s}})`` denotes the prefactor.
-Here we use a modified version of SFA which takes account of the Coulomb potential, which gives the prefactor
+Here we use a modified version of SFA which takes account of the Coulomb potential [^Kjeldsen_2006] [^Milosevic_2006], which gives the prefactor
 ```math
 P_{\bm{p}}(t_{\mathrm{s}}) = \{ [\bm{p}+\bm{A}(t_{\mathrm{s}})] \cdot \bm{F}(t_{\mathrm{s}}) \}^{-\alpha/2},
 ```
@@ -99,10 +99,14 @@ The probablity density (in the final momentum space) carried by the electron sam
 \mathrm{d}W/\mathrm{d}\bm{p} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(-2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}).
 ```
 
+[^Popruzhenko_2014]: S. V. Popruzhenko, Keldysh Theory of Strong Field Ionization: History, Applications, Difficulties and Perspectives. *J. Phys. B: At. Mol. Opt. Phys.* **47**, 204001 (2014). DOI:[10.1088/0953-4075/47/20/204001](https://dx.doi.org/10.1088/0953-4075/47/20/204001)
+[^Kjeldsen_2006]: T. K. Kjeldsen *et al.*, Strong-Field Ionization of Atoms and Molecules: The Two-Term Saddle-Point Method. *Phys. Rev. A* **74**, 023407 (2006). DOI:[10.1103/PhysRevA.74.023407](https://dx.doi.org/10.1103/PhysRevA.74.023407)
+[^Milosevic_2006]: D. B. Milošević *et al.*, Above-Threshold Ionization by Few-Cycle Pulses. *J. Phys. B: At. Mol. Opt. Phys.* **39**, R203–R262 (2006). DOI: [10.1088/0953-4075/39/14/R01](https://dx.doi.org/10.1088/0953-4075/39/14/R01)
+
 
 ## SFA with Adiabatic Expansion (SFA-AE)
 
-For small Keldysh parameter ``\gamma``, the non-adiabatic effect is not significant, thus an adiabatic expansion scheme can be carried out to develop a modified theory based on the SFA, which is named after the SFA with adiabatic expansion (SFA-AE). It partially includes the non-adiabatic effect and is competent to give similar results compared with that given by the SFA under small Keldysh parameters.
+For small Keldysh parameter ``\gamma``, the non-adiabatic effect is not significant, thus an adiabatic expansion scheme can be carried out to develop a modified theory based on the SFA, which is named after the SFA with adiabatic expansion (SFA-AE) [^Ni_2018]. It partially includes the non-adiabatic effect and is competent to give similar results compared with that given by the SFA under small Keldysh parameters.
 
 The SFA-AE is applicable when the Keldysh parameter is small or the non-adiabatic effect is insignificant, and we recall that in the SFA there is a corresponding quantity ``t_{\mathrm{i}}`` which quantifies the non-adiabacity of tunneling.
 For small ``t_{\mathrm{i}}``, we expand the vector potential ``\bm{A}(t_{\mathrm{r}} + \mathrm{i}t_{\mathrm{i}})`` at ``t_{\mathrm{r}}``, up to the second order of ``t_{\mathrm{i}}``:
@@ -137,10 +141,13 @@ The initial position has the expression
 \bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2-\bm{k}_\perp \cdot \bm{F}'}.
 ```
 
+[^Ni_2018]: H. Ni *et al.*, Tunneling Criteria and a Nonadiabatic Term for Strong-Field Ionization. *Phys. Rev. A* **98**, 013411 (2018). DOI:[10.1103/PhysRevA.98.013411](https://dx.doi.org/10.1103/PhysRevA.98.013411)
+
+
 
 ## Ammosov-Delone-Krainov (ADK)
 
-The Ammosov-Delone-Krainov (ADK) theory is used to study the adiabatic tunneling in the strong-field ionization, and is, in a sense, the adiabatic limit of the SFA.
+The Ammosov-Delone-Krainov (ADK) theory [^Ammosov_1986] [^Delone_1998] is used to study the adiabatic tunneling in the strong-field ionization, and is, in a sense, the adiabatic limit of the SFA.
 
 In the adiabatic limit, the laser field can be treated as static, thus we have ``\bm{F}'(t)=\bm{0}`` (higher order derivatives of ``\bm{F}(t)`` remains zero as well).
 Substuting it into the expressions of SFA-AE yields the ADK rate
@@ -152,10 +159,15 @@ and the tunneling exit position
 \bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
 ```
 
+[^Ammosov_1986]: M. V. Ammosov *et al.*, Tunnel Ionization of Complex Atoms and of Atomic Ions in an Alternating Electromagnetic Field. *Sov. Phys. JETP* **64**, 1191 (1986).
+[^Delone_1998]: N. B. Delone *et al.*, Tunneling and Barrier-Suppression Ionization of Atoms and Ions in a Laser Radiation Field. *Phys.-Usp.* **41**, 469–485. DOI: [10.1070/PU1998v041n05ABEH000393](https://dx.doi.org/10.1070/PU1998v041n05ABEH000393)
+
+
+
 
 ## Molecular ADK (MO-ADK)
 
-The molecular ADK (MO-ADK) theory generalizes the original ADK theory by extending the application scope from atomic to simple linear molecules.
+The molecular ADK (MO-ADK) theory generalizes the original ADK theory by extending the application scope from atomic to simple linear molecules [^Tong_2002].
 
 In the MO-ADK theory, the wavefunction of a linear molecule's ionizing orbital behaves asymptotically as
 ```math
@@ -191,12 +203,13 @@ As for the ionization probability, we include the influence of the initial kinet
 \mathrm{d}W/\mathrm{d}\bm{k}_\perp \mathrm{d}t = \sum_{m'} \frac{|B_{m'}(\beta,\gamma)|^2}{2^{|m'|}|m'|!} \kappa^{-|m'|} \left(\frac{2\kappa^2}{F}\right)^{2Z/\kappa-|m'|-1} \mathrm{e}^{-2\kappa'^3(k_\perp)/3F}.
 ```
 
-[[[Question: The normalization coefficient?]]]
+[^Tong_2002]: X. M. Tong *et al.*, Theory of Molecular Tunneling Ionization. *Phys. Rev. A* **66**, 033402 (2002). DOI: [10.1103/PhysRevA.66.033402](https://dx.doi.org/10.1103/PhysRevA.66.033402)
+
 
 
 ## Weak-Field Asymptotic Theory (WFAT)
 
-The weak-field asymptotic theory (WFAT) generalizes the tunneling ionization from isotropic atomic potentials to arbitrary molecular potentials. Compared with the MO-ADK theory, the WFAT accounts for the influence of the molecules' permanent dipole moment, and is applicable for complex molecules other than simple linear molecules.
+The weak-field asymptotic theory (WFAT) generalizes the tunneling ionization from isotropic atomic potentials to arbitrary molecular potentials [^Tolstikhin_2011]. Compared with the MO-ADK theory, the WFAT accounts for the influence of the molecules' permanent dipole moment, and is applicable for complex molecules other than simple linear molecules.
 
 The formulation of the WFAT is based on the expansion in the parabolic coordinates.
 The total ionization rate ``\Gamma(\beta,\gamma) = \mathrm{d}W/\mathrm{d}t``, is split into different parabolic channels:
@@ -212,7 +225,7 @@ The field factor is expressed as
 ```math
 W_\nu(F) = \frac{\kappa}{2} \left(\frac{4\kappa^2}{F}\right)^{2Z/\kappa-2n_\xi-|m|-1} \mathrm{e}^{-2\kappa^3/3F}.
 ```
-The structure factor, in the integral representation of the WFAT, is given as an integral:
+The structure factor, in the integral representation of the WFAT [^Dnestryan_2018], is given as an integral:
 ```math
 G_\nu (\beta,\gamma) = \mathrm{e}^{-\kappa\mu_z} \int \Omega_\nu^* \left(\hat{\bm{R}}^{-1} \bm{r}\right) \hat{V}_{\mathrm{c}}(\bm{r}) \psi_0(\bm{r}) \mathrm{d} \bm{r},
 ```
@@ -260,4 +273,6 @@ The initial position ``\bm{r}_0`` is the same as that in the MO-ADK theory, and 
 \mathrm{d}W/\mathrm{d}\bm{k}_\perp \mathrm{d}t = \sum_\nu |G_\nu(\beta,\gamma)|^2 \cdot \frac{\kappa}{2} \left(\frac{4\kappa^2}{F}\right)^{2Z/\kappa-2n_\xi-|m|-1} \mathrm{e}^{-2\kappa'^3(k_\perp)/3F}.
 ```
 
-[[[Question: The normalization coefficient?]]]
+[^Tolstikhin_2011]: O. I. Tolstikhin *et al.*, Theory of Tunneling Ionization of Molecules: Weak-Field Asymptotics Including Dipole Effects. *Phys. Rev. A* **84**, 053423 (2011). DOI: [10.1103/PhysRevA.84.053423](https://dx.doi.org/10.1103/PhysRevA.84.053423)
+[^Dnestryan_2018]: A. I. Dnestryan *et al.*, Structure Factors for Tunneling Ionization Rates of Molecules: General Grid-Based Methodology and Convergence Studies. *J. Chem. Phys.* **149**, 164107. DOI: [10.1063/1.5046902](https://dx.doi.org/10.1063/1.5046902)
+

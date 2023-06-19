@@ -24,7 +24,7 @@ The tunneled electrons, each having different tunneling time, initial positions 
 where ``V(\bm{r})`` denotes the potential of the parent ion.
 
 After the laser ends, the electron interacts only with the residual parent ion.
-At a distance from the parent ion, the electron interacts with the potential's Coulomb tail, and its Runge-Lenz vector ``\bm{a} = \bm{p}\times\bm{L} - Z\bm{r}/r`` can be viewed as approximately conserved. Taking advantage of this conserved quantity, combining with the conservation of angular momentum and energy, we obtain the expression of the final momentum:
+At a distance from the parent ion, the electron interacts with the potential's Coulomb tail, and its Runge-Lenz vector ``\bm{a} = \bm{p}\times\bm{L} - Z\bm{r}/r`` can be viewed as approximately conserved. Taking advantage of this conserved quantity, combining with the conservation of angular momentum and energy, we obtain the expression of the final momentum [^ShvetsovShilovski_2012]:
 ```math
 \begin{aligned}
     \bm{p}_\infty &= p_\infty \frac{p_\infty(\bm{L}\times\bm{a})-\bm{a}}{1+p_\infty^2 L^2}, \\
@@ -39,10 +39,12 @@ For electrons with negative energy, we assume that they finally become rydberg s
 
 Finally, electrons with similar final momenta (i.e., in the same small box of the final momentum grid) would be collected by summing up the probabilities they carry: ``W_{\bm{p}} = \sum_i{W_i}``, and the final momentum spectrum is given by ``W_{\bm{p}}``.
 
+[^ShvetsovShilovski_2012]: N. I. Shvetsov-Shilovski *et al.*, Ionization in elliptically polarized pulses: Multielectron polarization effects and asymmetry of photoelectron momentum distributions, *Phys. Rev. A* **85**, 023428 (2012). DOI: [10.1103/PhysRevA.85.023428](https://dx.doi.org/10.1103/PhysRevA.85.023428)
+
 
 ## Quantum Trajectory Monte Carlo (QTMC)
 
-Compared with the CTMC, the QTMC scheme endows each electron trajectory with a quantum phase ``\Phi`` based on the Feynman path-integral approach.
+Compared with the CTMC, the QTMC scheme endows each electron trajectory with a quantum phase ``\Phi`` based on the Feynman path-integral approach [^Li_2014].
 The phase gets acculmulated during the electron's excursion and is expressed as
 ```math
 \Phi = - \int_{t_0}^\infty \left[ \frac{p^2}{2} + V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t.
@@ -61,9 +63,12 @@ Since electrons which arrived at the same final momentum share the same energy a
 is same for electrons with the same final momentum.
 Therefore, in numerical implementation, the upper limit of the phase integral can be simply set as the end of the laser, i.e., the ``t_{\mathrm{f}}``.
 
+[^Li_2014]: M. Li *et al.*, Classical-quantum correspondence for above-threshold ionization, *Phys. Rev. Lett.* **112**, 113002 (2014). DOI: [10.1103/PhysRevLett.112.113002](https://dx.doi.org/10.1103/PhysRevLett.112.113002)
+
+
 ## Semiclassical Two-Step (SCTS) Model
 
-The SCTS model improves the quantum phase in the QTMC scheme, giving
+The SCTS model [^ShvetsovShilovski_2016] improves the quantum phase in the QTMC scheme, giving
 ```math
 \Phi = - \bm{k}_0\cdot\bm{r}_0 - \int_{t_0}^\infty \left[ \frac{p^2}{2} + V(\bm{r}) - \bm{r}\cdot\bm{\nabla}V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t.
 ```
@@ -86,3 +91,5 @@ In this way we obtain the expression of the SCTS phase that is suitable for nume
 ```math
 \Phi = - \bm{k}_0\cdot\bm{r}_0 + I_{\mathrm{p}}t_0 - \int_{t_0}^{t_{\mathrm{f}}} \left[ \frac{p^2}{2} + V(\bm{r}) - \bm{r}\cdot\bm{\nabla}V(\bm{r}) \right] \mathrm{d}t + \Phi_{\mathrm{f}}^{\mathrm{C}}(t_{\mathrm{f}}).
 ```
+
+[^ShvetsovShilovski_2016]: N. I. Shvetsov-Shilovski *et al.*, Semiclassical two-step model for strong-field ionization, *Phys. Rev. A* **94**, 013415 (2016). DOI: [10.1103/PhysRevA.94.013415](https://dx.doi.org/10.1103/PhysRevA.94.013415)
