@@ -22,7 +22,7 @@ Targets.HydrogenLikeAtom
 
 ## Single-Active-Electron (SAE) Atom
 
-The single-active-electron (SAE) atom is an implementation of the empirical atomic SAE  model potential proposed by Tong *et al.* [^Tong_2005]
+The single-active-electron (SAE) atom is an implementation of the empirical atomic SAE model potential proposed by Tong *et al.* [^Tong_2005]
 The model potential of the SAE atom has the form
 ```math
 V(r) = -\frac{Z + a_1 \mathrm{e}^{-b_1 r} + a_2 r \mathrm{e}^{-b_2 r} + a_3 \mathrm{e}^{-b_3 r}}{r},
@@ -53,9 +53,23 @@ Example:
 ```jldoctest
 julia> t1 = Targets.HAtom()
 [HydrogenLikeAtom] Atom H, Ip=0.5, Z=1.0, SoftCore=1.0
-
+```
+```jldoctest
 julia> t2 = Targets.Xe1pAtom()
 [SAEAtom] Atom Xe⁺, Ip=0.7708, Z=2.0
 ```
 
+
 ## Molecule
+
+The `Molecule` object represents a generic molecule, which is implemented in the library as [`Targets.Molecule`](@ref).
+The structure of `Molecule` is much more complex than that of atoms because the MO-ADK and WFAT features for molecular strong-field ionization require a number of coefficients, which are saved to files for convenience.
+
+### Initialization, saving and loading
+
+The `Molecule` object can be initialized either by providing necessary information of the molecule (mainly atoms, coordinates of the atoms and the charge of the molecule) or from external data (stored in the HDF5 format), cf. the documentation of [`Targets.Molecule`](@ref):
+
+```@docs
+Targets.Molecule
+```
+

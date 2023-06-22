@@ -5,7 +5,46 @@ using Rotations
 using Dates
 using HDF5
 
-"Represents a molecule."
+"""
+Represents a generic molecule.
+
+# Fresh initialization
+
+A new instance of `Molecule` can be initialized via the constructor method:
+```julia
+Molecule(atoms, atom_coords, charge::Integer=0, name::String="[NA]", data_path::String="", calc_energy::Bool=false, rot_α=0.0, rot_β=0.0, rot_γ=0.0)
+```
+
+## Parameters:
+- `atoms`                   : Atoms in the molecule, stored as a vector of String.
+- `atom_coords`             : Atoms' coordinates in the molecule (in **Angstrom**), stored as a N×3 matrix.
+- `charge`                  : Total charge of the molecule (ion) (optional, default 0).
+- `name`                    : Name of the molecule (optional).
+- `data_path`               : Path to the molecule's data (default empty). Specifying an empty string indicates no saving (but can still be saved later by calling method `MolSaveDataAs`).
+- `calc_energy`             : Indicates whether to calculate the energy data of the molecule upon initialization (default false).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (optional, default 0).
+
+## Example:
+The following example creates a new instance of Hydrogen `Molecule`, and saves the data related to the `Molecule` to the specified path.
+```jldoctest
+julia> mol = Targets.Molecule(atoms=["H","H"], atom_coords=[0 0 -0.375; 0 0 0.375], charge=0, name="Hydrogen", data_path="./Molecule_Hydrogen.h5")
+[ Info: [Molecule] Data saved for molecule Hydrogen at "./Molecule_Hydrogen.h5".
+Molecule [Hydrogen]
+```
+
+# Initialization from existing data
+
+To initialize an instance of `Molecule` from existing external data, invoke
+```julia
+Molecule(data_path::String, rot_α=0.0, rot_β=0.0, rot_γ=0.0)
+```
+
+## Example:
+```jldoctest
+julia> mol = Targets.Molecule("./Molecule_Hydrogen.h5")
+Molecule [Hydrogen]
+```
+"""
 mutable struct Molecule <: Target
 
     "Path to the data file that stores information and data about the molecule."
@@ -63,7 +102,7 @@ mutable struct Molecule <: Target
     Initializes a new instance of `Molecule` with given parameters.
     # Parameters
     - `atoms`                   : Atoms in the molecule, stored as a vector of String.
-    - `atom_coords`             : Atoms' coordinates in the molecule, stored as a N×3 matrix.
+    - `atom_coords`             : Atoms' coordinates in the molecule (in **Angstrom**), stored as a N×3 matrix.
     - `charge`                  : Total charge of the molecule (ion) (optional, default 0).
     - `name`                    : Name of the molecule (optional).
     - `data_path`               : Path to the molecule's data (default empty). Specifying an empty string indicates no saving (but can still be saved later by calling method `MolSaveDataAs`).

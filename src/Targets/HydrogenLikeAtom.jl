@@ -8,7 +8,7 @@ An instance of `HydrogenLikeAtom` can be initialized via the constructor method:
 HydrogenLikeAtom(Ip, Z, soft_core=1.0, name="[NA]")
 ```
 
-Example:
+## Example:
 ```jldoctest
 julia> t = Targets.HydrogenLikeAtom(Ip=0.5, Z=1.0, soft_core=1.0, name="H")
 [HydrogenLikeAtom] Atom H, Ip=0.5, Z=1.0, SoftCore=1.0
