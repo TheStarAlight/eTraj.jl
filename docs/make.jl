@@ -11,6 +11,5 @@ makedocs(
             "Manual"    => [
                 "Targets"   => "manual1_targets.md"
                 ]
-        ],
-        doctest = false
+        ]
         )

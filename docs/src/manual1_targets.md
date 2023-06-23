@@ -3,7 +3,16 @@
 *This section provides information of available targets (atoms/molecules) in the library.*
 
 A target interacts with the laser field and release the electron through multi-photon or tunneling processes.
-Here we list available targets implemented in the library.
+Here we list available targets implemented in the [`Targets`](@ref) module of the library.
+
+```@docs
+Targets
+```
+
+```@contents
+Pages = ["manual1_targets.md"]
+Depth = 3
+```
 
 ## Hydrogen-Like Atom
 
@@ -50,20 +59,19 @@ These atoms/ions can be obtained by invoking `Targets.**Atom()` (for neutral ato
 
 Example:
 
-```jldoctest
-julia> t1 = Targets.HAtom()
-[HydrogenLikeAtom] Atom H, Ip=0.5, Z=1.0, SoftCore=1.0
+```@setup manual_targets
+using SemiclassicalSFI
 ```
-```jldoctest
-julia> t2 = Targets.Xe1pAtom()
-[SAEAtom] Atom Xe⁺, Ip=0.7708, Z=2.0
+```@repl manual_targets
+t1 = Targets.HAtom()
+t2 = Targets.Xe1pAtom()
 ```
 
 
 ## Molecule
 
 The `Molecule` object represents a generic molecule, which is implemented in the library as [`Targets.Molecule`](@ref).
-The structure of `Molecule` is much more complex than that of atoms because the MO-ADK and WFAT features for molecular strong-field ionization require a number of coefficients, which are saved to files for convenience.
+The structure of `Molecule` is much more complex than that of atoms because the [Molecular ADK (MO-ADK)](@ref) and [Weak-Field Asymptotic Theory (WFAT)](@ref) features for molecular strong-field ionization require a number of coefficients, which are saved to files for convenience.
 
 ### Initialization, saving and loading
 
@@ -73,3 +81,49 @@ The `Molecule` object can be initialized either by providing necessary informati
 Targets.Molecule
 ```
 
+The molecule object, after modification, can be manually saved to a HDF5 file via [`Targets.MolSaveDataAs`](@ref).
+
+```@docs
+Targets.MolSaveDataAs
+```
+
+### Molecular-SFI Data Preparation
+
+To use the molecular strong-field ionization theories such as the MO-ADK and WFAT to provide the intitial conditions of the electrons, the structure coefficients of the `Molecule` have to be calculated beforehand and stored in the object.
+Cf. the documentation of [`Targets.MolCalcMOADKCoeff!`](@ref) and [`Targets.MolCalcWFATData!`](@ref).
+
+Evaluation of the structure coefficients depends on the external quantum chemistry packages.
+The [`Targets.MolecularCalculators`](@ref) module undertakes the task of communication with the external quantum packages.
+Currently only the [`Targets.MolecularCalculators.PySCFMolecularCalculator`](@ref) is implemented.
+
+!!! note "Customized calculation parameters"
+    When invoking `MolCalcMOADKCoeff!` and `MolCalcWFATData!` to perform calculation of structure coefficients, customized calculation parameters can be passed to the `kwargs` of these methods.
+    These parameters would be passed to the constructor method of the `MolecularCalculator` (e.g., the `basis` parameter of the [`Targets.MolecularCalculators.PySCFMolecularCalculator`](@ref)), as well as the [`Targets.MolecularCalculators.calcStructFactorData`](@ref), [`Targets.MolecularCalculators.calcMOADKCoeff`](@ref) methods.
+    Refer to their documentation below for more information.
+
+```@docs
+Targets.MolCalcMOADKCoeff!
+Targets.MolCalcWFATData!
+```
+
+```@docs
+Targets.MolecularCalculators
+Targets.MolecularCalculators.PySCFMolecularCalculator
+```
+
+```@docs
+Targets.MolecularCalculators.calcStructFactorData
+Targets.MolecularCalculators.calcMOADKCoeff
+```
+
+### Molecule's Orientation
+
+The molecule's orientation is described by a set of Euler angles (``z-y'-z''`` convention), which defines a rotational transformation from the molecular frame (MF) to the lab frame (LF).
+This property of `Molecule` is NOT included in the saved file and thus needs to be specified each time upon initialization of the `Molecule` object from external files.
+
+The orientation of the molecule can be obtained and set via the [`Targets.MolRotation`](@ref) and [`Targets.SetMolRotation`](@ref) methods.
+
+```@docs
+Targets.MolRotation
+Targets.SetMolRotation
+```

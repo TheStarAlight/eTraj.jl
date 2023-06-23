@@ -6,6 +6,10 @@ using Dates
 using HDF5
 
 """
+```
+struct Molecule <: Target
+```
+
 Represents a generic molecule.
 
 # Fresh initialization
@@ -394,12 +398,28 @@ function MolMOADKCoeff_lMax(mol::Molecule, orbitIdx_relHOMO::Integer)
     return size(MolMOADKCoeffs(mol, orbitIdx_relHOMO), 1) - 1
 end
 
-"Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
+"""
+```
+MolRotation(mol::Molecule)
+```
+Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ).
+"""
 MolRotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
-"Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
+"""
+```
+SetMolRotation(mol::Molecule, α,β,γ)
+```
+Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ).
+"""
 function SetMolRotation(mol::Molecule, α,β,γ)
     mol.rot_α = α; mol.rot_β = β; mol.rot_γ = γ;
 end
+"""
+```
+SetMolRotation(mol::Molecule, (α,β,γ))
+```
+Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ).
+"""
 function SetMolRotation(mol::Molecule, (α,β,γ))
     SetMolRotation(mol, α,β,γ)
 end
@@ -460,10 +480,31 @@ function _MolSaveEnergyData(mol::Molecule)
 end
 
 """
-Calculates the WFAT data of the molecule and saves the data.
-- `MCType`              : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+```
+MolCalcWFATData!(   mol::Molecule,
+                    orbitIdx_relHOMO::Integer = 0,
+                    MCType::Type = PySCFMolecularCalculator;
+                    kwargs...)
+```
+Calculates the WFAT data of the `Molecule` and saves the data.
+- `MCType`              : Type of `MolecularCalculator` if the one for this `Molecule` is not initialized before. Default is `PySCFMolecularCalculator` if the `MCType` is not specified.
 - `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator` and the `calcStructFactorData` method, e.g. `basis`, `grid_rNum`, `grid_rMax`, `sf_lMax`, ⋯
+
+# Example:
+```jldoctest
+julia> mol = Targets.Molecule(["H","H"], [0 0 -0.375; 0 0 0.375], 0, "Hydrogen")
+Molecule [Hydrogen]
+
+julia> Targets.MolCalcWFATData!(mol, orbitIdx_relHOMO=0, basis="6-31g")
+[ Info: [PySCFMolecularCalculator] Running molecular calculation...
+[ Info: Finished initialization [taking 0.0466409 second(s)].
+[ Info: [PySCFMolecularCalculator] Running calculation of structure factor data... (ionizing orbital 0 relative to HOMO)
+✓ Calculating the effective potential... (720000 pts)    Time: 0:00:22
+Progress: 100%[●●●●●●●●●●●●●●●●●●●●●●●●●] Time: 0:00:22 (31.08 μs/it)
+✓ Calculating the integrals... (7986 integrals)          Time: 0:02:48
+Progress: 100%[●●●●●●●●●●●●●●●●●●●●●●●●●] Time: 0:02:48 (21.08 ms/it)
+```
 """
 function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
@@ -521,10 +562,25 @@ function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Integer)
     @info "[Molecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 """
-Calculates the MOADK coefficients of the molecule and saves the data.
-- `MCType`              : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
+```
+MolCalcMOADKCoeff!( mol::Molecule,
+                    orbitIdx_relHOMO::Integer = 0,
+                    MCType::Type = PySCFMolecularCalculator;
+                    kwargs...)
+```
+Calculates the MOADK coefficients of the `Molecule` and saves the data.
+- `MCType`              : Type of `MolecularCalculator` if the one for this `Molecule` is not initialized before. Default is `PySCFMolecularCalculator` if `MCType` is not specified.
 - `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator`, e.g. `grid_rNum`, `l_max`.
+
+## Example:
+```jldoctest
+julia> mol = Molecule(["H","H"], [0 0 -0.375; 0 0 0.375], 0, "Hydrogen")
+Molecule [Hydrogen]
+
+julia> MolCalcMOADKCoeff!(mol, basis="6-31g")
+[ Info: [PySCFMolecularCalculator] Running calculation of MOADK coefficients... (ionizing orbital 0 relative to HOMO)
+```
 """
 function MolCalcMOADKCoeff!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
@@ -585,7 +641,12 @@ function _MolSaveMOADKCoeff(mol::Molecule, orbitIdx_relHOMO::Integer)
     @info "[Molecule] MOADK coefficients of orbital index $(orbitIdx_relHOMO) saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
-"Saves the data of the `Molecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`)."
+"""
+```
+MolSaveDataAs(mol::Molecule, data_path::String)
+```
+Saves the data of the `Molecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`).
+"""
 function MolSaveDataAs(mol::Molecule, data_path::String)
     function defaultFileName()
         Y,M,D = yearmonthday(now())

@@ -10,7 +10,22 @@ using HDF5
 using Dates
 using ProgressMeter
 
-"An interface of molecular calculation using PySCF."
+"""
+```
+struct PySCFMolecularCalculator <: MolecularCalculatorBase
+```
+An interface of molecular calculation using PySCF.
+
+An instance of `PySCFMolecularCalculator` can initialized via the following constructor method:
+
+```
+PySCFMolecularCalculator(; mol, basis::String="pc-1", kwargs...)
+```
+
+# Parameters
+- `mol::Molecule`   : The `Molecule` to be calculated.
+- `basis::String`   : Basis set used for calculation (default `pc-1`).
+"""
 mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The molecule to be calculated."
     # mol::Molecule; # linter reported error when specifying type Molecule.
@@ -99,7 +114,21 @@ function DipoleMomentum(mc::PySCFMolecularCalculator)
 end
 
 """
-Calculates the DATA used in structure factor calculation in WFAT of the given molecule.
+```
+calcStructFactorData(;
+    mc::PySCFMolecularCalculator,
+    orbitIdx_relHOMO::Int = 0,
+    grid_rNum::Int  = 200,
+    grid_rMax::Real = 10.,
+    grid_θNum::Int  = 60,
+    grid_ϕNum::Int  = 60,
+    sf_nξMax ::Int  = 5,
+    sf_mMax  ::Int  = 5,
+    sf_lMax  ::Int  = 10,
+    kwargs...)
+```
+
+Calculates the data used in structure factor calculation in WFAT of the given molecule.
 
 # Returns
 `(μ, IntData)`  : Orbital dipole momentum and the IntData which stores the integrals.
@@ -109,11 +138,11 @@ Calculates the DATA used in structure factor calculation in WFAT of the given mo
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO and -1 indicates HOMO-1) (default 0).
 - `grid_rNum`       : The number of radial grid (default 200).
 - `grid_rMax`       : The maximum radius of the radial grid (default 10.0).
-- `grid_θNum`       : The number of angular grid in the θ direction (default 60).
-- `grid_ϕNum`       : The number of angular grid in the ϕ direction (default 60).
-- `sf_nξMax`        : The maximum number of nξ used in calculation (default 3).
-- `sf_mMax`         : The maximum number of |m| used in calculation (default 3).
-- `sf_lMax`         : The maximum angular quantum number l used in calculation (default 6).
+- `grid_θNum`       : The number of angular grid in the ``θ`` direction (default 60).
+- `grid_ϕNum`       : The number of angular grid in the ``ϕ`` direction (default 60).
+- `sf_nξMax`        : The maximum number of ``n_ξ`` used in calculation (default 3).
+- `sf_mMax`         : The maximum number of ``|m|`` used in calculation (default 3).
+- `sf_lMax`         : The maximum angular quantum number ``l`` used in calculation (default 6).
 """
 function calcStructFactorData(; mc::PySCFMolecularCalculator,
                                 orbitIdx_relHOMO::Int = 0,
@@ -121,9 +150,9 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
                                 grid_rMax::Real = 10.,
                                 grid_θNum::Int  = 60,
                                 grid_ϕNum::Int  = 60,
-                                sf_nξMax ::Int = 5,
-                                sf_mMax  ::Int = 5,
-                                sf_lMax  ::Int = 10,
+                                sf_nξMax ::Int  = 5,
+                                sf_mMax  ::Int  = 5,
+                                sf_lMax  ::Int  = 10,
                                 kwargs...)
     # == PROCEDURE ==
     # 0. Obtain the coefficients (finished in the initialization).
@@ -458,6 +487,19 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
 end
 
 """
+```
+calcMOADKCoeff(;
+    mc::PySCFMolecularCalculator,
+    orbitIdx_relHOMO::Int = 0,
+    grid_rNum::Int  = 200,
+    grid_rReg::Tuple{<:Real,<:Real} = (3,8),
+    grid_θNum::Int  = 60,
+    grid_ϕNum::Int  = 60,
+    l_max::Int      = 6,
+    m_max::Int      = 3,
+    kwargs...)
+```
+
 Calculates the MOADK coefficients of the given molecule.
 
 # Parameters
@@ -465,10 +507,10 @@ Calculates the MOADK coefficients of the given molecule.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO and -1 indicates HOMO-1) (default 0).
 - `grid_rNum`       : The number of radial grid (default 200).
 - `grid_rReg`       : The region of radial distance to fit the wavefunction to obtain the coefficients (default (3,8)).
-- `grid_θNum`       : The number of angular grid in the θ direction (default 60).
-- `grid_ϕNum`       : The number of angular grid in the ϕ direction (default 60).
-- `l_max`           : The maximum number of l calculated (default 6).
-- `m_max`           : The maximum number of m calculated (default 3).
+- `grid_θNum`       : The number of angular grid in the ``θ`` direction (default 60).
+- `grid_ϕNum`       : The number of angular grid in the ``ϕ`` direction (default 60).
+- `l_max`           : The maximum number of ``l`` calculated (default 6).
+- `m_max`           : The maximum number of ``m`` calculated (default 3).
 """
 function calcMOADKCoeff(;
                         mc::PySCFMolecularCalculator,
