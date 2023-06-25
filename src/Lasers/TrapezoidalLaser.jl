@@ -95,6 +95,17 @@ LaserF0(l::TrapezoidalLaser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::TrapezoidalLaser) = LaserF0(l) / AngFreq(l)
 
+"Gets the unit envelope function (the peak value is 1) of the laser field."
+function UnitEnvelope(l::TrapezoidalLaser)
+    local T = Period(l); local Δt = TimeShift(l);
+    local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
+    local t_on = N_on*T; local t_const = N_const*T; local t_off = N_off*T;
+    function (t)
+        t -= Δt
+        ( (0<t<t_on)*(t/t_on) + (t_on≤t≤(t_on+t_const))*1.0 + ((t_on+t_const)<t<(t_on+t_const+t_off))*(1-(t-t_on-t_const)/t_off) )
+    end
+end
+
 "Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::TrapezoidalLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);

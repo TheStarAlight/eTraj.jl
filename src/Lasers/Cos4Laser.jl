@@ -92,6 +92,15 @@ LaserF0(l::Cos4Laser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::Cos4Laser) = LaserF0(l) / AngFreq(l)
 
+"Gets the unit envelope function (the peak value is 1) of the laser field."
+function UnitEnvelope(l::Cos4Laser)
+    local ω = AngFreq(l); local N = CycNum(l); local Δt = l.t_shift;
+    function (t)
+        t -= Δt
+        cos(ω*t/(2N))^4 * (abs(ω*real(t))<N*π)
+    end
+end
+
 "Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::Cos4Laser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
