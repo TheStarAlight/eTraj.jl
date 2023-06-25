@@ -1,7 +1,7 @@
 using Documenter, SemiclassicalSFI
 
 makedocs(
-        sitename="SemiclassicalSFI.jl",
+        sitename = "SemiclassicalSFI.jl",
         pages = [
             "Home"      => "index.md",
             "Theory"    => [
@@ -9,7 +9,9 @@ makedocs(
                 "Trajectory Simulation and Phase Methods"   => "theory2_trajectory_simulation_phase_methods.md"
                 ],
             "Manual"    => [
-                "Targets"   => "manual1_targets.md"
+                "Targets"   => "manual1_targets.md",
+                "Lasers"    => "manual2_lasers.md"
                 ]
-        ]
+        ],
+        format = Documenter.HTML(edit_link=nothing)
         )
