@@ -8,9 +8,13 @@ using Test
 
     @info "Testing Cos2Laser ..."
     @testset verbose=true "Cos2Laser" begin
-        l1 = Cos2Laser(peakInt=4e14, waveLen=800., cycNum=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l2 = Cos2Laser(4e14,800.,2.,1.,π/2,π,10.)
-        @test l1 == l2
+        l1 = Cos2Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l2 = Cos2Laser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l3 = Cos2Laser(peak_int=4e14, wave_len=800., duration=220.63996467273427, ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l = Cos2Laser(4e14,800.,2.,1.,π/2,π,10.)
+        @test l == l1
+        @test l == l2
+        @test l == l3
         @test begin
             show(l1)
             true
@@ -30,9 +34,13 @@ using Test
 
     @info "Testing Cos4Laser ..."
     @testset verbose=true "Cos4Laser" begin
-        l1 = Cos4Laser(peakInt=4e14, waveLen=800., cycNum=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l2 = Cos4Laser(4e14,800.,2.,1.,π/2,π,10.)
-        @test l1 == l2
+        l1 = Cos4Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l2 = Cos4Laser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l3 = Cos4Laser(peak_int=4e14, wave_len=800., duration=220.63996467273427, ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l = Cos4Laser(4e14,800.,2.,1.,π/2,π,10.)
+        @test l == l1
+        @test l == l2
+        @test l == l3
         @test begin
             show(l1)
             true
@@ -52,9 +60,15 @@ using Test
 
     @info "Testing GaussianLaser ..."
     @testset verbose=true "GaussianLaser" begin
-        l1 = GaussianLaser(peakInt=4e14, waveLen=800., spreadCycNum=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l2 = GaussianLaser(4e14, 800., 2., 1., π/2, π, 10.)
-        @test l1 == l2
+        l1 = GaussianLaser(peak_int=4e14, wave_len=800., spread_cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l2 = GaussianLaser(peak_int=4e14, ang_freq=0.05695419065625, spread_cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l3 = GaussianLaser(peak_int=4e14, wave_len=800., spread_duration=220.63996467273427, ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l4 = GaussianLaser(peak_int=4e14, wave_len=800., FWHM_duration=519.5674115462751, ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l = GaussianLaser(4e14, 800., 2., 1., π/2, π, 10.)
+        @test l == l1
+        @test l == l2
+        @test l == l3
+        @test l == l4
         @test begin
             show(l1)
             true
@@ -76,9 +90,11 @@ using Test
 
     @info "Testing TrapezoidalLaser ..."
     @testset verbose=true "TrapezoidalLaser" begin
-        l1 = TrapezoidalLaser(peakInt=4e14, waveLen=800., cycNumTurnOn=2., cycNumTurnOff=2., cycNumConst=6., ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l2 = TrapezoidalLaser(4e14, 800., 2., 2., 6., 1., π/2, π, 10.)
-        @test l1 == l2
+        l1 = TrapezoidalLaser(peak_int=4e14, wave_len=800., cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l2  = TrapezoidalLaser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l = TrapezoidalLaser(4e14, 800., 2., 2., 6., 1., π/2, π, 10.)
+        @test l == l1
+        @test l == l2
         @test begin
             show(l1)
             true
