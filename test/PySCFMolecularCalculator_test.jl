@@ -9,7 +9,7 @@ using Test
     mol = Molecule(["H","H"], [0 0 -0.375; 0 0 0.375], 0, "Hydrogen")
     #* initialization and energy calculation
     @testset verbose=true "Energy" begin
-        MolCalcEnergyData!(mol, MolecularCalculators.PySCFMolecularCalculator, basis="sto-3g")
+        MolCalcEnergyData!(mol, MCType=MolecularCalculators.PySCFMolecularCalculator, basis="sto-3g")
         @test MolHOMOEnergy(mol) ≈ -0.57443656
         @test MolEnergyLevels(mol)[MolHOMOIndex(mol)+1] ≈ 0.6609100513
     end

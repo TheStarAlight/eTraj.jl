@@ -18,53 +18,55 @@ struct Cos2Laser <: MonochromaticLaser
     """
     Constructs a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
     # Parameters
-    - `peakInt`     : Peak intensity of the laser field (in W/cm²).
-    - `WaveLen`     : Wavelength of the laser field (in nm).
-    - `cycNum`      : Number of cycles of the laser field.
+    - `peak_int`    : Peak intensity of the laser field (in W/cm²).
+    - `wave_len`    : Wavelength of the laser field (in nm).
+    - `cyc_num`     : Number of cycles of the laser field.
     - `ellip`       : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
-    function Cos2Laser(peakInt, waveLen, cycNum, ellip, azi=0., cep=0., t_shift=0.)
-        @assert peakInt>0   "[Cos2Laser] Peak intensity must be positive."
-        @assert waveLen>0   "[Cos2Laser] Wavelength must be positive."
-        @assert cycNum>0    "[Cos2Laser] Cycle number must be positive."
+    function Cos2Laser(peak_int, wave_len, cyc_num, ellip, azi=0., cep=0., t_shift=0.)
+        @assert peak_int>0  "[Cos2Laser] Peak intensity must be positive."
+        @assert wave_len>0  "[Cos2Laser] Wavelength must be positive."
+        @assert cyc_num>0   "[Cos2Laser] Cycle number must be positive."
         @assert -1≤ellip≤1  "[Cos2Laser] Ellipticity must be in [-1,1]."
-        new(peakInt,waveLen,cycNum,ellip,azi,cep,t_shift)
+        new(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
     end
     """
     Constructs a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
     # Parameters
-    - `peakInt`     : Peak intensity of the laser field (in W/cm²).
-    - `WaveLen`     : Wave length of the laser field (in nm). Must specify either `waveLen` or `angFreq`.
-    - `angFreq`     : Angular frequency of the laser field (in a.u.). Must specify either `waveLen` or `angFreq`.
-    - `cycNum`      : Number of cycles of the laser field. Must specify either `cycNum` or `duration`.
-    - `duration`    : Duration of the laser field (in a.u.). Must specify either `cycNum` or `duration`.
-    - `ellip`       : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+    - `peak_int`    : Peak intensity of the laser field (in W/cm²).
+    - `wave_len`    : Wave length of the laser field (in nm). Must specify either `wave_len` or `ang_freq`.
+    - `ang_freq`    : Angular frequency of the laser field (in a.u.). Must specify either `wave_len` or `ang_freq`.
+    - `cyc_num`     : Number of cycles of the laser field. Must specify either `cyc_num` or `duration`.
+    - `duration`    : Duration of the laser field (in a.u.). Must specify either `cyc_num` or `duration`.
+    - `ellip`       : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
     - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
     - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
     - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
     """
-    function Cos2Laser(;peakInt,
-                        waveLen=-1, angFreq=-1,     # must specify either waveLen or angFreq.
-                        cycNum=-1,  duration=-1,    # must specify either cycNum or duration.
+    function Cos2Laser(;peak_int,
+                        wave_len=-1, ang_freq=-1,   # must specify either wave_len or ang_freq.
+                        cyc_num=-1,  duration=-1,   # must specify either cyc_num or duration.
                         ellip, azi=0., cep=0., t_shift=0.)
-        @assert waveLen>0 || angFreq>0  "[Cos2Laser] Must specify either waveLen or angFreq."
-        @assert cycNum>0 || duration>0  "[Cos2Laser] Must specify either cycNum or duration."
-        if waveLen>0 && angFreq>0
-            @warn "[Cos2Laser] Both waveLen & angFreq are specified, will use waveLen."
+        @assert wave_len>0 || ang_freq>0    "[Cos2Laser] Must specify either wave_len or ang_freq."
+        @assert cyc_num>0 || duration>0     "[Cos2Laser] Must specify either cyc_num or duration."
+        if wave_len>0 && ang_freq>0
+            @warn "[Cos2Laser] Both wave_len & ang_freq are specified, will use wave_len."
         end
-        if cycNum>0 && duration>0
-            @warn "[Cos2Laser] Both cycNum & duration are specified, will use cycNum."
+        if cyc_num>0 && duration>0
+            @warn "[Cos2Laser] Both cyc_num & duration are specified, will use cyc_num."
         end
-        if waveLen==-1
-            waveLen = 45.563352525 / angFreq
+        if wave_len==-1
+            wave_len = 45.563352525 / ang_freq
+        else
+            ang_freq = 45.563352525 / wave_len
         end
-        if cycNum==-1
-            cycNum = duration / (2π/angFreq)
+        if cyc_num==-1
+            cyc_num = duration / (2π/ang_freq)
         end
-        Cos2Laser(peakInt,waveLen,cycNum,ellip,azi,cep,t_shift)
+        Cos2Laser(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
     end
 end
 "Gets the peak intensity of the laser field (in W/cm²)."
@@ -152,7 +154,7 @@ function LaserFy(l::Cos2Laser)
 end
 
 "Prints the information about the laser."
-Base.show(io::IO, l::Cos2Laser) = println(io,"[MonochromaticLaser] Envelope cos², Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), e=$(l.ellip)"
+Base.show(io::IO, l::Cos2Laser) = println(io,"[MonochromaticLaser] Envelope cos², Wavelength=$(l.wave_len) nm, $(l.cyc_num) cycle(s), ε=$(l.ellip)"
                                            * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
                                            * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
 
