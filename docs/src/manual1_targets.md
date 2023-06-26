@@ -14,6 +14,10 @@ Pages = ["manual1_targets.md"]
 Depth = 3
 ```
 
+```@meta
+CurrentModule = SemiclassicalSFI.Targets
+```
+
 ## Hydrogen-Like Atom
 
 A hydrogen-like atom has a potential of the form
@@ -23,7 +27,7 @@ V(r) = -\frac{Z}{\sqrt{r^2+a}},
 where ``Z`` is the nuclear charge number;
 ``a`` denotes the soft-core parameter, which is applied to avoid singularity of the potential and can be adjusted to fit the actual ionization potential of the atom (obtained by TDSE).
 
-The hydrogen-like atom is implemented in the library as [`Targets.HydrogenLikeAtom`](@ref).
+The hydrogen-like atom is implemented in the library as [`HydrogenLikeAtom`](@ref).
 ```@docs
 Targets.HydrogenLikeAtom
 ```
@@ -38,7 +42,7 @@ V(r) = -\frac{Z + a_1 \mathrm{e}^{-b_1 r} + a_2 r \mathrm{e}^{-b_2 r} + a_3 \mat
 ```
 where the ``a_i`` and ``b_i`` are tunable model potential parameters [^note].
 
-The SAE atom is implemented in the library as [`Targets.SAEAtom`](@ref).
+The SAE atom is implemented in the library as [`SAEAtom`](@ref).
 ```@docs
 Targets.SAEAtom
 ```
@@ -51,9 +55,9 @@ Targets.SAEAtom
 
 The library provides some preset commonly-used atoms or atomic ions for convenience.
 
-- `HydrogenLikeAtom`: H, He⁺, Li²⁺
+- [`HydrogenLikeAtom`](@ref) : H, He⁺, Li²⁺
 
-- `SAEAtom`:          He, Ne, Ne⁺, Ne²⁺, Ar, Ar⁺, Ar²⁺, V, Ni, Kr, Kr⁺, Rb, Nb, Pd, Xe, Xe⁺, Ta
+- [`SAEAtom`](@ref) :          He, Ne, Ne⁺, Ne²⁺, Ar, Ar⁺, Ar²⁺, V, Ni, Kr, Kr⁺, Rb, Nb, Pd, Xe, Xe⁺, Ta
 
 These atoms/ions can be obtained by invoking `Targets.**Atom()` (for neutral atoms) or `Targets.**#pAtom()` (for positive atomic ions), where `**` denotes the symbol of the nucleus and `#` denotes the positive charge the ion carries.
 
@@ -70,18 +74,18 @@ t2 = Targets.Xe1pAtom()
 
 ## Molecule
 
-The `Molecule` object represents a generic molecule, which is implemented in the library as [`Targets.Molecule`](@ref).
+The `Molecule` object represents a generic molecule, which is implemented in the library as [`Molecule`](@ref).
 The structure of `Molecule` is much more complex than that of atoms because the [Molecular ADK (MO-ADK)](@ref) and [Weak-Field Asymptotic Theory (WFAT)](@ref) features for molecular strong-field ionization require a number of coefficients, which are saved to files for convenience.
 
 ### Initialization, saving and loading
 
-The `Molecule` object can be initialized either by providing necessary information of the molecule (mainly atoms, coordinates of the atoms and the charge of the molecule) or from external data (stored in the HDF5 format), cf. the documentation of [`Targets.Molecule`](@ref):
+The `Molecule` object can be initialized either by providing necessary information of the molecule (mainly atoms, coordinates of the atoms and the charge of the molecule) or from external data (stored in the HDF5 format), cf. the documentation of [`Molecule`](@ref):
 
 ```@docs
 Targets.Molecule
 ```
 
-The molecule object, after modification, can be manually saved to a HDF5 file via [`Targets.MolSaveDataAs`](@ref).
+The molecule object, after modification, can be manually saved to a HDF5 file via [`MolSaveDataAs`](@ref).
 
 ```@docs
 Targets.MolSaveDataAs
@@ -90,15 +94,15 @@ Targets.MolSaveDataAs
 ### Molecular-SFI Data Preparation
 
 To use the molecular strong-field ionization theories such as the MO-ADK and WFAT to provide the intitial conditions of the electrons, the structure coefficients of the `Molecule` have to be calculated beforehand and stored in the object.
-Cf. the documentation of [`Targets.MolCalcMOADKCoeff!`](@ref) and [`Targets.MolCalcWFATData!`](@ref).
+Cf. the documentation of [`MolCalcMOADKCoeff!`](@ref) and [`MolCalcWFATData!`](@ref).
 
 Evaluation of the structure coefficients depends on the external quantum chemistry packages.
 The [`Targets.MolecularCalculators`](@ref) module undertakes the task of communication with the external quantum packages.
-Currently only the [`Targets.MolecularCalculators.PySCFMolecularCalculator`](@ref) is implemented.
+Currently only the [`PySCFMolecularCalculator`](@ref) is implemented.
 
 !!! note "Customized calculation parameters"
     When invoking `MolCalcMOADKCoeff!` and `MolCalcWFATData!` to perform calculation of structure coefficients, customized calculation parameters can be passed to the `kwargs` of these methods.
-    These parameters would be passed to the constructor method of the `MolecularCalculator` (e.g., the `basis` parameter of the [`Targets.MolecularCalculators.PySCFMolecularCalculator`](@ref)), as well as the [`Targets.MolecularCalculators.calcStructFactorData`](@ref), [`Targets.MolecularCalculators.calcMOADKCoeff`](@ref) methods.
+    These parameters would be passed to the constructor method of the `MolecularCalculator` (e.g., the `basis` parameter of the [`PySCFMolecularCalculator`](@ref)), as well as the [`MolecularCalculators.calcStructFactorData`](@ref), [`MolecularCalculators.calcMOADKCoeff`](@ref) methods.
     Refer to their documentation below for more information.
 
 ```@docs
@@ -121,7 +125,7 @@ Targets.MolecularCalculators.calcMOADKCoeff
 The molecule's orientation is described by a set of Euler angles (``z-y'-z''`` convention), which defines a rotational transformation from the molecular frame (MF) to the lab frame (LF).
 This property of `Molecule` is NOT included in the saved file and thus needs to be specified each time upon initialization of the `Molecule` object from external files.
 
-The orientation of the molecule can be obtained and set via the [`Targets.MolRotation`](@ref) and [`Targets.SetMolRotation`](@ref) methods.
+The orientation of the molecule can be obtained and set via the [`MolRotation`](@ref) and [`SetMolRotation`](@ref) methods.
 
 ```@docs
 Targets.MolRotation
