@@ -70,7 +70,7 @@ Pkg.test("SemiclassicalSFI")
     # (@v1.8) pkg> add package_name@1.0
     ```
 
-    It is shown that *OrdinaryDiffEq@6.51* and *DiffEqGPU@1.26* runs well on Windows 10 and Manjaro Linux.
+    It is shown that *OrdinaryDiffEq@6.51* and *DiffEqGPU@1.26* runs well on Windows 10 (10.0.19044) and Manjaro Linux (?).
 
 ### Configuring Python and pyscf
 
@@ -93,7 +93,7 @@ $ pip3 install pyscf
 ## Contributors
 
 - [Mingyu Zhu](https://github.com/TheStarAlight) @ ECNU
-- Hongcheng Ni @ ECNU
+- [Hongcheng Ni](https://faculty.ecnu.edu.cn/_s29/nhc_en/main.psp) @ ECNU
 
 ## License
 

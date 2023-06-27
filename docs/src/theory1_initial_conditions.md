@@ -41,42 +41,42 @@ M_{\bm{p}} = \braket{ \Psi^{\mathrm{V}}_{\bm{p}} | U_{\mathrm{f}}(t_{\mathrm{f}}
 ```
 where the Volkov state under the LG is the product of a plane wave and a phase factor:
 ```math
-\ket{ \Psi^{\mathrm{V}}_{\bm{p}} } = \ket{ \bm{p}+\bm{A}(t) } \mathrm{e}^{-\mathrm{i}S_{\bm{p}}(t)},
+\ket{ \Psi^{\mathrm{V}}_{\bm{p}} } = \ket{ \bm{p}+\bm{A}(t) } \mathrm{e}^{\mathrm{i}S_{\bm{p}}(t)},
 ```
 and the phase has the expression:
 ```math
-S_{\bm{p}}(t) = \int^{t} \frac12 [\bm{p}+\bm{A}(\tau)]^2 \mathrm{d}\tau.
+S_{\bm{p}}(t) = - \int^{t} \frac12 [\bm{p}+\bm{A}(\tau)]^2 \mathrm{d}\tau.
 ```
 In this way the ``M_{\bm{p}}`` is expressed as
 ```math
-M_{\bm{p}} = -\mathrm{i} \int_{t_{\mathrm{i}}}^{t_{\mathrm{f}}} \braket{ \bm{p}+\bm{A}(\tau) | \bm{F}(\tau)\cdot\bm{r} | \psi_0 } \mathrm{e}^{\mathrm{i}\tilde{S}_{\bm{p}}(\tau)} \mathrm{d}\tau,
+M_{\bm{p}} = -\mathrm{i} \int_{t_{\mathrm{i}}}^{t_{\mathrm{f}}} \braket{ \bm{p}+\bm{A}(\tau) | \bm{F}(\tau)\cdot\bm{r} | \psi_0 } \mathrm{e}^{-\mathrm{i}\tilde{S}_{\bm{p}}(\tau)} \mathrm{d}\tau,
 ```
-and we note that here we have extracted the phase factor of ``\ket{\Psi_0}`` and combined it with the former ``\mathrm{e}^{\mathrm{i}S_{\bm{p}}(t)}``, giving
+and we note that here we have extracted the phase factor of ``\ket{\Psi_0}`` and combined it with the former ``\mathrm{e}^{-\mathrm{i}S_{\bm{p}}(t)}``, giving
 ```math
-\tilde{S}_{\bm{p}}(t) = \int^{t} \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau.
+\tilde{S}_{\bm{p}}(t) = - \int^{t} \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau.
 ```
 
-Utilizing the saddle-point approximation (SPA) would give a more consise expression of ``M_{\bm{p}}``.
+An additional saddle-point approximation facilitates preparation of initial conditions of the electron trajectories in closed analytical forms.
 The variation of ``\tilde{S}_{\bm{p}}(t)`` is much more sensitive than that of ``\braket{ \bm{p}+\bm{A}(t) | \bm{F}(t)\cdot\bm{r} | \psi_0 }`` as ``t`` varies, which leads to a fact that the whole integrand in our latest expression of ``M_{\bm{p}}`` oscillates in its complex phase and its values cancel out each other in most cases, except when the variation of the phase ``\tilde{S}_{\bm{p}}(t)`` becomes stable, i.e., at the saddle points of ``\tilde{S}_{\bm{p}}(t)``. The saddle points ``t_{\mathrm{s}}=t_{\mathrm{r}}+\mathrm{i}t_{\mathrm{i}}`` are the zeroes of the derivative of the complex function ``\tilde{S}_{\bm{p}}(t)``, which satisfy
 ```math
-\partial_t \tilde{S}_{\bm{p}}(t) |_{t=t_{\mathrm{s}}} = \frac12 [\bm{p}+\bm{A}(t_{\mathrm{s}})]^2 + I_{\mathrm{p}} = 0.
+-\partial_t \tilde{S}_{\bm{p}}(t) |_{t=t_{\mathrm{s}}} = \frac12 [\bm{p}+\bm{A}(t_{\mathrm{s}})]^2 + I_{\mathrm{p}} = 0.
 ```
 The integral can be approximated by a summation over the saddle points:
 ```math
-M_{\bm{p}} \approx \sum_{t_{\mathrm{s}}} P_{\bm{p}}(t_{\mathrm{s}}) \mathrm{e}^{\mathrm{i}\tilde{S}_{\bm{p}}(t_{\mathrm{s}})},
+M_{\bm{p}} \approx \sum_{t_{\mathrm{s}}} P_{\bm{p}}(t_{\mathrm{s}}) \mathrm{e}^{-\mathrm{i}\tilde{S}_{\bm{p}}(t_{\mathrm{s}})},
 ```
 where ``P_{\bm{p}}(t_{\mathrm{s}})`` denotes the prefactor.
-Here we use a modified version of SFA which takes account of the Coulomb potential [^Kjeldsen_2006] [^Milosevic_2006], which gives the prefactor
+Here we use a modified version of SFA which takes account of the Coulomb tail [^Kjeldsen_2006] [^Milosevic_2006], which gives the prefactor
 ```math
 P_{\bm{p}}(t_{\mathrm{s}}) = \{ [\bm{p}+\bm{A}(t_{\mathrm{s}})] \cdot \bm{F}(t_{\mathrm{s}}) \}^{-\alpha/2},
 ```
-where ``\alpha = 1+Z/\sqrt{2I_{\mathrm{p}}}``.
+where ``\alpha = 1+Z/\sqrt{2I_{\mathrm{p}}}``, and ``Z`` is the asymptotic charge of the nucleus.
 The phase ``\tilde{S}_{\bm{p}}(t_{\mathrm{s}})`` is obtained by solving the integral
 ```math
 \begin{aligned}
     \tilde{S}_{\bm{p}}(t_{\mathrm{s}})
-    &= \int_{-\infty}^{t_{\mathrm{s}}} \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau \\
-    &= \left( -\int_{t_{\mathrm{s}}}^{t_{\mathrm{r}}} -\int_{t_{\mathrm{r}}}^{\infty} \right) \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau \\
+    &= \int_{t_{\mathrm{s}}}^{\infty} \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau \\
+    &= \left( \int_{t_{\mathrm{s}}}^{t_{\mathrm{r}}} + \int_{t_{\mathrm{r}}}^{\infty} \right) \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau \\
     &= \Phi_{\mathrm{tun}} + \Phi_{\mathrm{traj}},
 \end{aligned}
 ```
@@ -86,7 +86,7 @@ The SFA provides the final momentum distribution, while the trajectory simulatio
 To utilize the SFA to give initial conditions, we suppose that the classical electron is ejected at time ``t_{\mathrm{r}}`` at tunneling exit ``\bm{r}_0`` with momentum ``\bm{k}_0``.
 The initial momentum ``\bm{k}_0``, neglecting the Coulomb potential, is related to the final momentum ``\bm{p}`` through
 ```math
-\bm{p} = \bm{k}_0 + \int_{t_{\mathrm{r}}}^{\infty} \bm{F}(\tau) \mathrm{d}\tau = \bm{k}_0 - \bm{A}(t_{\mathrm{r}}).
+\bm{p} = \bm{k}_0 - \int_{t_{\mathrm{r}}}^{\infty} \bm{F}(\tau) \mathrm{d}\tau = \bm{k}_0 - \bm{A}(t_{\mathrm{r}}).
 ```
 The initial position ``\bm{r}_0``, i.e., the tunneling exit, is found by constructing a quantum tunneling trajectory.
 The beginning of the trajectory, i.e., the tunneling entrance, has a real part of zero; the electron tunnels through the barrier during the time interval ``t_{\mathrm{s}}`` to ``t_{\mathrm{r}}`` and emerges as a classical electron at the tunneling exit with real position and momentum.
@@ -96,7 +96,7 @@ In this way we obtain the expression of the initial position:
 ```
 The probablity density (in the final momentum space) carried by the electron sample is
 ```math
-\mathrm{d}W/\mathrm{d}\bm{p} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(-2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}).
+\mathrm{d}W/\mathrm{d}\bm{p} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}).
 ```
 
 [^Popruzhenko_2014]: S. V. Popruzhenko, Keldysh Theory of Strong Field Ionization: History, Applications, Difficulties and Perspectives. *J. Phys. B: At. Mol. Opt. Phys.* **47**, 204001 (2014). DOI:[10.1088/0953-4075/47/20/204001](https://dx.doi.org/10.1088/0953-4075/47/20/204001)
@@ -106,7 +106,7 @@ The probablity density (in the final momentum space) carried by the electron sam
 
 ## SFA with Adiabatic Expansion (SFA-AE)
 
-For small Keldysh parameter ``\gamma``, the non-adiabatic effect is not significant, thus an adiabatic expansion scheme can be carried out to develop a modified theory based on the SFA, which is named after the SFA with adiabatic expansion (SFA-AE) [^Ni_2018]. It partially includes the non-adiabatic effect and is competent to give similar results compared with that given by the SFA under small Keldysh parameters.
+For small Keldysh parameter ``\gamma``, the non-adiabatic effect is not significant, thus an adiabatic expansion scheme can be carried out to develop a modified theory based on the SFA, which is named after the SFA with adiabatic expansion (SFA-AE) [^Ni_2018]. It includes the non-adiabatic effect to a large extent and is capable of giving similar results compared with that given by the SFA under small Keldysh parameters.
 
 The SFA-AE is applicable when the Keldysh parameter is small or the non-adiabatic effect is insignificant, and we recall that in the SFA there is a corresponding quantity ``t_{\mathrm{i}}`` which quantifies the non-adiabacity of tunneling.
 For small ``t_{\mathrm{i}}``, we expand the vector potential ``\bm{A}(t_{\mathrm{r}} + \mathrm{i}t_{\mathrm{i}})`` at ``t_{\mathrm{r}}``, up to the second order of ``t_{\mathrm{i}}``:
@@ -124,21 +124,21 @@ t_{\mathrm{i}} = \sqrt{\frac{k^2(t_{\mathrm{r}})+2I_{\mathrm{p}}}{F^2(t_{\mathrm
 
 The ``\mathrm{Im}\ \Phi_{\mathrm{tun}}`` related to the ionization rate, in the SFA-AE, is
 ```math
-\mathrm{Im}\ \Phi_{\mathrm{tun}} \approx -\frac13 \sqrt{\frac{[k^2(t_{\mathrm{r}})+2I_{\mathrm{p}}]^3}{F^2(t_{\mathrm{r}})-\bm{k}(t_{\mathrm{r}}) \cdot \bm{F}'(t_{\mathrm{r}})}},
+\mathrm{Im}\ \Phi_{\mathrm{tun}} \approx -\frac13 \frac{[k^2(t_{\mathrm{r}})+2I_{\mathrm{p}}]^{3/2}}{\sqrt{F^2(t_{\mathrm{r}})-\bm{k}(t_{\mathrm{r}}) \cdot \bm{F}'(t_{\mathrm{r}})}},
 ```
 and we obtain
 ```math
 \begin{aligned}
     \mathrm{d}W/\mathrm{d}\bm{p}
-    &= \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(-2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}) \\
-    &= \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp \left[ -\frac23 \sqrt{\frac{[k_\perp^2+2I_{\mathrm{p}}]^3}{F^2-\bm{k}_\perp \cdot \bm{F}'}} \right],
+    &= \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}) \\
+    &= \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp \left[ -\frac23 \frac{(k_\perp^2+2I_{\mathrm{p}})^{3/2}}{\sqrt{F^2-\bm{k}_\perp \cdot \bm{F}'}} \right],
 \end{aligned}
 ```
 where the ``\bm{k}_{\perp}`` denotes the transverse momentum at the tunneling exit, which is actually equivalent to ``\bm{k}(t_{\mathrm{r}})`` in the SFA-AE because the above saddle-point equation requires ``\bm{k}(t_{\mathrm{r}}) \cdot \bm{F}(t_{\mathrm{r}}) = 0``. We note that the initial momentum, ``\bm{k}_0``, is exactly ``\bm{k}_{\perp}``.
 
 The initial position has the expression
 ```math
-\bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2-\bm{k}_\perp \cdot \bm{F}'}.
+\bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = -\frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2-\bm{k}_\perp \cdot \bm{F}'}.
 ```
 
 [^Ni_2018]: H. Ni *et al.*, Tunneling Criteria and a Nonadiabatic Term for Strong-Field Ionization. *Phys. Rev. A* **98**, 013411 (2018). DOI:[10.1103/PhysRevA.98.013411](https://dx.doi.org/10.1103/PhysRevA.98.013411)
@@ -156,7 +156,7 @@ Substuting it into the expressions of SFA-AE yields the ADK rate
 ```
 and the tunneling exit position
 ```math
-\bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
+\bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = -\frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
 ```
 
 [^Ammosov_1986]: M. V. Ammosov *et al.*, Tunnel Ionization of Complex Atoms and of Atomic Ions in an Alternating Electromagnetic Field. *Sov. Phys. JETP* **64**, 1191 (1986).
@@ -196,7 +196,7 @@ Q_{l m'} = (-1)^{m'} \sqrt{\frac{(2l+1)(l+|m'|)!}{2(l-|m'|)!}}.
 
 To ultilize the MO-ADK theory to provide the initial conditions in the trajectory simulation, we simply adopt the result of the atomic ADK theory:
 ```math
-\bm{r}_0 = \frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
+\bm{r}_0 = -\frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
 ```
 As for the ionization probability, we include the influence of the initial kinetic energy ``k_\perp^2/2`` by replacing the ``\kappa=\sqrt{2I_{\mathrm{p}}}`` with ``\kappa'(k_\perp)=\sqrt{2I_{\mathrm{p}}+k_\perp^2}`` in the exponential term of the ionization probability in the MO-ADK theory, giving
 ```math

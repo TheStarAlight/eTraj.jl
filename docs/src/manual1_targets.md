@@ -85,7 +85,7 @@ The `Molecule` object can be initialized either by providing necessary informati
 Targets.Molecule
 ```
 
-The molecule object, after modification, can be manually saved to a HDF5 file via [`MolSaveDataAs`](@ref).
+The `Molecule` object, after modification, can be manually saved to a HDF5 file via [`MolSaveDataAs`](@ref).
 
 ```@docs
 Targets.MolSaveDataAs
