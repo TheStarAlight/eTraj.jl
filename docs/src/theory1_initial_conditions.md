@@ -28,16 +28,16 @@ H = \frac12 \bm{p}^2 + V(\bm{r}) + \bm{F}(t)\cdot\bm{r}.
 ```
 Denoting ``\ket{\Psi_0} = \ket{\psi_0} \mathrm{e}^{\mathrm{i}I_{\mathrm{p}}t}`` as the unperturbed initial state with ionization potential of ``I_{\mathrm{p}}``, ``\ket{\Psi_{\bm{p}}}`` as the continuum state of momentum ``\bm{p}``, and
 ```math
-U(t_{\mathrm{f}},t_{\mathrm{i}}) = \exp \left[ -\mathrm{i} \int_{t_{\mathrm{i}}}^{t_{\mathrm{f}}} H(\tau) \mathrm{d}\tau \right]
+U(t_{\mathrm{f}},t_0) = \exp \left[ -\mathrm{i} \int_{t_0}^{t_{\mathrm{f}}} H(\tau) \mathrm{d}\tau \right]
 ```
-the time-evolution operator, the transition amplitude between the initial state and the final state of momentum ``\bm{p}`` is written as
+the time-evolution operator, the transition amplitude between the initial state (at ``t_0``) and the final state of momentum ``\bm{p}`` (at ``t_{\mathrm{f}}``) is written as
 ```math
-M_{\bm{p}} = \braket{ \Psi_{\bm{p}} | U(t_{\mathrm{f}},t_{\mathrm{i}}) | \Psi_0 }.
+M_{\bm{p}} = \braket{ \Psi_{\bm{p}} | U(t_{\mathrm{f}},t_0) | \Psi_0 }.
 ```
 
 Here lies the key idea of SFA: when the influence of the Coulomb field to the ionized electrons is weak compared with that of the external laser field, we may neglect the influence of the Coulomb field in the expression of ``M_{\bm{p}}`` by replacing the time-evolution operator with a Coulomb-free one ``U_{\mathrm{f}}``, and meanwhile replacing the continuum state with the Volkov state ``\ket{\Psi^{\mathrm{V}}_{\bm{p}}}`` which represents a free electron evolving under the same laser field:
 ```math
-M_{\bm{p}} = \braket{ \Psi^{\mathrm{V}}_{\bm{p}} | U_{\mathrm{f}}(t_{\mathrm{f}},t_{\mathrm{i}}) | \Psi_0 },
+M_{\bm{p}} = \braket{ \Psi^{\mathrm{V}}_{\bm{p}} | U_{\mathrm{f}}(t_{\mathrm{f}},t_{\mathrm{0}}) | \Psi_0 },
 ```
 where the Volkov state under the LG is the product of a plane wave and a phase factor:
 ```math
@@ -49,14 +49,14 @@ S_{\bm{p}}(t) = - \int^{t} \frac12 [\bm{p}+\bm{A}(\tau)]^2 \mathrm{d}\tau.
 ```
 In this way the ``M_{\bm{p}}`` is expressed as
 ```math
-M_{\bm{p}} = -\mathrm{i} \int_{t_{\mathrm{i}}}^{t_{\mathrm{f}}} \braket{ \bm{p}+\bm{A}(\tau) | \bm{F}(\tau)\cdot\bm{r} | \psi_0 } \mathrm{e}^{-\mathrm{i}\tilde{S}_{\bm{p}}(\tau)} \mathrm{d}\tau,
+M_{\bm{p}} = -\mathrm{i} \int_{t_{\mathrm{0}}}^{t_{\mathrm{f}}} \braket{ \bm{p}+\bm{A}(\tau) | \bm{F}(\tau)\cdot\bm{r} | \psi_0 } \mathrm{e}^{-\mathrm{i}\tilde{S}_{\bm{p}}(\tau)} \mathrm{d}\tau,
 ```
 and we note that here we have extracted the phase factor of ``\ket{\Psi_0}`` and combined it with the former ``\mathrm{e}^{-\mathrm{i}S_{\bm{p}}(t)}``, giving
 ```math
 \tilde{S}_{\bm{p}}(t) = - \int^{t} \left[ \frac12 [\bm{p}+\bm{A}(\tau)]^2 + I_{\mathrm{p}} \right] \mathrm{d}\tau.
 ```
 
-An additional saddle-point approximation facilitates preparation of initial conditions of the electron trajectories in closed analytical forms.
+An additional saddle-point approximation facilitates preparation of initial conditions of the electron trajectories.
 The variation of ``\tilde{S}_{\bm{p}}(t)`` is much more sensitive than that of ``\braket{ \bm{p}+\bm{A}(t) | \bm{F}(t)\cdot\bm{r} | \psi_0 }`` as ``t`` varies, which leads to a fact that the whole integrand in our latest expression of ``M_{\bm{p}}`` oscillates in its complex phase and its values cancel out each other in most cases, except when the variation of the phase ``\tilde{S}_{\bm{p}}(t)`` becomes stable, i.e., at the saddle points of ``\tilde{S}_{\bm{p}}(t)``. The saddle points ``t_{\mathrm{s}}=t_{\mathrm{r}}+\mathrm{i}t_{\mathrm{i}}`` are the zeroes of the derivative of the complex function ``\tilde{S}_{\bm{p}}(t)``, which satisfy
 ```math
 -\partial_t \tilde{S}_{\bm{p}}(t) |_{t=t_{\mathrm{s}}} = \frac12 [\bm{p}+\bm{A}(t_{\mathrm{s}})]^2 + I_{\mathrm{p}} = 0.
