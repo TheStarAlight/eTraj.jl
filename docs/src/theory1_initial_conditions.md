@@ -135,6 +135,10 @@ and we obtain
 \end{aligned}
 ```
 where the ``\bm{k}_{\perp}`` denotes the transverse momentum at the tunneling exit, which is actually equivalent to ``\bm{k}(t_{\mathrm{r}})`` in the SFA-AE because the above saddle-point equation requires ``\bm{k}(t_{\mathrm{r}}) \cdot \bm{F}(t_{\mathrm{r}}) = 0``. We note that the initial momentum, ``\bm{k}_0``, is exactly ``\bm{k}_{\perp}``.
+The prefactor ``P_{\bm{p}}(t_{\mathrm{s}})`` which included the Coulomb tail correction, in the SFA-AE, has the expression [^Frolov_2017]:
+```math
+P_{\bm{p}}(t_{\mathrm{s}}) = \left[ (k_\perp^2+2I_{\mathrm{p}})(F^2-\bm{k}_\perp \cdot \bm{F}) \right]^{-\alpha/2}.
+```
 
 The initial position has the expression
 ```math
@@ -142,6 +146,7 @@ The initial position has the expression
 ```
 
 [^Ni_2018]: H. Ni *et al.*, Tunneling Criteria and a Nonadiabatic Term for Strong-Field Ionization. *Phys. Rev. A* **98**, 013411 (2018). DOI:[10.1103/PhysRevA.98.013411](https://dx.doi.org/10.1103/PhysRevA.98.013411)
+[^Frolov_2017]: Frolov *et al.*, Adiabatic-Limit Coulomb Factors for Photoelectron and High-Order-Harmonic Spectra. *Phys. Rev. A* **96**, 023406 (2017). DOI:[10.1103/PhysRevA.96.023406](https://dx.doi.org/10.1103/PhysRevA.96.023406)
 
 
 
