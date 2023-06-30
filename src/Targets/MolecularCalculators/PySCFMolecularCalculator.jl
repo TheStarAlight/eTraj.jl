@@ -16,7 +16,7 @@ struct PySCFMolecularCalculator <: MolecularCalculatorBase
 ```
 An interface of molecular calculation using PySCF.
 
-An instance of `PySCFMolecularCalculator` can initialized via the following constructor method:
+An instance of `PySCFMolecularCalculator` can be initialized via the following constructor method:
 
 ```
 PySCFMolecularCalculator(; mol, basis::String="pc-1", kwargs...)

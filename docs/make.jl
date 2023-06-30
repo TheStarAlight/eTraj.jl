@@ -13,5 +13,8 @@ makedocs(
                 "Lasers"    => "manual2_lasers.md"
                 ]
         ],
-        format = Documenter.HTML(edit_link=nothing)
+        format = Documenter.HTML(
+            edit_link=nothing,
+            footer="· *SemiclassicalSFI.jl* Documentation · by *Mingyu Zhu* and other contributors"
+            )
         )
