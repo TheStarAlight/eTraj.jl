@@ -1,4 +1,4 @@
-# Targets
+# [Targets](@id targets_doc)
 
 *This section provides information of available targets (atoms/molecules) in the library.*
 

@@ -30,14 +30,14 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all methods:
-- `ionRateMethod = <:ADK|:SFA|:SFA_AE|:WFAT>`   : Method of determining ionization rate. Currently supports `:ADK`, `:SFA`, `:SFA_AE` for atoms and `:WFAT`, `:MOADK` for molecules.
-- `laser::Laser`                                : Parameters of the laser field.
-- `target::Target`                              : Parameters of the target.
-- `sample_tSpan = (start,stop)`                 : Time span in which electrons are sampled.
-- `sample_tSampleNum`                           : Number of time samples.
-- `simu_tFinal`                                 : Time when every trajectory simulation ends.
-- `finalMomentum_pMax = (pxMax,pyMax,pzMax)`    : Boundaries of final momentum spectrum collecting in three dimensions.
-- `finalMomentum_pNum = (pxNum,pyNum,pzNum)`    : Numbers of final momentum spectrum collecting in three dimensions.
+- `ionRateMethod = <:ADK|:SFA|:SFA_AE|:WFAT|:MOADK>`    : Method of determining ionization rate. Currently supports `:ADK`, `:SFA`, `:SFA_AE` for atoms and `:WFAT`, `:MOADK` for molecules.
+- `laser::Laser`                                        : Parameters of the laser field.
+- `target::Target`                                      : Parameters of the target.
+- `sample_tSpan = (start,stop)`                         : Time span in which electrons are sampled.
+- `sample_tSampleNum`                                   : Number of time samples.
+- `simu_tFinal`                                         : Time when every trajectory simulation ends.
+- `finalMomentum_pMax = (pxMax,pyMax,pzMax)`            : Boundaries of final momentum spectrum collecting in three dimensions.
+- `finalMomentum_pNum = (pxNum,pyNum,pzNum)`            : Numbers of final momentum spectrum collecting in three dimensions.
 
 ## Required params. for step-sampling methods:
 - `ss_kdMax`    : Boundary of kd (momentum's component along transverse direction (in xy plane)) samples.

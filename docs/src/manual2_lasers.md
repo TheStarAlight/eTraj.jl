@@ -1,4 +1,4 @@
-# Lasers
+# [Lasers](@id lasers_doc)
 
 *This section provides information of available lasers in the library.*
 
