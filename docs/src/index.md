@@ -2,6 +2,10 @@
 
 *Implementation of classical/semiclassical methods in strong-field ionization of atoms and molecules.*
 
+```@contents
+Pages = ["index.md"]
+```
+
 ## Background
 
 The interaction between laser and matter has attracted widespread interest since the invention of laser technology decades ago.
@@ -37,7 +41,7 @@ After decades of accumulation of research and development, the trajectory simula
 
 - *GPU acceleration of traj. simulation* : a supported graphic card (NVIDIA is suggested)
 
-- *MOADK and WFAT features* : Linux or MacOS platform, Python 3 with the [pyscf](https://github.com/pyscf/pyscf) python package installed and the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package successfully built.
+- *MOADK and WFAT features* : Linux or MacOS platform, Python 3 with the [PySCF](https://github.com/pyscf/pyscf) python package installed and the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package successfully built.
 
 ### Installing the package
 
@@ -50,7 +54,7 @@ Pkg.add(url="https://github.com/TheStarAlight/SemiclassicalSFI.jl.git")
 # (@v1.8) pkg> add https://github.com/TheStarAlight/SemiclassicalSFI.jl.git
 ```
 
-It is suggested to test the package to check if the functions of the package run properly:
+It is suggested to test the package to check if the functions check if the key features (e.g., GPU acceleration and molecular calculation) work on your platform:
 
 ```julia
 Pkg.test("SemiclassicalSFI")
@@ -72,9 +76,9 @@ Pkg.test("SemiclassicalSFI")
 
     It is shown that *OrdinaryDiffEq@6.51* and *DiffEqGPU@1.26* runs well on Windows 10 (10.0.19044), Ubuntu (22.04.1 LTS) and Manjaro Linux (?).
 
-### Configuring Python and pyscf
+### Configuring Python and PySCF
 
-Currently the MOADK and WFAT features related to molecules rely on the [pyscf](https://github.com/pyscf/pyscf) python package, which doesn't support Windows platform. *SemiclassicalSFI.jl* calls the pyscf using the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package. There are two ways to set up the Python environment used by PyCall, here we suggest using your local Python environment for convenience.
+Currently the [MO-ADK](@ref MOADK) and [WFAT](@ref WFAT) features related to molecules rely on the [PySCF](https://github.com/pyscf/pyscf) python package, which doesn't support Windows platform. *SemiclassicalSFI.jl* calls the PySCF using the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package. There are two ways to set up the Python environment used by PyCall, here we suggest using your local Python environment for convenience.
 
 To correctly set up the configuration of PyCall, first, set the `PYTHON` environment variable to your Python executable, and build the PyCall package:
 
@@ -84,11 +88,12 @@ using Pkg
 Pkg.build("PyCall")
 ```
 
-And don't forget to install pyscf in your Python via pip:
+And don't forget to install PySCF in your Python via pip:
 
 ```
 $ pip3 install pyscf
 ```
+
 
 ## Contributors
 

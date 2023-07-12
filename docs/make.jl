@@ -15,6 +15,7 @@ makedocs(
                 ]
         ],
         format = Documenter.HTML(
+            ansicolor=true,
             edit_link=nothing,
             footer="· *SemiclassicalSFI.jl* Documentation · by *Mingyu Zhu* and other contributors"
             )

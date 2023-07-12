@@ -75,7 +75,7 @@ t2 = Targets.Xe1pAtom()
 ## Molecule
 
 The `Molecule` object represents a generic molecule, which is implemented in the library as [`Molecule`](@ref).
-The structure of `Molecule` is much more complex than that of atoms because the [Molecular ADK (MO-ADK)](@ref) and [Weak-Field Asymptotic Theory (WFAT)](@ref) features for molecular strong-field ionization require a number of coefficients, which are saved to files for convenience.
+The structure of `Molecule` is much more complex than that of atoms because the [Molecular ADK (MO-ADK) theory](@ref MOADK) and [Weak-Field Asymptotic Theory (WFAT)](@ref WFAT) features for molecular strong-field ionization require a number of coefficients, which are saved to files for convenience.
 
 ### Initialization, saving and loading
 

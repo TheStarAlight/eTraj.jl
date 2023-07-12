@@ -481,10 +481,10 @@ end
 
 """
 ```
-MolCalcWFATData!(   mol::Molecule,
-                    orbitIdx_relHOMO::Integer = 0,
-                    MCType::Type = PySCFMolecularCalculator;
-                    kwargs...)
+MolCalcWFATData!(mol::Molecule,
+                 orbitIdx_relHOMO::Integer = 0,
+                 MCType::Type = PySCFMolecularCalculator;
+                 kwargs...)
 ```
 Calculates the WFAT data of the `Molecule` and saves the data.
 - `MCType`              : Type of `MolecularCalculator` if the one for this `Molecule` is not initialized before. Default is `PySCFMolecularCalculator` if the `MCType` is not specified.
@@ -563,10 +563,10 @@ function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Integer)
 end
 """
 ```
-MolCalcMOADKCoeff!( mol::Molecule,
-                    orbitIdx_relHOMO::Integer = 0,
-                    MCType::Type = PySCFMolecularCalculator;
-                    kwargs...)
+MolCalcMOADKCoeff!(mol::Molecule,
+                   orbitIdx_relHOMO::Integer = 0,
+                   MCType::Type = PySCFMolecularCalculator;
+                   kwargs...)
 ```
 Calculates the MOADK coefficients of the `Molecule` and saves the data.
 - `MCType`              : Type of `MolecularCalculator` if the one for this `Molecule` is not initialized before. Default is `PySCFMolecularCalculator` if `MCType` is not specified.

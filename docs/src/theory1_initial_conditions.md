@@ -16,7 +16,7 @@ Atomic units (a.u.) are used throughout unless stated otherwise.
 Pages = ["theory1_initial_conditions.md"]
 ```
 
-## Strong-Field Approximation (SFA)
+## [Strong-Field Approximation (SFA)](@id SFA)
 
 The Strong-Field Approximation (SFA) [^Popruzhenko_2014] is originated from the Keldysh theory of strong-field ionization.
 Compared with the pertubative methods and adiabatic tunneling theories, the SFA is able to predict both the multi-photon and the tunneling process during the laser-atom interaction, as well as high-order non-pertubative phenomenona such as the above-threshold ionization (ATI) because it fully includes the non-adiabatic effect of the laser-atom interaction.
@@ -104,7 +104,7 @@ The probablity density (in the final momentum space) carried by the electron sam
 [^Milosevic_2006]: D. B. Milošević *et al.*, Above-Threshold Ionization by Few-Cycle Pulses. *J. Phys. B: At. Mol. Opt. Phys.* **39**, R203–R262 (2006). DOI: [10.1088/0953-4075/39/14/R01](https://dx.doi.org/10.1088/0953-4075/39/14/R01)
 
 
-## SFA with Adiabatic Expansion (SFA-AE)
+## [SFA with Adiabatic Expansion (SFA-AE)](@id SFAAE)
 
 For small Keldysh parameter ``\gamma``, the non-adiabatic effect is not significant, thus an adiabatic expansion scheme can be carried out to develop a modified theory based on the SFA, which is named after the SFA with adiabatic expansion (SFA-AE) [^Ni_2018]. It includes the non-adiabatic effect to a large extent and is capable of giving similar results compared with that given by the SFA under small Keldysh parameters.
 
@@ -150,7 +150,7 @@ The initial position has the expression
 
 
 
-## Ammosov-Delone-Krainov (ADK)
+## [Ammosov-Delone-Krainov (ADK)](@id ADK)
 
 The Ammosov-Delone-Krainov (ADK) theory [^Ammosov_1986] [^Delone_1998] is used to study the adiabatic tunneling in the strong-field ionization, and is, in a sense, the adiabatic limit of the SFA.
 
@@ -170,19 +170,25 @@ and the tunneling exit position
 
 
 
-## Molecular ADK (MO-ADK)
+## [Molecular ADK (MO-ADK)](@id MOADK)
 
 The molecular ADK (MO-ADK) theory generalizes the original ADK theory by extending the application scope from atomic to simple linear molecules [^Tong_2002].
 
 In the MO-ADK theory, the wavefunction of a linear molecule's ionizing orbital behaves asymptotically as
 ```math
-\psi_0^{(m)}(\bm{r}) \sim \sum_l C_l F_l(r) Y_{lm}(\theta,\phi)
+\psi_0^{(m)}(\bm{r}) \sim \sum_l F_l(r) Y_{lm}(\theta,\phi)
 ```
 in the molecular frame (MF) when ``r\rightarrow\infty``, where ``m`` denotes the magnetic quantum number along the molecular axis (``m=0,1,2`` denotes ``\sigma,\pi`` and ``\delta`` symmetries respectively).
 Assigning ``\kappa=\sqrt{2I_{\mathrm{p}}}``, the ``F_l(r)`` has the following asymptotic behavior when ``r\rightarrow\infty``:
 ```math
-F_l(r) \sim r^{Z/\kappa-1} \mathrm{e}^{-\kappa r}.
+F_l(r) \sim C_l r^{Z/\kappa-1} \mathrm{e}^{-\kappa r}.
 ```
+In numerical implementation we obtain the parameters ``C_l`` by fitting the above expression [^Zhang_2015], and the ``F_l(r)`` is found by the spherical-harmonic expansion of the wavefunction:
+```math
+F_l(r) = \int \mathrm{d}\bm{\Omega} Y_{lm}^{*}(\bm{\Omega}) \psi_0^{(m)}(\bm{r}).
+```
+
+[^Zhang_2015]: Zhang, B. *et al.*, SLIMP: Strong Laser Interaction Model Package for Atoms and Molecules. *Comp. Phys. Comm.* **192**, 330–341 (2015). DOI: [10.1016/j.cpc.2015.02.031](https://dx.doi.org/10.1016/j.cpc.2015.02.031)
 
 We assume the electric field is pointing towards the ``z`` axis in the laboratory frame (LF).
 The angle-dependent tunneling ionization rate in the MO-ADK theory reads
@@ -212,7 +218,7 @@ As for the ionization probability, we include the influence of the initial kinet
 
 
 
-## Weak-Field Asymptotic Theory (WFAT)
+## [Weak-Field Asymptotic Theory (WFAT)](@id WFAT)
 
 The weak-field asymptotic theory (WFAT) generalizes the tunneling ionization from isotropic atomic potentials to arbitrary molecular potentials [^Tolstikhin_2011]. Compared with the MO-ADK theory, the WFAT accounts for the influence of the molecules' permanent dipole moment, and is applicable for complex molecules other than simple linear molecules.
 
