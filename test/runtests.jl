@@ -6,4 +6,5 @@ using Test
     include("Lasers_test.jl")
     include("PySCFMolecularCalculator_test.jl")
     include("TrajectorySimulation_test.jl")
+    include("performSFI_test.jl")
 end

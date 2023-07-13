@@ -5,21 +5,21 @@ using ..Lasers
 using ..Targets
 using Base.Threads
 
-export initSampleProvider, ElectronSampleProvider, batchNum, generateElectronBatch
+export init_sampler, ElectronSampleProvider, batch_num, gen_electron_batch
 
-function initSampleProvider(;kwargs...)
-    return if kwargs[:ionRateMethod] == :ADK
+function init_sampler(;kwargs...)
+    return if kwargs[:init_cond_method] == :ADK
         ADKSampler(;kwargs...)
-    elseif kwargs[:ionRateMethod] == :SFA
+    elseif kwargs[:init_cond_method] == :SFA
         SFASampler(;kwargs...)
-    elseif kwargs[:ionRateMethod] == :SFA_AE
+    elseif kwargs[:init_cond_method] == :SFAAE
         SFAAESampler(;kwargs...)
-    elseif kwargs[:ionRateMethod] == :WFAT
+    elseif kwargs[:init_cond_method] == :WFAT
         WFATSampler(;kwargs...)
-    elseif kwargs[:ionRateMethod] == :MOADK
+    elseif kwargs[:init_cond_method] == :MOADK
         MOADKSampler(;kwargs...)
     else
-        error("[SampleProviders] Undefined tunneling rate method [$(kwargs[:ionRateMethod])].")
+        error("[SampleProviders] Undefined initial condition method [$(kwargs[:init_cond_method])].")
         return
     end
 end

@@ -3,57 +3,57 @@ using StaticArrays
 using NLsolve
 using QuadGK
 
-"Sample provider which yields electron samples through SFA formula, matching `IonRateMethod=:SFA`"
+"Sample provider which yields initial electron samples through SFA formula."
 struct SFASampler <: ElectronSampleProvider
     laser           ::Laser;
-    target          ::SAEAtomBase;          # SFA only supports [SAEAtomBase].
-    tSamples        ::AbstractVector;
-    ss_kdSamples    ::AbstractVector;
-    ss_kzSamples    ::AbstractVector;
-    phaseMethod     ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
-    ionRatePrefix   ::Symbol;           # currently supports :ExpRate.
+    target          ::SAEAtomBase;      # SFA only supports [SAEAtomBase].
+    t_samples       ::AbstractVector;
+    ss_kd_samples   ::AbstractVector;
+    ss_kz_samples   ::AbstractVector;
+    phase_method    ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
+    rate_prefix     ::Symbol;           # currently supports :ExpRate.
     function SFASampler(;   laser               ::Laser,
                             target              ::SAEAtomBase,
-                            sample_tSpan        ::Tuple{<:Real,<:Real},
-                            sample_tSampleNum   ::Integer,
-                            simu_phaseMethod    ::Symbol,
-                            rate_ionRatePrefix  ::Symbol,
-                            ss_kdMax            ::Real,
-                            ss_kdNum            ::Integer,
-                            ss_kzMax            ::Real,
-                            ss_kzNum            ::Integer,
+                            sample_t_span       ::Tuple{<:Real,<:Real},
+                            sample_t_num        ::Integer,
+                            simu_phase_method   ::Symbol,
+                            rate_prefix         ::Symbol,
+                            ss_kd_max           ::Real,
+                            ss_kd_num           ::Integer,
+                            ss_kz_max           ::Real,
+                            ss_kz_num           ::Integer,
                             kwargs...   # kwargs are surplus params.
                             )
         # check phase method support.
-        if ! (simu_phaseMethod in [:CTMC, :QTMC, :SCTS])
-            error("[SFASampler] Undefined phase method [$simu_phaseMethod].")
+        if ! (simu_phase_method in [:CTMC, :QTMC, :SCTS])
+            error("[SFASampler] Undefined phase method [$simu_phase_method].")
             return
         end
-        # check IonRate prefix support.
-        if ! (rate_ionRatePrefix in [:ExpRate, :ExpPre, :ExpJac, :Full])
-            error("[SFASampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+        # check rate prefix support.
+        if ! (rate_prefix in [:ExpRate, :ExpPre, :ExpJac, :Full])
+            error("[SFASampler] Undefined tunneling rate prefix [$rate_prefix].")
             return
         end
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "[SFASampler] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_kdNum>0 && ss_kzNum>0) "[SFASampler] Invalid kd/kz sample number $ss_kdNum/$ss_kzNum."
+        @assert (sample_t_num>0) "[SFASampler] Invalid time sample number $sample_t_num."
+        @assert (ss_kd_num>0 && ss_kz_num>0) "[SFASampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         # finish initialization.
         return new(laser, target,
-                range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
-                range(-abs(ss_kdMax),abs(ss_kdMax);length=ss_kdNum), range(-abs(ss_kzMax),abs(ss_kzMax);length=ss_kzNum),
-                simu_phaseMethod, rate_ionRatePrefix
+                range(sample_t_span[1],sample_t_span[2];length=sample_t_num),
+                range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
+                simu_phase_method, rate_prefix
                 )
     end
 end
 
 "Gets the total number of batches."
-function batchNum(sp::SFASampler)
-    return length(sp.tSamples)
+function batch_num(sp::SFASampler)
+    return length(sp.t_samples)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA method."
-function generateElectronBatch(sp::SFASampler, batchId::Int)
-    tr   = sp.tSamples[batchId]  # real part of time
+function gen_electron_batch(sp::SFASampler, batchId::Int)
+    tr   = sp.t_samples[batchId]  # real part of time
     Ax::Function = LaserAx(sp.laser)
     Ay::Function = LaserAy(sp.laser)
     Fx::Function = LaserFx(sp.laser)
@@ -69,8 +69,8 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
     if Ftr == 0
         return nothing
     end
-    kdNum, kzNum = length(sp.ss_kdSamples), length(sp.ss_kzSamples)
-    dim = (sp.phaseMethod == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    kdNum, kzNum = length(sp.ss_kd_samples), length(sp.ss_kz_samples)
+    dim = (sp.phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
     sample_count_thread = zeros(Int,nthreads())
     init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
 
@@ -85,7 +85,7 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
 
     @threads for ikd in 1:kdNum
         for ikz in 1:kzNum
-            kd, kz = sp.ss_kdSamples[ikd], sp.ss_kzSamples[ikz]
+            kd, kz = sp.ss_kd_samples[ikd], sp.ss_kz_samples[ikz]
             spe((ti,)) = saddle_point_equation(Ax,Ay,tr,ti,kd,kz)
             ti_sol = nlsolve(spe, [asinh(ω/Ftr*sqrt(kd^2+kz^2+2Ip))/ω])
             ti = 0.0
@@ -119,10 +119,10 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
             ky0 = py+Ay(tr)
             kz0 = kz
             rate = exp(2*imag(S))
-            if sp.ionRatePrefix == :ExpPre || sp.ionRatePrefix == :Full
+            if sp.rate_prefix == :ExpPre || sp.rate_prefix == :Full
                 rate /= abs((px+Ax(tr+1im*ti))*Fx(tr+1im*ti)+(py+Ay(tr+1im*ti))*Fy(tr+1im*ti))^α
             end
-            if sp.ionRatePrefix == :ExpJac || sp.ionRatePrefix == :Full
+            if sp.rate_prefix == :ExpJac || sp.rate_prefix == :Full
                 dt = 0.01
                 dk = 0.01
                 spe_t_p_dt((ti,)) = saddle_point_equation(Ax,Ay,tr+dt,ti,kd,kz)
@@ -140,7 +140,7 @@ function generateElectronBatch(sp::SFASampler, batchId::Int)
                 rate *= abs(dpxdtr*dpydkd-dpxdkd*dpydtr)/(4dt*dk)
             end
             init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
-            if sp.phaseMethod != :CTMC
+            if sp.phase_method != :CTMC
                 init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0
             end
         end

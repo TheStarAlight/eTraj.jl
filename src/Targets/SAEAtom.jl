@@ -168,10 +168,10 @@ end
 Gets the exponential term of ADK rate which depends on
 Field strength `F`,
 Azimuthal angle of field `φ`,
-momentum's transverse component `pd` (in xy plane),
-and propagation-direction (which is Z axis) component `pz`.
+momentum's transverse component `kd` (in xy plane),
+and propagation-direction (which is Z axis) component `kz`.
 """
-ADKRateExp(t::SAEAtom) = (F,φ,pd,pz) -> exp(-2(pd^2+pz^2+2*t.Ip)^1.5/3F)
+ADKRateExp(t::SAEAtom) = (F,φ,kd,kz) -> exp(-2(kd^2+kz^2+2*t.Ip)^1.5/3F)
 
 "Prints the information of the atom."
 Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge)\n")
