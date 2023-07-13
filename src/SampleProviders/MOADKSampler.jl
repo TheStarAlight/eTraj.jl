@@ -108,7 +108,7 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
     # the total tunneling rate consists of partial rates of different m' : Γ = ∑ Γ_m'
     # the partial rate consists of a structural part |B_m'|²/(2^|m'|*|m'|!) and a field part W_m'(F) = κ^(-|m'|) * (2κ²/F)^(2Z/κ-|m'|-1) * exp(-2κ³/3F)
     lMax = MolMOADKCoeff_lMax(sp.target, sp.ion_orbit_idx)
-    B_data = zeros(2lMax+1) # to get B(m_), call B_data[m_+lMax+1]
+    B_data = zeros(ComplexF64, 2lMax+1) # to get B(m_), call B_data[m_+lMax+1]
     for m_ in -lMax:lMax
         B_data[m_+lMax+1] = MolMOADKStructureFactor_B(sp.target, sp.ion_orbit_idx, sp.ion_orbit_m, m_, β, γ)
     end
