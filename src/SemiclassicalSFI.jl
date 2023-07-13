@@ -171,7 +171,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         end
         next!(prog1,spinner=raw"-\|/"); next!(prog2);
     end
-    finish!(prog1); finish!(prog2);
+    finish!(prog1); finish!(prog2); println();
     if simu_phase_method != :CTMC
         ion_prob_final = abs2.(ion_prob_final)
         if final_ryd_collect
