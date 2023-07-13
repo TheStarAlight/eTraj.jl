@@ -3,42 +3,42 @@ using HDF5
 using Rotations
 using WignerD
 
-"Sample provider which yields electron samples through WFAT formula, matching `IonRateMethod=:WFAT`"
+"Sample provider which yields initial electron samples through WFAT formula."
 struct WFATSampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::Molecule;     # WFAT only supports [Molecule]
-    tSamples        ::AbstractVector;
-    ss_kdSamples    ::AbstractVector;
-    ss_kzSamples    ::AbstractVector;
-    ionRatePrefix   ::Symbol;       # currently supports :ExpRate(would be treated as :ExpPre) & :ExpPre.
-    tunExit         ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
-    ionOrbitRelHOMO ::Integer;
+    t_samples        ::AbstractVector;
+    ss_kd_samples    ::AbstractVector;
+    ss_kz_samples    ::AbstractVector;
+    rate_prefix   ::Symbol;       # currently supports :ExpRate(would be treated as :ExpPre) & :ExpPre.
+    tun_exit         ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
+    ion_orbit_idx ::Integer;
 
-    function WFATSampler(;  laser               ::Laser,
-                            target              ::Molecule,
-                            sample_tSpan        ::Tuple{<:Real,<:Real},
-                            sample_tSampleNum   ::Int,
-                            rate_ionRatePrefix  ::Symbol,
-                            ss_kdMax            ::Real,
-                            ss_kdNum            ::Int,
-                            ss_kzMax            ::Real,
-                            ss_kzNum            ::Int,
-                            mol_ionOrbitRelHOMO ::Int,
+    function WFATSampler(;  laser           ::Laser,
+                            target          ::Molecule,
+                            sample_t_span   ::Tuple{<:Real,<:Real},
+                            sample_t_num    ::Int,
+                            rate_prefix     ::Symbol,
+                            ss_kd_max       ::Real,
+                            ss_kd_num       ::Int,
+                            ss_kz_max       ::Real,
+                            ss_kz_num       ::Int,
+                            mol_orbit_idx   ::Int,
                             kwargs...   # kwargs are surplus params.
                             )
         # check sampling parameters.
-        @assert (sample_tSampleNum>0) "[WFATSampler] Invalid time sample number $sample_tSampleNum."
-        @assert (ss_kdNum>0 && ss_kzNum>0) "[WFATSampler] Invalid kd/kz sample number $ss_kdNum/$ss_kzNum."
+        @assert (sample_t_num>0) "[WFATSampler] Invalid time sample number $sample_t_num."
+        @assert (ss_kd_num>0 && ss_kz_num>0) "[WFATSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         # load WFAT IntData.
-        if ! (mol_ionOrbitRelHOMO in MolWFATAvailableIndices(target))
-            MolCalcWFATData!(target, mol_ionOrbitRelHOMO)
+        if ! (mol_orbit_idx in MolWFATAvailableIndices(target))
+            MolCalcWFATData!(target, mol_orbit_idx)
         end
-        # check IonRate prefix support.
-        if ! (rate_ionRatePrefix in [:ExpRate, :ExpPre])
-            error("[WFATSampler] Undefined tunneling rate prefix [$rate_ionRatePrefix].")
+        # check rate prefix support.
+        if ! (rate_prefix in [:ExpRate, :ExpPre])
+            error("[WFATSampler] Undefined tunneling rate prefix [$rate_prefix].")
         end
         # check Keldysh parameter & over-barrier condition.
-        Ip = IonPotential(target, mol_ionOrbitRelHOMO)
+        Ip = IonPotential(target, mol_orbit_idx)
         F0 = LaserF0(laser)
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         if γ0 ≥ 0.5
@@ -56,22 +56,22 @@ struct WFATSampler <: ElectronSampleProvider
         end
         # finish initialization.
         return new( laser, target,
-                    range(sample_tSpan[1],sample_tSpan[2];length=sample_tSampleNum),
-                    range(-abs(ss_kdMax),abs(ss_kdMax);length=ss_kdNum), range(-abs(ss_kzMax),abs(ss_kzMax);length=ss_kzNum),
-                    rate_ionRatePrefix, tunExit,
-                    mol_ionOrbitRelHOMO
+                    range(sample_t_span[1],sample_t_span[2];length=sample_t_num),
+                    range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
+                    rate_prefix, tunExit,
+                    mol_orbit_idx
                     )
     end
 end
 
 "Gets the total number of batches."
-function batchNum(sp::WFATSampler)
-    return length(sp.tSamples)
+function batch_num(sp::WFATSampler)
+    return length(sp.t_samples)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using WFAT method."
-function generateElectronBatch(sp::WFATSampler, batchId::Int)
-    t = sp.tSamples[batchId]
+function gen_electron_batch(sp::WFATSampler, batchId::Int)
+    t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
     Fxt = Fx(t)
@@ -79,7 +79,7 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
     Ft = hypot(Fxt,Fyt)
     φ_field = atan( Fyt, Fxt)   # direction of field vector F.
     φ_exit  = atan(-Fyt,-Fxt)   # direction of tunneling exit, which is opposite to F.
-    Ip = IonPotential(sp.target, sp.ionOrbitRelHOMO)
+    Ip = IonPotential(sp.target, sp.ion_orbit_idx)
     κ  = sqrt(2Ip)
     Z  = AsympNuclCharge(sp.target)
     if Ft == 0
@@ -87,7 +87,7 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
     end
 
     # determining tunneling exit position (using ADK's parabolic tunneling exit method if tunExit=:Para)
-    r_exit = if sp.tunExit == :Para
+    r_exit = if sp.tun_exit == :Para
         (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
     else
         Ip / Ft
@@ -104,13 +104,13 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
     # determining tunneling rate Γ.
     # The total rate Γ consists of partial rates of different channels ν=(nξ,m): Γ = ∑ Γ_ν
     # The partial rate consists of structure factor part |G_ν(β,γ)|² and field factor W_ν(F): Γ_ν = |G_ν(β,γ)|²*W_ν(F)
-    nξMax, mMax = MolWFATMaxChannels(sp.target, sp.ionOrbitRelHOMO)
+    nξMax, mMax = MolWFATMaxChannels(sp.target, sp.ion_orbit_idx)
     G_data = zeros(ComplexF64, nξMax+1, 2mMax+1)    # to obtain G_nξ,m, call G_data[nξ+1, m+mMax+1]
     for nξ in 0:nξMax, m in -mMax:mMax
-        G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.ionOrbitRelHOMO,nξ,m,β,γ)
+        G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.ion_orbit_idx,nξ,m,β,γ)
     end
-    ionRate::Function =
-        if sp.ionRatePrefix == :ExpRate || sp.ionRatePrefix == :ExpPre
+    ion_rate::Function =
+        if sp.rate_prefix == :ExpRate || sp.rate_prefix == :ExpPre
             function (F,kd,kz)
                 Γsum = 0.
                 for nξ in 0:nξMax, m in -mMax:mMax
@@ -124,18 +124,18 @@ function generateElectronBatch(sp::WFATSampler, batchId::Int)
             #TODO: Add support for full prefixes.
         end
     dim = 8
-    kdNum, kzNum = length(sp.ss_kdSamples), length(sp.ss_kzSamples)
+    kdNum, kzNum = length(sp.ss_kd_samples), length(sp.ss_kz_samples)
     init = zeros(Float64, dim, kdNum, kzNum) # initial condition
     x0 = r_exit*cos(φ_exit)
     y0 = r_exit*sin(φ_exit)
     z0 = 0.
     @threads for ikd in 1:kdNum
-        kd0 = sp.ss_kdSamples[ikd]
+        kd0 = sp.ss_kd_samples[ikd]
         kx0 = kd0*-sin(φ_exit)
         ky0 = kd0* cos(φ_exit)
         for ikz in 1:kzNum
-            kz0 = sp.ss_kzSamples[ikz]
-            init[1:8,ikd,ikz] = [x0,y0,z0,kx0,ky0,kz0,t,ionRate(Ft,kd0,kz0)]
+            kz0 = sp.ss_kz_samples[ikz]
+            init[1:8,ikd,ikz] = [x0,y0,z0,kx0,ky0,kz0,t,ion_rate(Ft,kd0,kz0)]
         end
     end
     return reshape(init,dim,:)
