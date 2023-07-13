@@ -1,2 +1,3 @@
 test/tmp*
+test/test_*
 docs/build
