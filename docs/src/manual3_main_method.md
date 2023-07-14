@@ -18,18 +18,20 @@ CurrentModule = SemiclassicalSFI
 performSFI
 ```
 
+
+
 ## Lasers & Targets
 
 ### Lasers
 
-- `laser:Laser`
+- `laser::Laser`
 
 A `Lasers.Laser` object containing information of the laser field.
 Cf. the documentation for [Lasers](@ref lasers_doc).
 
 ### Targets
 
-- `target:Target`
+- `target::Target`
 
 A `Targets.Target` object containing information of the atom/molecule target.
 Cf. the documentation for [Targets](@ref targets_doc).
@@ -68,7 +70,7 @@ MolCalcMOADKCoeff!(mol)
 ```
 
 For typical small molecules, using default parameters usually gives satisfactory results.
-However, for special demands, the user may refer to the documentation of [`MolCalcMOADKCoeff!`](@ref) and [`Targets.MolecularCalculators.calcMOADKCoeff`](@ref) for more configuration parameters.
+However, for special demands, the user may refer to the documentation of [`MolCalcMOADKCoeff!`](@ref) and [`Targets.MolecularCalculators.calcMOADKCoeff`](@ref) for more calculation parameters.
 
 #### Calculate WFAT Data
 
@@ -78,19 +80,70 @@ MolCalcWFATData!(mol, orbitIdx_relHOMO = 0)
 ```
 
 To obtain the data of other orbitals besides HOMO, the user may alter the `orbitIdx_relHOMO` parameter.
-If the user requires custom calculation parameters, refer to the documentation of [`MolCalcWFATData!`](@ref) and [`Targets.MolecularCalculators.calcStructFactorData`](@ref).
+For custom calculation parameters, refer to the documentation of [`MolCalcWFATData!`](@ref) and [`Targets.MolecularCalculators.calcStructFactorData`](@ref).
+
+#### Setting the Molecule's Orientation
+
+The orientation of the molecule can be specified by invoking the [`SetMolRotation`](@ref) method:
+```julia
+SetMolRotation(mol, 0.0,π/2,π/3)
+```
+and can be obtained through the [`MolRotation`](@ref) method:
+```julia
+MolRotation(mol)
+```
+
 
 
 ## Initial Condition Methods
 
-### Atomic SFA, SFA-AE and ADK
+- `init_cond_method = <:ADK|:SFA|:SFAAE|:WFAT|:MOADK>`
 
-#### Rate Prefactor
+Method of electrons' initial conditions.
+Currently supports `:ADK`, `:SFA`, `:SFAAE` for atoms, and `:WFAT`, `:MOADK` for molecules.
 
-#### Tunneling Exit Methods For ADK
+For more information about the theories, cf. [Theory - Initial Conditions](@ref theory_init_cond).
 
+!!! note "Note"
+    For initial condition methods [ADK](@ref ADK), [SFA](@ref SFA) or [SFA-AE](@ref SFAAE), you must specify an atom target of types [`HydrogenLikeAtom`](@ref) or [`SAEAtom`](@ref);
+    For initial condition methods [WFAT](@ref WFAT) or [MO-ADK](@ref MOADK), you must specify a molecule target of type [`Molecule`](@ref).
 
-### Molecular WFAT and MO-ADK
+    |  | [ADK](@ref ADK) | [SFA](@ref SFA) | [SFA-AE](@ref SFAAE) | [WFAT](@ref WFAT) | [MO-ADK](@ref MOADK) |
+    | :------------------------- |:-:|:-:|:-:|:-:|:-:|
+    | [`HydrogenLikeAtom`](@ref) | ✔ | ✔ | ✔ |   |   |
+    | [`SAEAtom`](@ref)          | ✔ | ✔ | ✔ |   |   |
+    | [`Molecule`](@ref)         |   |   |   | ✔ | ✔ |
+
+### Atomic Rate Prefix
+
+- `rate_prefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`
+
+Prefix of the exponential term in the ionization rate (default `:ExpRate`).
+
+For atomic [ADK](@ref ADK), [SFA](@ref SFA) and [SFA-AE](@ref SFAAE), we obtained the ionization probability in the following form:
+```math
+\mathrm{d}W/\mathrm{d}\bm{k}_\perp \mathrm{d}t_{\mathrm{r}} = \bm{J}(k_d,t_{\mathrm{r}}) \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}),
+```
+where the ``\lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2`` denotes the prefactor, which has different expressions for different theories:
+
+| [SFA](@ref SFA) | [SFA-AE](@ref SFAAE) | [ADK](@ref ADK) |
+| :-: | :-: | :-: |
+| ``\{ [\bm{p}+\bm{A}(t_{\mathrm{s}})] \cdot \bm{F}(t_{\mathrm{s}}) \}^{-\alpha}`` | ``\left[ (k_\perp^2+2I_{\mathrm{p}})(F^2-\bm{k}_\perp \cdot \bm{F}') \right]^{-\alpha/2}`` | ``\left[ (k_\perp^2+2I_{\mathrm{p}})F^2\right]^{-\alpha/2}`` |
+
+The ``\bm{J}(k_d,t_{\mathrm{r}})`` denotes the Jacobian which arises from the coordinate transformation.
+
+For initial condition methods [ADK](@ref ADK), [SFA](@ref SFA) and [SFA-AE](@ref SFAAE),
+specifying `ExpRate` would not add any prefix besides the exponential term;
+`ExpPre` would include the prefactor ``\lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2``;
+`ExpJac` would include the Jacobian ``\bm{J}(k_d,t_{\mathrm{r}})``;
+`Full` indicates inclusion of both the prefactor and Jacobian.
+
+### Tunneling Exit Methods For Atomic ADK
+
+- `adk_tun_exit = <:IpF|:FDM|:Para>`
+
+Tunneling exit method for atomic ADK methods (when `init_cond_method==:ADK`) (default :IpF).
+Cf. [Tunneling Exit Methods For Atomic ADK](@ref tun_exit_atomic_adk).
 
 
 ## Sampling Methods and Parameters

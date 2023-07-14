@@ -31,8 +31,8 @@ Performs a semiclassical simulation with given parameters.
 
 ## Required params. for all methods:
 - `init_cond_method = <:ADK|:SFA|:SFAAE|:WFAT|:MOADK>`  : Method of electrons' initial conditions. Currently supports `:ADK`, `:SFA`, `:SFAAE` for atoms and `:WFAT`, `:MOADK` for molecules.
-- `laser::Laser`                                        : Parameters of the laser field.
-- `target::Target`                                      : Parameters of the target.
+- `laser::Laser`                                        : A `Lasers.Laser` object containing information of the laser field.
+- `target::Target`                                      : A `Targets.Target` object containing information of the atom/molecule target.
 - `sample_t_span = (start,stop)`                        : Time span in which electrons are sampled.
 - `sample_t_num`                                        : Number of time samples.
 - `simu_t_final`                                        : Time when every trajectory simulation ends.
@@ -57,7 +57,7 @@ Performs a semiclassical simulation with given parameters.
 - `simu_nondipole = false`                          : Determines whether non-dipole effect is taken account in the simulation (default `false`).
 - `simu_GPU = false`                                : Determines whether GPU acceleration in trajectory simulation is used (default `false`).
 - `rate_monte_carlo = false`                        : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`). Currently only supports ADK.
-- `rate_prefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`  : Prefix of the exponential term in the ionization rate (default `:ExpRate`). For MO-ADK & WFAT, `:ExpRate` & `:ExpPre` are the same.
+- `rate_prefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`  : Prefix of the exponential term in the ionization rate (default `:ExpRate`).
 - `final_ryd_collect = false`                       : Determines whether rydberg final states are collected (default `false`).
 - `final_ryd_n_max`                                 : Determines the maximum principle quantum number n for rydberg final states to be collected.
 

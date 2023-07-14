@@ -1,4 +1,4 @@
-# Theory: Initial Conditions
+# [Theory: Initial Conditions](@id theory_init_cond)
 
 *This section reviews commonly-used theories used to provide initial conditions in the trajectory simulations.*
 
@@ -99,6 +99,22 @@ The probablity density (in the final momentum space) carried by the electron sam
 \mathrm{d}W/\mathrm{d}\bm{p} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}).
 ```
 
+We note that the ionization probability is expressed in the coordinate of final momentum ``(p_x,p_y,p_z)``.
+However, in the trajectory simulation, the initial electrons are sampled in the coordinate ``(t_{\mathrm{r}},k_d,k_z)``, where ``k_d`` denotes the initial momentum's component in the ``xy`` plane (which is perpendicular to the electric field).
+Thus, adding a Jacobian in the prefix of the ionization probability is required if we sample the initial electrons within such coordinate, the transformed expression reads
+```math
+\mathrm{d}W/\mathrm{d}\bm{k}_\perp \mathrm{d}t_{\mathrm{r}} = \bm{J}(k_d,t_{\mathrm{r}}) \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp(2\ \mathrm{Im}\ \Phi_{\mathrm{tun}}),
+```
+where the Jacobian is
+```math
+\bm{J}(k_d,t_{\mathrm{r}}) = \frac{\partial(p_x,p_y)}{\partial(k_d,t_{\mathrm{r}})} =
+\begin{vmatrix}
+    \partial p_x/\partial k_d & \partial p_x/\partial t_{\mathrm{r}} \\
+    \partial p_y/\partial k_d & \partial p_y/\partial t_{\mathrm{r}}
+\end{vmatrix}
+.
+```
+
 [^Popruzhenko_2014]: S. V. Popruzhenko, Keldysh Theory of Strong Field Ionization: History, Applications, Difficulties and Perspectives. *J. Phys. B: At. Mol. Opt. Phys.* **47**, 204001 (2014). DOI:[10.1088/0953-4075/47/20/204001](https://dx.doi.org/10.1088/0953-4075/47/20/204001)
 [^Kjeldsen_2006]: T. K. Kjeldsen *et al.*, Strong-Field Ionization of Atoms and Molecules: The Two-Term Saddle-Point Method. *Phys. Rev. A* **74**, 023407 (2006). DOI:[10.1103/PhysRevA.74.023407](https://dx.doi.org/10.1103/PhysRevA.74.023407)
 [^Milosevic_2006]: D. B. Milošević *et al.*, Above-Threshold Ionization by Few-Cycle Pulses. *J. Phys. B: At. Mol. Opt. Phys.* **39**, R203–R262 (2006). DOI: [10.1088/0953-4075/39/14/R01](https://dx.doi.org/10.1088/0953-4075/39/14/R01)
@@ -137,7 +153,7 @@ and we obtain
 where the ``\bm{k}_{\perp}`` denotes the transverse momentum at the tunneling exit, which is actually equivalent to ``\bm{k}(t_{\mathrm{r}})`` in the SFA-AE because the above saddle-point equation requires ``\bm{k}(t_{\mathrm{r}}) \cdot \bm{F}(t_{\mathrm{r}}) = 0``. We note that the initial momentum, ``\bm{k}_0``, is exactly ``\bm{k}_{\perp}``.
 The prefactor ``P_{\bm{p}}(t_{\mathrm{s}})`` which included the Coulomb tail correction, in the SFA-AE, has the expression [^Frolov_2017]:
 ```math
-P_{\bm{p}}(t_{\mathrm{s}}) = \left[ (k_\perp^2+2I_{\mathrm{p}})(F^2-\bm{k}_\perp \cdot \bm{F}) \right]^{-\alpha/2}.
+P_{\bm{p}}(t_{\mathrm{s}}) = \left[ (k_\perp^2+2I_{\mathrm{p}})(F^2-\bm{k}_\perp \cdot \bm{F}') \right]^{-\alpha/4}.
 ```
 
 The initial position has the expression
@@ -159,7 +175,11 @@ Substuting it into the expressions of SFA-AE yields the ADK rate
 ```math
 \mathrm{d}W/\mathrm{d}\bm{p} = \lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 \exp \left[ -\frac23 \frac{[k_\perp^2+2I_{\mathrm{p}}]^{3/2}}{F} \right],
 ```
-and the tunneling exit position
+where the prefactor reads
+```math
+\lvert P_{\bm{p}}(t_{\mathrm{s}}) \rvert^2 = \left[ (k_\perp^2+2I_{\mathrm{p}})F^2\right]^{-\alpha/2}.
+```
+The tunneling exit position can be obtained in the same approach:
 ```math
 \bm{r}_0 = \mathrm{Im} \int_{0}^{t_{\mathrm{i}}} \bm{A}(t_{\mathrm{r}}+\mathrm{i}\tau) \mathrm{d}\tau = -\frac{\bm{F}}{2} \frac{k_\perp^2+2I_{\mathrm{p}}}{F^2}.
 ```
@@ -167,7 +187,42 @@ and the tunneling exit position
 [^Ammosov_1986]: M. V. Ammosov *et al.*, Tunnel Ionization of Complex Atoms and of Atomic Ions in an Alternating Electromagnetic Field. *Sov. Phys. JETP* **64**, 1191 (1986).
 [^Delone_1998]: N. B. Delone *et al.*, Tunneling and Barrier-Suppression Ionization of Atoms and Ions in a Laser Radiation Field. *Phys.-Usp.* **41**, 469–485. DOI: [10.1070/PU1998v041n05ABEH000393](https://dx.doi.org/10.1070/PU1998v041n05ABEH000393)
 
+### [Tunneling Exit Methods for Atomic ADK](@id tun_exit_atomic_adk)
 
+The tunneling exit, i.e., the initial position ``\bm{r}_0`` of the classical trajectories, remains a controversial problem.
+Below we briefly review three methods for determination of the tunneling exit, which apply for the ADK method.
+
+(1) The ``I_{\mathrm{p}}/F`` model.
+
+The ``I_{\mathrm{p}}/F`` model is initially derived from the SFA theory and is the adiabatic limit of it.
+In this model the distance ``r_0`` between the tunneling exit and the nucleus is simply expressed as the quotient of the ionization potential ``I_{\mathrm{p}}`` and the electric field strength ``F``.
+Taking account of the initial kinetic energy ``k_\perp^2/2``, ``r_0`` reads
+```math
+r_0 = \frac{I_{\mathrm{p}}+k_\perp^2/2}{F}.
+```
+However, the shortcoming of the ``I_{\mathrm{p}}/F`` model is obvious: derived from the SFA which assumes a short-range potential (i.e., a delta potential), this model neglects the complexity of the Coulomb characteristics of the potential and thus the conclusion lacks persuasiveness.
+
+(2) The field-direction model (FDM).
+
+The field-direction model (FDM) determines the tunneling exit by treating the problem as a one-dimensional tunneling problem: the tunneling exit is found in the one-dimensional cut of the combined potential of the laser and nucleus along the field direction.
+We assume that the field points towards the ``-z`` direction, and the tunneling exit ``r_0`` is found from
+```math
+V(r_0 \bm{e}_z) - F r_0 = - I_{\mathrm{p}}.
+```
+For sufficiently large ``r_0``, the potential ``V(r)`` behaves as ``-Z/r``, and the tunneling exit is expressed as
+```math
+r_0 = \frac{I_{\mathrm{p}}+\sqrt{I_{\mathrm{p}}^2-4FZ}}{2F}.
+```
+The FDM approach takes the Coulomb field into account, however, not in such a scientific way because this problem is actually not independent of the transverse dimensions.
+
+(3) The parabolic-coordinate model.
+
+For a static electric field towards the ``-z`` direction, the parabolic-coordinate model introduces the parabolic coordinate ``\xi = r+z``, ``\eta = r-z``, ``\phi = \tan^{-1}{y/x}``, in which the Schrödinger equation becomes separable in the three dimensions.
+The parabolic-coordinate approach gives expression of the tunneling exit:
+```math
+r_0 = \frac{I_{\mathrm{p}}+\sqrt{I_{\mathrm{p}}^2-4F \left[ Z-(1+|m|)\sqrt{I_{\mathrm{p}}/2} \right] }}{2F},
+```
+where ``m`` is the magnetic quantum number along the ``z`` axis (due to the isotropic angular distribution of the atomic wavefunction, we set ``m=0``).
 
 
 ## [Molecular ADK (MO-ADK)](@id MOADK)

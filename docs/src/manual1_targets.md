@@ -125,6 +125,11 @@ Targets.MolecularCalculators.calcMOADKCoeff
 The molecule's orientation is described by a set of Euler angles (``z-y'-z''`` convention), which defines a rotational transformation from the molecular frame (MF) to the lab frame (LF).
 This property of `Molecule` is NOT included in the saved file and thus needs to be specified each time upon initialization of the `Molecule` object from external files.
 
+!!! note "Note"
+    Here the three Euler angles `(α,β,γ)` that describe the `Molecule`'s orientation are completely different from that of the Euler angles `(β',γ')` in the [WFAT](@ref WFAT) and [MO-ADK](@ref MOADK) theory.
+    These theories' "lab frame" is chosen for convenience of theoretical formulation, where the electric field is assumed to be static, pointing towards the ``+z`` direction,
+    and has no relation with the lab frame mentioned above.
+
 The orientation of the molecule can be obtained and set via the [`MolRotation`](@ref) and [`SetMolRotation`](@ref) methods.
 
 ```@docs
