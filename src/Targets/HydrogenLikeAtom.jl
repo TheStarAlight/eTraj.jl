@@ -11,8 +11,8 @@ struct HydrogenLikeAtom <: SAEAtomBase
     "Name of the atom."
     name::String;
     "Initializes a new instance of HydrogenLikeAtom."
-    HydrogenLikeAtom( Ip, Z, soft_core=1.0, name="[NA]") = new(Ip, Z, soft_core, name)
-    HydrogenLikeAtom(;Ip, Z, soft_core=1.0, name="[NA]") = new(Ip, Z, soft_core, name)
+    HydrogenLikeAtom( Ip, Z, soft_core=0.01, name="[NA]") = new(Ip, Z, soft_core, name)
+    HydrogenLikeAtom(;Ip, Z, soft_core=0.01, name="[NA]") = new(Ip, Z, soft_core, name)
 end
 
 "Gets the ionization potential of the atom."
@@ -132,7 +132,7 @@ and propagation-direction (which is Z axis) component `kz`.
 ADKRateExp(t::HydrogenLikeAtom) = (F,φ,kd,kz) -> exp(-2(kd^2+kz^2+2*t.Ip)^1.5/3F)
 
 "Prints the information of the atom."
-Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge), SoftCore=$(t.soft_core)\n")
+Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge), soft_core=$(t.soft_core)\n")
 
 using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."

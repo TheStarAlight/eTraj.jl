@@ -8,8 +8,8 @@ using Test
 
     @info "Testing HydrogenLikeAtom ..."
     @testset verbose=true "HydrogenLikeAtom" begin
-        t1 = HydrogenLikeAtom(Ip=0.5,Z=1.0,soft_core=1.0,name="H")
-        t2 = HydrogenLikeAtom(0.5,1.0,1.0,"H")
+        t1 = HydrogenLikeAtom(Ip=0.5,Z=1.0,soft_core=0.01,name="H")
+        t2 = HydrogenLikeAtom(0.5,1.0,0.01,"H")
         t3 = HAtom()
         @test t1 == t2 == t3
         @test begin
@@ -18,10 +18,10 @@ using Test
         end
         @test IonPotential(t1)       == 0.5
         @test AsympNuclCharge(t1)    == 1
-        @test SoftCore(t1)           == 1.0
+        @test SoftCore(t1)           == 0.01
         @test TargetName(t1)         == "H"
-        @test TargetPotential(t1)(1.0,1.0,1.0)   == -0.5
-        @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .== (-1/8,-1/8,-1/8))
+        @test TargetPotential(t1)(1.0,1.0,1.0) ≈ -1/sqrt(3.01)
+        @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (3.01)^(-1.5))
         #@test TrajectoryFunction(t) #TODO: add this test after revising the code.
         @test ADKRateExp(t1)(0.1,0.0,1.0,1.0) ≈ exp(-2*3.0^1.5/0.3)
     end
