@@ -16,7 +16,7 @@ struct SFASampler <: ElectronSampleProvider
                             target              ::SAEAtomBase,
                             sample_t_span       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Integer,
-                            simu_phase_method   ::Symbol,
+                            traj_phase_method   ::Symbol,
                             rate_prefix         ::Symbol,
                             ss_kd_max           ::Real,
                             ss_kd_num           ::Integer,
@@ -25,8 +25,8 @@ struct SFASampler <: ElectronSampleProvider
                             kwargs...   # kwargs are surplus params.
                             )
         # check phase method support.
-        if ! (simu_phase_method in [:CTMC, :QTMC, :SCTS])
-            error("[SFASampler] Undefined phase method [$simu_phase_method].")
+        if ! (traj_phase_method in [:CTMC, :QTMC, :SCTS])
+            error("[SFASampler] Undefined phase method [$traj_phase_method].")
             return
         end
         # check rate prefix support.
@@ -41,7 +41,7 @@ struct SFASampler <: ElectronSampleProvider
         return new(laser, target,
                 range(sample_t_span[1],sample_t_span[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                simu_phase_method, rate_prefix
+                traj_phase_method, rate_prefix
                 )
     end
 end

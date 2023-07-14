@@ -9,7 +9,6 @@ struct MOADKSampler <: ElectronSampleProvider
     t_samples       ::AbstractVector;
     ss_kd_samples   ::AbstractVector;
     ss_kz_samples   ::AbstractVector;
-    rate_prefix     ::Symbol;       # currently supports :ExpRate(would be treated as :ExpPre) & :ExpPre.
     tun_exit        ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     ion_orbit_idx   ::Integer;
     ion_orbit_m     ::Integer;
@@ -18,7 +17,6 @@ struct MOADKSampler <: ElectronSampleProvider
                             target          ::Molecule,
                             sample_t_span   ::Tuple{<:Real,<:Real},
                             sample_t_num    ::Integer,
-                            rate_prefix     ::Symbol,
                             ss_kd_max       ::Real,
                             ss_kd_num       ::Integer,
                             ss_kz_max       ::Real,
@@ -33,10 +31,6 @@ struct MOADKSampler <: ElectronSampleProvider
         # if coefficients are not available, calculate it.
         if ! (mol_orbit_idx in MolMOADKAvailableIndices(target))
             MolCalcMOADKCoeff!(target, mol_orbit_idx)
-        end
-        # check rate prefix support.
-        if ! (rate_prefix in [:ExpRate, :ExpPre])
-            error("[MOADKSampler] Unsupported tunneling rate prefix [$rate_prefix].")
         end
         # check Keldysh parameter & over-barrier condition.
         Ip = IonPotential(target, mol_orbit_idx)
@@ -61,7 +55,7 @@ struct MOADKSampler <: ElectronSampleProvider
         return new( laser, target,
                     range(sample_t_span[1],sample_t_span[2];length=sample_t_num),
                     range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                    rate_prefix, tun_exit,
+                    tun_exit,
                     mol_orbit_idx, moadk_orbit_m)
     end
 end
@@ -113,16 +107,12 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
         B_data[m_+lMax+1] = MolMOADKStructureFactor_B(sp.target, sp.ion_orbit_idx, sp.ion_orbit_m, m_, β, γ)
     end
     ion_rate::Function =
-        if sp.rate_prefix == :ExpRate || sp.rate_prefix == :ExpPre
-            function (F,kd,kz)
-                Γsum = 0.
-                for m_ in -lMax:lMax
-                    Γsum += abs2(B_data[m_+lMax+1])/(2^abs(m_)*factorial(abs(m_))) * κ^(-abs(m_)) * (2κ^2/F)^(2Z/κ-abs(m_)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)
-                end
-                return Γsum
+        function (F,kd,kz)
+            Γsum = 0.
+            for m_ in -lMax:lMax
+                Γsum += abs2(B_data[m_+lMax+1])/(2^abs(m_)*factorial(abs(m_))) * κ^(-abs(m_)) * (2κ^2/F)^(2Z/κ-abs(m_)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)
             end
-        else
-            #TODO: Add Full prefix including jac.
+            return Γsum
         end
     # generating samples
     dim = 8
