@@ -16,7 +16,7 @@ struct ADKSampler <: ElectronSampleProvider
     ADK_tun_exit    ::Symbol;           # currently supports :IpF, :FDM, :Para.
     function ADKSampler(;   laser               ::Laser,
                             target              ::SAEAtomBase,
-                            sample_t_span       ::Tuple{<:Real,<:Real},
+                            sample_t_interval   ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Int,
                             sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
@@ -69,7 +69,7 @@ struct ADKSampler <: ElectronSampleProvider
         if ! sample_monte_carlo    # check SS sampling parameters.
             @assert (ss_kd_num>0 && ss_kz_num>0) "[ADKSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         else                    # check MC sampling parameters.
-            @assert (sample_t_span[1] < sample_t_span[2]) "[ADKSampler] Invalid sampling time span $sample_t_span."
+            @assert (sample_t_interval[1] < sample_t_interval[2]) "[ADKSampler] Invalid sampling time span $sample_t_interval."
             @assert (mc_t_batch_size>0) "[ADKSampler] Invalid batch size $mc_t_batch_size."
             @assert (mc_kt_max>0) "[ADKSampler] Invalid sampling kt_max $mc_kt_max."
         end
@@ -77,12 +77,12 @@ struct ADKSampler <: ElectronSampleProvider
         return if ! sample_monte_carlo
             new(laser,target,
                 sample_monte_carlo,
-                range(sample_t_span[1],sample_t_span[2];length=sample_t_num),
+                range(sample_t_interval[1],sample_t_interval[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 0,0,    # for MC params. pass meaningless values
                 traj_phase_method,rate_prefix,adk_tun_exit)
         else
-            t_samples = rand(sample_t_num) .* (sample_t_span[2]-sample_t_span[1]) .+ sample_t_span[1]
+            t_samples = rand(sample_t_num) .* (sample_t_interval[2]-sample_t_interval[1]) .+ sample_t_interval[1]
             new(laser,target,
                 sample_monte_carlo,
                 t_samples,

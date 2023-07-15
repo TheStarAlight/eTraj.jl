@@ -14,7 +14,7 @@ struct SFASampler <: ElectronSampleProvider
     rate_prefix     ::Symbol;           # currently supports :ExpRate.
     function SFASampler(;   laser               ::Laser,
                             target              ::SAEAtomBase,
-                            sample_t_span       ::Tuple{<:Real,<:Real},
+                            sample_t_interval   ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Integer,
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Symbol,
@@ -39,7 +39,7 @@ struct SFASampler <: ElectronSampleProvider
         @assert (ss_kd_num>0 && ss_kz_num>0) "[SFASampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         # finish initialization.
         return new(laser, target,
-                range(sample_t_span[1],sample_t_span[2];length=sample_t_num),
+                range(sample_t_interval[1],sample_t_interval[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 traj_phase_method, rate_prefix
                 )

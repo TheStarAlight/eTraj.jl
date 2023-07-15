@@ -33,7 +33,7 @@ Performs a semiclassical simulation with given parameters.
 - `init_cond_method = <:ADK|:SFA|:SFAAE|:WFAT|:MOADK>`  : Method of electrons' initial conditions. Currently supports `:ADK`, `:SFA`, `:SFAAE` for atoms and `:WFAT`, `:MOADK` for molecules.
 - `laser::Laser`                                        : A `Lasers.Laser` object containing information of the laser field.
 - `target::Target`                                      : A `Targets.Target` object containing information of the atom/molecule target.
-- `sample_t_span = (start,stop)`                        : Time span in which electrons are sampled.
+- `sample_t_interval = (start,stop)`                    : Time interval in which the initial electrons are sampled.
 - `sample_t_num`                                        : Number of time samples.
 - `traj_t_final`                                        : Time when every trajectory simulation ends.
 - `final_p_max = (pxMax,pyMax,pzMax)`                   : Boundaries of final momentum spectrum collected in three dimensions.
@@ -78,7 +78,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     init_cond_method    ::Symbol,
                     laser               ::Laser,
                     target              ::Target,
-                    sample_t_span       ::Tuple{<:Real,<:Real},
+                    sample_t_interval   ::Tuple{<:Real,<:Real},
                     sample_t_num        ::Integer,
                     traj_t_final        ::Real,
                     final_p_max         ::Tuple{<:Real,<:Real,<:Real},
@@ -112,7 +112,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     )
     #* pack up all parameters.
     kwargs = Dict{Symbol,Any}()
-    @pack! kwargs= (init_cond_method, laser, target, sample_t_span, sample_t_num, traj_t_final, final_p_max, final_p_num,
+    @pack! kwargs= (init_cond_method, laser, target, sample_t_interval, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
                     mc_t_batch_size, mc_kt_max,
                     traj_phase_method, traj_dt, traj_nondipole, traj_GPU, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
@@ -199,7 +199,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         dict_out[:init_cond_method]     = init_cond_method
         dict_out[:laser]                = Lasers.Serialize(laser)
         dict_out[:target]               = Targets.Serialize(target)
-        dict_out[:sample_t_span]        = sample_t_span
+        dict_out[:sample_t_interval]    = sample_t_interval
         dict_out[:sample_t_num]         = sample_t_num
         dict_out[:traj_t_final]         = traj_t_final
         dict_out[:final_p_max]          = final_p_max
