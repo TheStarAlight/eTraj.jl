@@ -2,7 +2,7 @@ using SemiclassicalSFI
 using Test
 using StaticArrays
 using OrdinaryDiffEq
-using DiffEqGPU
+using DiffEqGPU, CUDA
 
 @info "# Testing trajectory simulation ..."
 
@@ -23,8 +23,8 @@ using DiffEqGPU
         du6 = tFz
         @SVector [du1,du2,du3,du4,du5,du6]
     end
-    simu_tFinal = 120.
-    simu_relTol = 1e-6
+    traj_t_final = 120.
+    traj_dt = 0.001
     init = [10.0  9.0  8.0  7.0;    # x
              5.0  1.0  0.0  0.0;    # y
              0.0  0.0  6.0  1.0;    # z
@@ -32,28 +32,28 @@ using DiffEqGPU
              1.0  1.0 -1.0  2.0;    # py
              0.0  0.0  0.0  3.0;    # pz
              0.0 -5.0  0.0  0.0;]
-    final = [-107.586580634  14.769123285  -111.052988864   10.541324293;
-               88.693028463  66.732062023  -135.010858308  216.489065097;
-                0.0           0.0             0.580939406  357.985889013;
-               -0.972128611  -0.017974487    -0.992418369    0.028651930;
-                0.852993520   0.666820202    -0.932743294    1.985856245;
-                0.0           0.0            -0.047583462    2.972879184;]
-    trajODEProb::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,6)), (0,simu_tFinal))
-    initTraj = (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]), tspan=(init[7,i],simu_tFinal))
-    ensembleProb::EnsembleProblem = EnsembleProblem(trajODEProb, prob_func=initTraj, safetycopy=false)
+    final = [-107.586659754  14.769525931  -111.052945103   10.541838348;
+               88.693094313  66.732075229  -135.011048697  216.489086428;
+                0.0           0.0             0.580938720  357.985889110;
+               -0.972143888  -0.017934642    -0.992390595    0.028702222;
+                0.852999481   0.666821600    -0.932762255    1.985858411;
+                0.0           0.0            -0.047583468    2.972879185;]
+    traj_ODE_prob::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,6)), (0,traj_t_final))
+    init_traj = (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]), tspan=(init[7,i],traj_t_final))
+    ensemble_prob::EnsembleProblem = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
     solc = nothing
     solg = nothing
     @info "Testing CPU..."
     @testset verbose=true "CPU" begin
         @test begin
-            solc = solve(ensembleProb, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), reltol=simu_relTol, save_everystep=false);
-            mapreduce(function((k,i),) ≈(final[k,i],solc[i][end][k],rtol=1e-4) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
+            solc = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), adaptive=false, dt=traj_dt, save_everystep=false);
+            mapreduce(function((k,i),) ≈(final[k,i],solc[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
         end
     end
     @info "Testing GPU..."
     @testset verbose=true "GPU" begin
         @test begin
-            solg = solve(ensembleProb, DiffEqGPU.GPUTsit5(), DiffEqGPU.EnsembleGPUKernel(0.), trajectories=size(init,2), dt=0.1, adaptive=true, save_everystep=false);
+            solg = solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend(),0.0), trajectories=size(init,2), adaptive=false, dt=traj_dt, save_everystep=false);
             mapreduce(function((k,i),) ≈(final[k,i],solg[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
         end
     end

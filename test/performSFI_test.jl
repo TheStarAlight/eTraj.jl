@@ -35,7 +35,7 @@ using Base.Threads
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_ADK_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :CTMC,
-                traj_rtol           = 1e-6,
+                traj_dt             = 0.1,
                 rate_prefix         = :Full
             )
             true
@@ -62,7 +62,7 @@ using Base.Threads
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_ADK_GPU_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :CTMC,
-                traj_rtol           = 1e-6,
+                traj_dt             = 0.1,
                 rate_prefix         = :Full,
                 traj_GPU            = true
             )
@@ -88,7 +88,7 @@ using Base.Threads
                 mc_kt_max           = 2.0,
                 save_path           = "./performSFI_test_output/test_ADK_MC_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :CTMC,
-                traj_rtol           = 1e-6,
+                traj_dt             = 0.1,
                 rate_prefix         = :Full,
                 sample_monte_carlo  = true
             )
@@ -116,7 +116,7 @@ using Base.Threads
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_ADK_QTMC_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :QTMC,
-                traj_rtol           = 1e-6,
+                traj_dt             = 0.1,
                 rate_prefix         = :Full
             )
             true
@@ -143,7 +143,7 @@ using Base.Threads
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_ADK_SCTS_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :SCTS,
-                traj_rtol           = 1e-6,
+                traj_dt             = 0.1,
                 rate_prefix         = :Full
             )
             true
@@ -170,7 +170,7 @@ using Base.Threads
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_SFAAE_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :CTMC,
-                traj_rtol           = 1e-6,
+                traj_dt             = 0.1,
                 rate_prefix         = :Full
             )
             true
@@ -197,7 +197,7 @@ using Base.Threads
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_SFA_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :CTMC,
-                traj_rtol           = 1e-6,
+                traj_dt             = 0.1,
                 rate_prefix         = :Full
             )
             true
@@ -223,7 +223,7 @@ using Base.Threads
                 ss_kz_max           = 2.0,
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_MOADK_Hydrogen_4e14_800nm_2cyc_CP.h5",
-                traj_rtol           = 1e-6
+                traj_dt             = 0.1
             )
             true
         end
@@ -248,7 +248,7 @@ using Base.Threads
                 ss_kz_max           = 2.0,
                 ss_kz_num           = 100,
                 save_path           = "./performSFI_test_output/test_WFAT_Hydrogen_4e14_800nm_2cyc_CP.h5",
-                traj_rtol           = 1e-6
+                traj_dt             = 0.1
             )
             true
         end
