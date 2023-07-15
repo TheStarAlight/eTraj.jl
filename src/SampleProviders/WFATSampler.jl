@@ -7,18 +7,16 @@ using WignerD
 struct WFATSampler <: ElectronSampleProvider
     laser           ::Laser;
     target          ::Molecule;     # WFAT only supports [Molecule]
-    t_samples        ::AbstractVector;
-    ss_kd_samples    ::AbstractVector;
-    ss_kz_samples    ::AbstractVector;
-    rate_prefix   ::Symbol;       # currently supports :ExpRate(would be treated as :ExpPre) & :ExpPre.
-    tun_exit         ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
-    ion_orbit_idx ::Integer;
+    t_samples       ::AbstractVector;
+    ss_kd_samples   ::AbstractVector;
+    ss_kz_samples   ::AbstractVector;
+    tun_exit        ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
+    ion_orbit_idx   ::Integer;
 
     function WFATSampler(;  laser           ::Laser,
                             target          ::Molecule,
                             sample_t_span   ::Tuple{<:Real,<:Real},
                             sample_t_num    ::Int,
-                            rate_prefix     ::Symbol,
                             ss_kd_max       ::Real,
                             ss_kd_num       ::Int,
                             ss_kz_max       ::Real,
@@ -33,10 +31,6 @@ struct WFATSampler <: ElectronSampleProvider
         if ! (mol_orbit_idx in MolWFATAvailableIndices(target))
             MolCalcWFATData!(target, mol_orbit_idx)
         end
-        # check rate prefix support.
-        if ! (rate_prefix in [:ExpRate, :ExpPre])
-            error("[WFATSampler] Undefined tunneling rate prefix [$rate_prefix].")
-        end
         # check Keldysh parameter & over-barrier condition.
         Ip = IonPotential(target, mol_orbit_idx)
         F0 = LaserF0(laser)
@@ -47,10 +41,10 @@ struct WFATSampler <: ElectronSampleProvider
             @warn "[WFATSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         F_crit = Ip^2/4/(1-sqrt(Ip/2))
-        tunExit = :Para
+        tun_exit = :Para
         if F0 ≥ F_crit
             @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied. Tunneling exit method switched from [Para] to [IpF]."
-            tunExit = :IpF
+            tun_exit = :IpF
         elseif F0 ≥ F_crit*2/3
             @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
         end
@@ -58,7 +52,7 @@ struct WFATSampler <: ElectronSampleProvider
         return new( laser, target,
                     range(sample_t_span[1],sample_t_span[2];length=sample_t_num),
                     range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                    rate_prefix, tunExit,
+                    tun_exit,
                     mol_orbit_idx
                     )
     end
@@ -110,18 +104,14 @@ function gen_electron_batch(sp::WFATSampler, batchId::Int)
         G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.ion_orbit_idx,nξ,m,β,γ)
     end
     ion_rate::Function =
-        if sp.rate_prefix == :ExpRate || sp.rate_prefix == :ExpPre
-            function (F,kd,kz)
-                Γsum = 0.
-                for nξ in 0:nξMax, m in -mMax:mMax
-                    G2 = abs2(G_data[nξ+1, m+mMax+1])  # G², structural part
-                    WF = (κ/2) * (4κ^2/F)^(2Z/κ-2nξ-abs(m)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)   # W_F, field part
-                    Γsum += G2*WF
-                end
-                return Γsum
+        function (F,kd,kz)
+            Γsum = 0.
+            for nξ in 0:nξMax, m in -mMax:mMax
+                G2 = abs2(G_data[nξ+1, m+mMax+1])  # G², structural part
+                WF = (κ/2) * (4κ^2/F)^(2Z/κ-2nξ-abs(m)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)   # W_F, field part
+                Γsum += G2*WF
             end
-        else
-            #TODO: Add support for full prefixes.
+            return Γsum
         end
     dim = 8
     kdNum, kzNum = length(sp.ss_kd_samples), length(sp.ss_kz_samples)
