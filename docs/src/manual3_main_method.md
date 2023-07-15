@@ -142,16 +142,42 @@ specifying `ExpRate` would not add any prefix besides the exponential term;
 
 - `adk_tun_exit = <:IpF|:FDM|:Para>`
 
-Tunneling exit method for atomic ADK methods (when `init_cond_method==:ADK`) (default :IpF).
+Tunneling exit method for atomic ADK methods (when `init_cond_method==:ADK`) (default `:IpF`).
 Cf. [Tunneling Exit Methods For Atomic ADK](@ref tun_exit_atomic_adk).
+
 
 
 ## Sampling Methods and Parameters
 
-### Step-Sampling
+In *SemiclassicalSFI.jl* the initial electrons are sampled in the ``(t_{\mathrm{r}},k_d,k_z)`` coordinate, where ``k_d`` denotes the initial momentum's component in the ``xy`` plane (which is perpendicular to the electric field).
+There are two ways of sampling in these coordinates, namely *step sampling* and *Monte-Carlo sampling*.
 
-### Monte-Carlo-Sampling
+- `sample_monte_carlo = false` : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`).
 
+- `sample_t_interval = (start,stop)` : Time interval in which the initial electrons are sampled.
+
+- `sample_t_num` : Number of time samples.
+
+### Step Sampling
+
+In the step sampling scheme, the `sample_t_num` time samples are uniformly distributed in the interval `sample_t_interval`.
+In each time sample, a batch of electrons of different initial conditions are launched and collected, whose initial momenta ``\bm{k}_\perp`` are distributed on a Cartesian grid ``(k_d,k_z)``.
+The Cartesian grid is defined by the following parameters:
+
+- `ss_kd_max`, `ss_kd_num`, `ss_kz_max`, `ss_kz_num`
+
+In the ``k_d`` dimension, `ss_kd_num` samples distribute uniformly in the interval (-`ss_kd_max`,`ss_kd_max`);
+and in the ``k_z`` dimension, there are `ss_kz_num` equidistant samples in the interval (-`ss_kz_max`,`ss_kz_max`).
+
+The step sampling method is supported for all initial condition methods.
+
+### Monte-Carlo Sampling
+
+In the Monte-Carlo sampling scheme, the `sample_t_num` time samples are randomly chosen in the `sample_t_interval`;
+A batch containing `mc_t_batch_size` electrons would be sampled in a single time sample, the electrons' initial momenta ``\bm{k}_\perp`` are also randomly sampled inside a circle ``k_d^2+k_z^2 \leq k_{\perp\mathrm{max}}^2``, where the ``k_{\perp\mathrm{max}}^2`` is defined in the parameter as `mc_kt_max`.
+
+- `mc_t_batch_size` : Number of electron samples in a single time sample.
+- `mc_kt_max` : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Trajectory Simulation
 
@@ -161,7 +187,7 @@ Cf. [Tunneling Exit Methods For Atomic ADK](@ref tun_exit_atomic_adk).
 
 ### Accuracy Control
 
-### GPU Acceleration
+### GPU Acceleration (Experimental)
 
 
 ## Final Electron Collecting & Saving
