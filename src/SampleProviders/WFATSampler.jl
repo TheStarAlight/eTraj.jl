@@ -13,15 +13,15 @@ struct WFATSampler <: ElectronSampleProvider
     tun_exit        ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     ion_orbit_idx   ::Integer;
 
-    function WFATSampler(;  laser               ::Laser,
-                            target              ::Molecule,
-                            sample_t_interval   ::Tuple{<:Real,<:Real},
-                            sample_t_num        ::Int,
-                            ss_kd_max           ::Real,
-                            ss_kd_num           ::Int,
-                            ss_kz_max           ::Real,
-                            ss_kz_num           ::Int,
-                            mol_orbit_idx       ::Int,
+    function WFATSampler(;  laser           ::Laser,
+                            target          ::Molecule,
+                            sample_t_intv   ::Tuple{<:Real,<:Real},
+                            sample_t_num    ::Int,
+                            ss_kd_max       ::Real,
+                            ss_kd_num       ::Int,
+                            ss_kz_max       ::Real,
+                            ss_kz_num       ::Int,
+                            mol_orbit_idx   ::Int,
                             kwargs...   # kwargs are surplus params.
                             )
         # check sampling parameters.
@@ -50,7 +50,7 @@ struct WFATSampler <: ElectronSampleProvider
         end
         # finish initialization.
         return new( laser, target,
-                    range(sample_t_interval[1],sample_t_interval[2];length=sample_t_num),
+                    range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                     range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                     tun_exit,
                     mol_orbit_idx

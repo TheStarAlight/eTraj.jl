@@ -33,7 +33,7 @@ Performs a semiclassical simulation with given parameters.
 - `init_cond_method = <:ADK|:SFA|:SFAAE|:WFAT|:MOADK>`  : Method of electrons' initial conditions. Currently supports `:ADK`, `:SFA`, `:SFAAE` for atoms and `:WFAT`, `:MOADK` for molecules.
 - `laser::Laser`                                        : A `Lasers.Laser` object containing information of the laser field.
 - `target::Target`                                      : A `Targets.Target` object containing information of the atom/molecule target.
-- `sample_t_interval = (start,stop)`                    : Time interval in which the initial electrons are sampled.
+- `sample_t_intv = (start,stop)`                        : Time interval in which the initial electrons are sampled.
 - `sample_t_num`                                        : Number of time samples.
 - `traj_t_final`                                        : Time when every trajectory simulation ends.
 - `final_p_max = (pxMax,pyMax,pzMax)`                   : Boundaries of final momentum spectrum collected in three dimensions.
@@ -46,8 +46,8 @@ Performs a semiclassical simulation with given parameters.
 - `ss_kz_num`   : Number of kz (momentum's component along propagation direction (z ax.)) samples.
 
 ## Required params. for Monte-Carlo-sampling methods:
-- `mc_t_batch_size` : Number of electron samples in a single time sample.
-- `mc_kt_max`       : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_kp_num`   : Number of kp (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
+- `mc_kp_max`   : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Optional params. for all methods:
 - `save_path`                                       : Output HDF5 file path.
@@ -78,7 +78,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     init_cond_method    ::Symbol,
                     laser               ::Laser,
                     target              ::Target,
-                    sample_t_interval   ::Tuple{<:Real,<:Real},
+                    sample_t_intv       ::Tuple{<:Real,<:Real},
                     sample_t_num        ::Integer,
                     traj_t_final        ::Real,
                     final_p_max         ::Tuple{<:Real,<:Real,<:Real},
@@ -89,8 +89,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     ss_kz_max           ::Real      = 0.,
                     ss_kz_num           ::Integer   = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
-                    mc_t_batch_size     ::Integer   = 0 ,
-                    mc_kt_max           ::Real      = 0.,
+                    mc_kp_num           ::Integer   = 0 ,
+                    mc_kp_max           ::Real      = 0.,
                         #* opt. params. for all methods
                     save_path           ::String    = default_filename(),
                     save_3D_spec        ::Bool      = false,
@@ -112,9 +112,9 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     )
     #* pack up all parameters.
     kwargs = Dict{Symbol,Any}()
-    @pack! kwargs= (init_cond_method, laser, target, sample_t_interval, sample_t_num, traj_t_final, final_p_max, final_p_num,
+    @pack! kwargs= (init_cond_method, laser, target, sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
-                    mc_t_batch_size, mc_kt_max,
+                    mc_kp_num, mc_kp_max,
                     traj_phase_method, traj_dt, traj_nondipole, traj_GPU, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
                     moadk_orbit_m,
@@ -199,7 +199,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         dict_out[:init_cond_method]     = init_cond_method
         dict_out[:laser]                = Lasers.Serialize(laser)
         dict_out[:target]               = Targets.Serialize(target)
-        dict_out[:sample_t_interval]    = sample_t_interval
+        dict_out[:sample_t_intv]        = sample_t_intv
         dict_out[:sample_t_num]         = sample_t_num
         dict_out[:traj_t_final]         = traj_t_final
         dict_out[:final_p_max]          = final_p_max
@@ -212,8 +212,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             dict_out[:ss_kz_num]        = ss_kz_num
         else
             # req. params. for Monte-Carlo (mc) methods
-            dict_out[:mc_t_batch_size]  = mc_t_batch_size
-            dict_out[:mc_kt_max]        = mc_kt_max
+            dict_out[:mc_kp_num]        = mc_kp_num
+            dict_out[:mc_kp_max]        = mc_kp_max
         end
         # opt. params. for all methods
         dict_out[:save_path]            = save_path
@@ -320,12 +320,12 @@ function launch_and_collect!( init,
         threadid = Threads.threadid()
         x0,y0,z0,px0,py0,pz0 = sol.u[i][ 1 ][1:6]
         x, y, z, px, py, pz  = sol.u[i][end][1:6]
-        if px^2+py^2+pz^2>(final_p_max[1]^2+final_p_max[2]^2+final_p_max[3]^2)*10  # possibly anomalous electron (due to [DiffEqGPU]), intercept and cancel.
+        if px^2+py^2+pz^2>100  # possibly anomalous electron, intercept and cancel.
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[Ensemble Simulation] Found electron (#$i in the batch) with anomalous momentum $([px,py,pz])."
+                @warn "[Ensemble Simulation] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1])."
             elseif warn_num == max_warn_num
-                @warn "[Ensemble Simulation] Found electron (#$i in the batch) with anomalous momentum $([px,py,pz]). Similar warnings would be suppressed."
+                @warn "[Ensemble Simulation] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end

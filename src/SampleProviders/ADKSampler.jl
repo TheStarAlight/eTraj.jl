@@ -9,14 +9,14 @@ struct ADKSampler <: ElectronSampleProvider
     t_samples       ::AbstractVector;
     ss_kd_samples   ::AbstractVector;
     ss_kz_samples   ::AbstractVector;
-    mc_t_batch_size ::Integer;
-    mc_kt_max       ::Real;
+    mc_kp_num       ::Integer;
+    mc_kp_max       ::Real;
     phase_method    ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
     rate_prefix     ::Symbol;           # currently supports :ExpRate.
     ADK_tun_exit    ::Symbol;           # currently supports :IpF, :FDM, :Para.
     function ADKSampler(;   laser               ::Laser,
                             target              ::SAEAtomBase,
-                            sample_t_interval   ::Tuple{<:Real,<:Real},
+                            sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Int,
                             sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
@@ -28,8 +28,8 @@ struct ADKSampler <: ElectronSampleProvider
                             ss_kz_max           ::Real,
                             ss_kz_num           ::Int,
                                 #* for Monte-Carlo-sampling (rate_monteCarlo)
-                            mc_t_batch_size     ::Int,
-                            mc_kt_max           ::Real,
+                            mc_kp_num           ::Int,
+                            mc_kp_max           ::Real,
                             kwargs...   # kwargs are surplus params.
                             )
         F0 = LaserF0(laser)
@@ -69,25 +69,25 @@ struct ADKSampler <: ElectronSampleProvider
         if ! sample_monte_carlo    # check SS sampling parameters.
             @assert (ss_kd_num>0 && ss_kz_num>0) "[ADKSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         else                    # check MC sampling parameters.
-            @assert (sample_t_interval[1] < sample_t_interval[2]) "[ADKSampler] Invalid sampling time span $sample_t_interval."
-            @assert (mc_t_batch_size>0) "[ADKSampler] Invalid batch size $mc_t_batch_size."
-            @assert (mc_kt_max>0) "[ADKSampler] Invalid sampling kt_max $mc_kt_max."
+            @assert (sample_t_intv[1] < sample_t_intv[2]) "[ADKSampler] Invalid sampling time span $sample_t_intv."
+            @assert (mc_kp_num>0) "[ADKSampler] Invalid batch size $mc_kp_num."
+            @assert (mc_kp_max>0) "[ADKSampler] Invalid sampling kt_max $mc_kp_max."
         end
         # finish initialization.
         return if ! sample_monte_carlo
             new(laser,target,
                 sample_monte_carlo,
-                range(sample_t_interval[1],sample_t_interval[2];length=sample_t_num),
+                range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 0,0,    # for MC params. pass meaningless values
                 traj_phase_method,rate_prefix,adk_tun_exit)
         else
-            t_samples = rand(sample_t_num) .* (sample_t_interval[2]-sample_t_interval[1]) .+ sample_t_interval[1]
+            t_samples = rand(sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1]
             new(laser,target,
                 sample_monte_carlo,
                 t_samples,
                 0:0,0:0,    # for SS params. pass meaningless values
-                mc_t_batch_size, mc_kt_max,
+                mc_kp_num, mc_kp_max,
                 traj_phase_method,rate_prefix,adk_tun_exit)
         end
     end
@@ -167,16 +167,16 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
         end
         return reshape(init,dim,:)
     else
-        init = zeros(Float64, dim, sp.mc_t_batch_size)
-        ktMax = sp.mc_kt_max
+        init = zeros(Float64, dim, sp.mc_kp_num)
+        kpMax = sp.mc_kp_max
         x0 = r_exit*cos(φ)
         y0 = r_exit*sin(φ)
         z0 = 0.0
-        @threads for i in 1:sp.mc_t_batch_size
+        @threads for i in 1:sp.mc_kp_num
             # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
-            kd0, kz0 = (rand()-0.5)*2ktMax, (rand()-0.5)*2ktMax
-            while kd0^2+kz0^2 > ktMax^2
-                kd0, kz0 = (rand()-0.5)*2ktMax, (rand()-0.5)*2ktMax
+            kd0, kz0 = (rand()-0.5)*2kpMax, (rand()-0.5)*2kpMax
+            while kd0^2+kz0^2 > kpMax^2
+                kd0, kz0 = (rand()-0.5)*2kpMax, (rand()-0.5)*2kpMax
             end
             kx0 = kd0*-sin(φ)
             ky0 = kd0* cos(φ)
