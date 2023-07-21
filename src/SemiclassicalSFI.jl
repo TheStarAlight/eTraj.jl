@@ -33,7 +33,7 @@ Performs a semiclassical simulation with given parameters.
 - `init_cond_method = <:ADK|:SFA|:SFAAE|:WFAT|:MOADK>`  : Method of electrons' initial conditions. Currently supports `:ADK`, `:SFA`, `:SFAAE` for atoms and `:WFAT`, `:MOADK` for molecules.
 - `laser::Laser`                                        : Parameters of the laser field.
 - `target::Target`                                      : Parameters of the target.
-- `sample_t_interval = (start,stop)`                    : Time interval in which the initial electrons are sampled.
+- `sample_t_intv = (start,stop)`                        : Time interval in which the initial electrons are sampled.
 - `sample_t_num`                                        : Number of time samples.
 - `traj_t_final`                                        : Time when every trajectory simulation ends.
 - `final_p_max = (pxMax,pyMax,pzMax)`                   : Boundaries of final momentum spectrum collected in three dimensions.
