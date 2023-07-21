@@ -320,12 +320,12 @@ function launch_and_collect!( init,
         threadid = Threads.threadid()
         x0,y0,z0,px0,py0,pz0 = sol.u[i][ 1 ][1:6]
         x, y, z, px, py, pz  = sol.u[i][end][1:6]
-        if px^2+py^2+pz^2>(final_p_max[1]^2+final_p_max[2]^2+final_p_max[3]^2)*10  # possibly anomalous electron (due to [DiffEqGPU]), intercept and cancel.
+        if px^2+py^2+pz^2>100  # possibly anomalous electron, intercept and cancel.
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[Ensemble Simulation] Found electron (#$i in the batch) with anomalous momentum $([px,py,pz])."
+                @warn "[Ensemble Simulation] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1])."
             elseif warn_num == max_warn_num
-                @warn "[Ensemble Simulation] Found electron (#$i in the batch) with anomalous momentum $([px,py,pz]). Similar warnings would be suppressed."
+                @warn "[Ensemble Simulation] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end
