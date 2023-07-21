@@ -11,7 +11,7 @@ using DiffEqGPU, CUDA
     traj = function (u,p,t)
         F0 = 0.05338027007325633 # Lasers.LaserF0(l)
         ω = 0.05695419065625 # Lasers.AngFreq(l)
-        N = 2   # l.cycNum
+        N = 2   # l.cyc_num
         φ = 0.0 # l.cep
         ε = 1.0 # l.ellip
         tFx, tFy, tFz = -1*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])

@@ -46,8 +46,8 @@ Performs a semiclassical simulation with given parameters.
 - `ss_kz_num`   : Number of kz (momentum's component along propagation direction (z ax.)) samples.
 
 ## Required params. for Monte-Carlo-sampling methods:
-- `mc_t_batch_size` : Number of electron samples in a single time sample.
-- `mc_kt_max`       : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_kp_num`   : Number of kp (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
+- `mc_kp_max`   : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Optional params. for all methods:
 - `save_path`                                       : Output HDF5 file path.
@@ -89,8 +89,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     ss_kz_max           ::Real      = 0.,
                     ss_kz_num           ::Integer   = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
-                    mc_t_batch_size     ::Integer   = 0 ,
-                    mc_kt_max           ::Real      = 0.,
+                    mc_kp_num           ::Integer   = 0 ,
+                    mc_kp_max           ::Real      = 0.,
                         #* opt. params. for all methods
                     save_path           ::String    = default_filename(),
                     save_3D_spec        ::Bool      = false,
@@ -114,7 +114,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (init_cond_method, laser, target, sample_t_interval, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
-                    mc_t_batch_size, mc_kt_max,
+                    mc_kp_num, mc_kp_max,
                     traj_phase_method, traj_dt, traj_nondipole, traj_GPU, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
                     moadk_orbit_m,
@@ -212,8 +212,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             dict_out[:ss_kz_num]        = ss_kz_num
         else
             # req. params. for Monte-Carlo (mc) methods
-            dict_out[:mc_t_batch_size]  = mc_t_batch_size
-            dict_out[:mc_kt_max]        = mc_kt_max
+            dict_out[:mc_kp_num]        = mc_kp_num
+            dict_out[:mc_kp_max]        = mc_kp_max
         end
         # opt. params. for all methods
         dict_out[:save_path]            = save_path
