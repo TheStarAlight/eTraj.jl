@@ -15,7 +15,7 @@ struct WFATSampler <: ElectronSampleProvider
 
     function WFATSampler(;  laser               ::Laser,
                             target              ::Molecule,
-                            sample_t_interval   ::Tuple{<:Real,<:Real},
+                            sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Int,
                             ss_kd_max           ::Real,
                             ss_kd_num           ::Int,
@@ -50,7 +50,7 @@ struct WFATSampler <: ElectronSampleProvider
         end
         # finish initialization.
         return new( laser, target,
-                    range(sample_t_interval[1],sample_t_interval[2];length=sample_t_num),
+                    range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                     range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                     tun_exit,
                     mol_orbit_idx
