@@ -216,18 +216,82 @@ Currently, all targets support the inclusion of non-dipole effects.
 
 ### Accuracy Control
 
+- `traj_rtol = 1e-6`
+
+Relative error tolerance when solving classical trajectories using adaptive methods (default `1e-6`).
+
+The classical trajectories of the electrons are obtained by solving ordinary differential equations using the [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl) package, where the solver would adjust the time-step length according to the relative error.
+Stricter error tolerance is favorable if the electron moves close to the nucleus, which usually happens in a linearly polarized laser field.
+
 ### GPU Acceleration (Experimental)
 
+- `traj_GPU = false`
 
+Determines whether to enable GPU acceleration in trajectory simulation (default `false`).
+
+The ordinary differential equations related to the electrons' classical trajectories can also be solved by GPU via the [DiffEqGPU.jl](https://github.com/SciML/DiffEqGPU.jl) package.
+The GPU acceleration now only supports the NVIDIA graphic cards, which also requires the CUDA driver to be correctly installed.
+
+!!! note "Note: Testing GPU capability"
+    The test sets of this library include GPU tests, the user may run the tests of this library to check if the graphic card is ready for GPU acceleration:
+    ```julia
+    Pkg.test("SemiclassicalSFI")
+    # In pkg mode of REPL:
+    # (@v1.8) pkg> test SemiclassicalSFI
+    ```
+
+!!! compat "Note: Experimental feature"
+    GPU acceleration is an experimental feature of the package and the API may change in the near future.
 
 ## Final Electron Collecting & Saving
 
 After the trajectory simulation ends, the electrons would be analyzed and collected.
 Those with positive energies finally become free electrons and would reach the detectors;
-while those with negative energies finally become rydberg states
+while those with negative energies finally fall on Rydberg states.
+The collected momentum spectra and Rydberg spectra would be saved in an HDF5 file together with the simulation abstract.
+This library provides some parameters to customize the collecting and saving procedure.
 
 ### 2D/3D Momentum Spectrum Collecting
 
+- `final_p_max = (pxMax,pyMax,pzMax)` : Boundaries of final momentum spectrum collected in three dimensions.
+- `final_p_num = (pxNum,pyNum,pzNum)` : Numbers of final momentum spectrum collected in three dimensions.
+- `save_3D_spec = false` : Determines whether to save the 3D momentum spectrum (otherwise 2D) (default `false`).
+
+Electrons with positive final energies would be collected and placed on the 3D momentum grid determined by `final_p_max` and `final_p_num`.
+When setting `save_3D_spec = false`, the three-dimensional final momentum spectrum would be squashed into two-dimensional ones (by summing over the z axis).
+
+The ``p_x``, ``p_y`` and ``p_z`` grids would be saved in entries that are named after `px`, `py` and `pz` respectively in the output file, and the final momentum spectrum would be saved in the `momentum_spec_2D` or `momentum_spec_3D` entry.
+
 ### Rydberg Final State Collecting
 
-### Output File Name
+- `final_ryd_collect = false` : Determines whether the rydberg final states are collected (default `false`).
+- `final_ryd_n_max` : Determines the maximum principle quantum number n for rydberg final states to be collected.
+
+Rydberg final states would be collected if `final_ryd_collect` is set to `true`.
+Only Rydberg states with principle quantum number that below `final_ryd_n_max` would be collected.
+
+The Rydberg spectrum is saved as a three-dimensional array in the entry named after `ryd_spec` in the output file.
+To get the probability of Rydberg state at ``(n,l,m)``, index with the indices `(n,l+1,m+final_ryd_n_max)`.
+
+### Output File
+
+- `save_path` : Output HDF5 file path.
+
+The output HDF5 file would be saved in the `save_path`.
+If the parameter is left unspecified or an error occurs when trying to write to the specified path, the output path would be set to `./SCSFI-yyyymmdd-hhmmss.h5`.
+
+Apart from the information related to the momentum and Rydberg spectrum, an abstract encoded in YAML, which contains necessary input parameters, is also saved in the `abstract` entry of the output file.
+
+The output file can be opened and accessed using the [HDF5.jl](https://github.com/JuliaIO/HDF5.jl) or [JLD2.jl](https://github.com/JuliaIO/JLD2.jl) packages.
+Below shows the structure of a typical output file.
+
+```
+🗂️ HDF5.File
+├─ 🔢 abstract
+├─ 🔢 ion_prob
+├─ 🔢 ion_prob_uncollected
+├─ 🔢 momentum_spec_2D
+├─ 🔢 px
+└─ 🔢 py
+```
+
