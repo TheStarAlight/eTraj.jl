@@ -2,7 +2,7 @@
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "4d39a8b48c5de020d52bcc1969b76d803886e624"
+project_hash = "c5a0d0a48a7ac8aac76d6aeefb2a7af7894418b8"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e58c18d2312749847a74f5be80bb0fa53da102bd"
@@ -232,9 +232,9 @@ version = "6.126.0"
 
 [[deps.DiffEqGPU]]
 deps = ["Adapt", "ChainRulesCore", "DiffEqBase", "Distributed", "DocStringExtensions", "ForwardDiff", "KernelAbstractions", "LinearAlgebra", "LinearSolve", "MuladdMacro", "Parameters", "Random", "RecursiveArrayTools", "Requires", "SciMLBase", "Setfield", "SimpleDiffEq", "StaticArrays", "TOML", "ZygoteRules"]
-git-tree-sha1 = "0ad2b926dd93d4d5501566f48fa3447a0323d37f"
+git-tree-sha1 = "bfbc4e707e72b6359cfdf3acf41891ddf11a01da"
 uuid = "071ae1c0-96b5-11e9-1965-c90190d839ea"
-version = "2.4.0"
+version = "2.4.1"
 
 [[deps.DiffResults]]
 deps = ["StaticArraysCore"]
