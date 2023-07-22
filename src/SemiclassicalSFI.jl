@@ -146,12 +146,12 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         else
             nothing, nothing, nothing
         end
-    # classical rates
-    classical_rates = Dict{Symbol,Float64}()
-        classical_rates[:ion]                = 0.
-        classical_rates[:ion_uncollected]    = 0.
-        classical_rates[:ryd]                = 0.
-        classical_rates[:ryd_uncollected]    = 0.
+    # classical prob
+    classical_prob = Dict{Symbol,Float64}()
+        classical_prob[:ion]                = 0.
+        classical_prob[:ion_uncollected]    = 0.
+        classical_prob[:ryd]                = 0.
+        classical_prob[:ryd_uncollected]    = 0.
     #   * launch electrons and collect
     prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
     prog2 = Progress(batch_num(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
@@ -170,7 +170,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             launch_and_collect!(init,
                                 ion_prob_final, ion_prob_sum_temp, ion_prob_collect,
                                 ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect,
-                                classical_rates; kwargs...)
+                                classical_prob; kwargs...)
         end
         next!(prog1,spinner=raw"-\|/"); next!(prog2);
     end
@@ -251,12 +251,12 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         h5write(save_path, "momentum_spec_3D", ion_prob_final)
     end
     h5write(save_path, "momentum_spec_2D", reshape(sum(ion_prob_final, dims=3),size(ion_prob_final)[1:2]))
-    h5write(save_path, "ion_rate",              classical_rates[:ion])
-    h5write(save_path, "ion_rate_uncollected",  classical_rates[:ion_uncollected])
+    h5write(save_path, "ion_prob",              classical_prob[:ion])
+    h5write(save_path, "ion_prob_uncollected",  classical_prob[:ion_uncollected])
     if final_ryd_collect
         h5write(save_path, "ryd_spec", ryd_prob_final)
-        h5write(save_path, "ryd_rate",              classical_rates[:ryd])
-        h5write(save_path, "ryd_rate_uncollected",  classical_rates[:ryd_uncollected])
+        h5write(save_path, "ryd_prob",              classical_prob[:ryd])
+        h5write(save_path, "ryd_prob_uncollected",  classical_prob[:ryd_uncollected])
     end
     @info "Task finished, data saved at \"$(save_path)\"."
 end
