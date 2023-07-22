@@ -1,7 +1,7 @@
 name = "SemiclassicalSFI"
 uuid = "e84e9fd6-fb60-4a95-a359-99d9c5aa2ce0"
 authors = ["Mingyu Zhu <myzhu@stu.ecnu.edu.cn> and contributors"]
-version = "1.4.0"
+version = "1.4.0-dev"
 
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
@@ -31,7 +31,7 @@ libcint_jll = "574b78ca-bebd-517c-801d-4735c93a9686"
 
 [compat]
 OrdinaryDiffEq = "≥ 6.51"
-DiffEqGPU = "≥ 2.1"
+DiffEqGPU = "≥ 2.4.1"
 CUDA = "≥ 4.0"
 julia = "≥ 1.7"
 

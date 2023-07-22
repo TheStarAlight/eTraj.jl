@@ -24,7 +24,7 @@ using DiffEqGPU, CUDA
         @SVector [du1,du2,du3,du4,du5,du6]
     end
     traj_t_final = 120.
-    traj_dt = 0.001
+    traj_rtol = 1e-6
     init = [10.0  9.0  8.0  7.0;    # x
              5.0  1.0  0.0  0.0;    # y
              0.0  0.0  6.0  1.0;    # z
@@ -46,14 +46,14 @@ using DiffEqGPU, CUDA
     @info "Testing CPU..."
     @testset verbose=true "CPU" begin
         @test begin
-            solc = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), adaptive=false, dt=traj_dt, save_everystep=false);
+            solc = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false);
             mapreduce(function((k,i),) ≈(final[k,i],solc[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
         end
     end
     @info "Testing GPU..."
     @testset verbose=true "GPU" begin
         @test begin
-            solg = solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend(),0.0), trajectories=size(init,2), adaptive=false, dt=traj_dt, save_everystep=false);
+            solg = solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend(),0.0), trajectories=size(init,2), adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false);
             mapreduce(function((k,i),) ≈(final[k,i],solg[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
         end
     end

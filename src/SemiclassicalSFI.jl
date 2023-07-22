@@ -53,7 +53,7 @@ Performs a semiclassical simulation with given parameters.
 - `save_path`                                       : Output HDF5 file path.
 - `save_3D_spec = false`                            : Determines whether the 3D momentum spectrum is saved (if not, will save 2D) (default `false`).
 - `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `CTMC`). Currently `:QTMC` and `:SCTS` only supports atom targets.
-- `traj_dt = 0.1`                                   : Time step when solving classical trajectories (default `0.1`).
+- `traj_rtol = 1e-6`                                : Relative error tolerance when solving classical trajectories using adaptive methods (default `1e-6`).
 - `traj_nondipole = false`                          : Determines whether non-dipole effect is taken account in the simulation (default `false`).
 - `traj_GPU = false`                                : [Experimental] Determines whether GPU acceleration in trajectory simulation is used (default `false`).
 - `sample_monte_carlo = false`                      : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`). Currently only supports ADK.
@@ -95,7 +95,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     save_path           ::String    = default_filename(),
                     save_3D_spec        ::Bool      = false,
                     traj_phase_method   ::Symbol    = :CTMC,
-                    traj_dt             ::Real      = 0.1,
+                    traj_rtol           ::Real      = 1e-6,
                     traj_nondipole      ::Bool      = false,
                     traj_GPU            ::Bool      = false,
                     sample_monte_carlo  ::Bool      = false,
@@ -115,7 +115,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     @pack! kwargs= (init_cond_method, laser, target, sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
                     mc_kp_num, mc_kp_max,
-                    traj_phase_method, traj_dt, traj_nondipole, traj_GPU, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
+                    traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
                     moadk_orbit_m,
                     adk_tun_exit)
@@ -219,7 +219,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         dict_out[:save_path]            = save_path
         dict_out[:save_3D_spec]         = save_3D_spec
         dict_out[:traj_phase_method]    = traj_phase_method
-        dict_out[:traj_dt]              = traj_dt
+        dict_out[:traj_rtol]            = traj_rtol
         dict_out[:traj_nondipole]       = traj_nondipole
         dict_out[:traj_GPU]             = traj_GPU
         dict_out[:sample_monte_carlo]   = sample_monte_carlo
@@ -274,7 +274,7 @@ function launch_and_collect!( init,
                             target              ::Target,
                             traj_t_final        ::Real,
                             traj_phase_method   ::Symbol,
-                            traj_dt             ::Real,
+                            traj_rtol           ::Real,
                             traj_nondipole      ::Bool,
                             traj_GPU            ::Bool,
                             final_ryd_collect   ::Bool,
@@ -301,19 +301,19 @@ function launch_and_collect!( init,
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 6 : 7 # x,y,z,px,py,pz[,phase]
-    trajODEProb::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,prob_dim)), (0,traj_t_final))
+    trajODEProb::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,prob_dim)), Float64.((0,traj_t_final)))
     initTraj::Function =
         if prob_dim == 6
-            (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]),     tspan = (init[7,i],traj_t_final))
+            (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]),     tspan = (init[7,i],Float64(traj_t_final)))
         else
-            (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],traj_t_final))
+            (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],Float64(traj_t_final)))
         end
     ensemble_prob::EnsembleProblem = EnsembleProblem(trajODEProb, prob_func=initTraj, safetycopy=false)
     sol =
         if ! traj_GPU
-            solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=false, dt=traj_dt, save_everystep=false)
+            solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
         else
-            solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories=batch_size, adaptive=false, dt=traj_dt, save_everystep=false)
+            solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
         end
     # collect and summarize.
     Threads.@threads for i in 1:batch_size
