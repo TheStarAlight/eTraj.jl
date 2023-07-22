@@ -52,12 +52,12 @@ Performs a semiclassical simulation with given parameters.
 ## Optional params. for all methods:
 - `save_path`                                       : Output HDF5 file path.
 - `save_3D_spec = false`                            : Determines whether the 3D momentum spectrum is saved (if not, will save 2D) (default `false`).
-- `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `CTMC`). Currently `:QTMC` and `:SCTS` only supports atom targets.
-- `traj_dt = 0.1`                                   : Time step when solving classical trajectories (default `0.1`).
-- `traj_nondipole = false`                          : Determines whether non-dipole effect is taken account in the simulation (default `false`).
+- `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `:CTMC`). Currently `:QTMC` and `:SCTS` only support atomic cases.
+- `traj_dt = 0.1`                                   : Time step when solving classical trajectories (in a.u.) (default `0.1`).
+- `traj_nondipole = false`                          : Determines whether the non-dipole effect is taken account in the simulation (default `false`).
 - `traj_GPU = false`                                : [Experimental] Determines whether GPU acceleration in trajectory simulation is used (default `false`).
 - `sample_monte_carlo = false`                      : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`). Currently only supports ADK.
-- `final_ryd_collect = false`                       : Determines whether rydberg final states are collected (default `false`).
+- `final_ryd_collect = false`                       : Determines whether the rydberg final states are collected (default `false`).
 - `final_ryd_n_max`                                 : Determines the maximum principle quantum number n for rydberg final states to be collected.
 
 ## Optional params. for atomic SFA, SFA-AE and ADK methods:

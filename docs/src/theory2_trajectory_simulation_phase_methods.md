@@ -1,4 +1,4 @@
-# Theory: Trajectory Simulation and Phase Methods
+# [Theory: Trajectory Simulation and Phase Methods](@id theory_traj_phase)
 
 *This section reviews the trajectory simulation procedure and the phase methods within.*
 
@@ -10,16 +10,21 @@ Note that atomic units (a.u.) is used throughout.
 
 ```@contents
 Pages = ["theory2_trajectory_simulation_phase_methods.md"]
+Depth = 3
 ```
 
 
-## Classical Trajectory Monte Carlo (CTMC)
+## [Classical Trajectory Monte Carlo (CTMC)](@id CTMC)
 
 In the CTMC, each sample electron carries a probability ``W``, following a classical trajectory, and finally ends up with a final momentum ``\bm{p}_\infty = \bm{p}|_{t=\infty}``, which is our interested physical quantity.
 
-The tunneled electrons, each having different tunneling time, initial positions and momenta, evolve under the Newtonian equation of motion:
+The tunneled electrons, each having different tunneling time, initial positions and momenta, evolve under the Hamiltonian equation:
 ```math
-\ddot{\bm{r}} = - \bm{F}(t) - \bm{\nabla}V(\bm{r}),
+\dot{\bm{r}} = \bm{\nabla}_{\bm{p}}H, \quad \dot{\bm{p}} = -\bm{\nabla}_{\bm{r}}H.
+```
+The Hamiltonian reads
+```math
+H = \frac12 \left[ \bm{p}+\bm{A}(t) \right]^2 + V(\bm{r}),
 ```
 where ``V(\bm{r})`` denotes the potential of the parent ion.
 
@@ -42,7 +47,23 @@ Finally, electrons with similar final momenta (i.e., in the same small box of th
 [^ShvetsovShilovski_2012]: N. I. Shvetsov-Shilovski *et al.*, Ionization in elliptically polarized pulses: Multielectron polarization effects and asymmetry of photoelectron momentum distributions, *Phys. Rev. A* **85**, 023428 (2012). DOI: [10.1103/PhysRevA.85.023428](https://dx.doi.org/10.1103/PhysRevA.85.023428)
 
 
-## Quantum Trajectory Monte Carlo (QTMC)
+### [Non-dipole Effects on the Trajectory Motion](@id traj_nondipole)
+
+Dipole approximation is usually applied in the study of laser-matter interaction by neglecting the spatial dependence of the laser field, i.e., we let ``\bm{A}(\bm{r},t) = \bm{A}(t)``.
+However, for lasers with high intensity or frequency, the spatial dependence of the laser becomes noticeable, the dipole approximation breaks down and we have to take non-dipole effects into account.
+
+To include the first-order non-dipole effects in trajectory simulation, we first refer to the spatial dependent vector potential ``\bm{A}(\bm{r},t)``, giving its first-order expansion in space coordinates:
+```math
+\bm{A}(\bm{r},t) = \bm{A}(t) \mathrm{e}^{\mathrm{i}\bm{k}\cdot\bm{r}} \approx \bm{A}(t) + \frac{z}{c} \bm{F}(t),
+```
+where we assume that the laser propagates in ``z`` direction.
+In this way we obtained the Hamiltonian which includes the first-order non-dipole effects:
+```math
+H = \frac12 \left[ \bm{p}+\bm{A}(t)+\frac{z}{c}\bm{F}(t) \right]^2 + V(\bm{r}).
+```
+
+
+## [Quantum Trajectory Monte Carlo (QTMC)](@id QTMC)
 
 Compared with the CTMC, the QTMC scheme endows each electron trajectory with a quantum phase ``\Phi`` based on the Feynman path-integral approach [^Li_2014].
 The phase gets acculmulated during the electron's excursion and is expressed as
@@ -66,7 +87,7 @@ Therefore, in numerical implementation, the upper limit of the phase integral ca
 [^Li_2014]: M. Li *et al.*, Classical-quantum correspondence for above-threshold ionization, *Phys. Rev. Lett.* **112**, 113002 (2014). DOI: [10.1103/PhysRevLett.112.113002](https://dx.doi.org/10.1103/PhysRevLett.112.113002)
 
 
-## Semiclassical Two-Step (SCTS) Model
+## [Semiclassical Two-Step (SCTS) Model](@id SCTS)
 
 The SCTS model [^ShvetsovShilovski_2016] improves the quantum phase in the QTMC scheme, giving
 ```math

@@ -154,13 +154,13 @@ There are two ways of sampling in these coordinates, namely *step sampling* and 
 
 - `sample_monte_carlo = false` : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`).
 
-- `sample_t_interval = (start,stop)` : Time interval in which the initial electrons are sampled.
+- `sample_t_intv = (start,stop)` : Time interval in which the initial electrons are sampled.
 
 - `sample_t_num` : Number of time samples.
 
 ### Step Sampling
 
-In the step sampling scheme, the `sample_t_num` time samples are uniformly distributed in the interval `sample_t_interval`.
+In the step sampling scheme, the `sample_t_num` time samples are uniformly distributed in the interval `sample_t_intv`.
 In each time sample, a batch of electrons of different initial conditions are launched and collected, whose initial momenta ``\bm{k}_\perp`` are distributed on a Cartesian grid ``(k_d,k_z)``.
 The Cartesian grid is defined by the following parameters:
 
@@ -173,24 +173,58 @@ The step sampling method is supported for all initial condition methods.
 
 ### Monte-Carlo Sampling
 
-In the Monte-Carlo sampling scheme, the `sample_t_num` time samples are randomly chosen in the `sample_t_interval`;
-A batch containing `mc_t_batch_size` electrons would be sampled in a single time sample, the electrons' initial momenta ``\bm{k}_\perp`` are also randomly sampled inside a circle ``k_d^2+k_z^2 \leq k_{\perp\mathrm{max}}^2``, where the ``k_{\perp\mathrm{max}}^2`` is defined in the parameter as `mc_kt_max`.
+In the Monte-Carlo sampling scheme, the `sample_t_num` time samples are randomly chosen in the `sample_t_intv`;
+A batch containing `mc_kp_num` electrons would be sampled in a single time sample, the electrons' initial momenta ``\bm{k}_\perp`` are also randomly sampled inside a circle ``k_d^2+k_z^2 \leq k_{\perp\mathrm{max}}^2``, where the ``k_{\perp\mathrm{max}}`` is defined in the parameter as `mc_kp_max`.
 
-- `mc_t_batch_size` : Number of electron samples in a single time sample.
-- `mc_kt_max` : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_kp_num` : Number of kp (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
+- `mc_kp_max` : Maximum value of momentum's transversal component (perpendicular to field direction).
+
+Currently the Monte-Carlo sampling method is only supported for the ADK initial condition method.
+
+
 
 ## Trajectory Simulation
 
+After preparation of the initial electrons, the electrons evolve classically in the combined potential of the nucleus and laser field, and the trajectory simulation terminates at `traj_t_final`.
+
+- `traj_t_final` : Time when every trajectory simulation ends.
+
 ### Phase Methods
 
+- `traj_phase_method = <:CTMC|:QTMC|:SCTS>`
+
+Method of classical trajectories' phase (default `CTMC`).
+Currently `:QTMC` and `:SCTS` only support atomic cases.
+
+|                   | [ADK](@ref ADK) | [SFA](@ref SFA) | [SFA-AE](@ref SFAAE) | [WFAT](@ref WFAT) | [MO-ADK](@ref MOADK) |
+| :---------------- |:-:|:-:|:-:|:-:|:-:|
+| [CTMC](@ref CTMC) | ✔ | ✔ | ✔ | ✔ | ✔ |
+| [QTMC](@ref QTMC) | ✔ | ✔ | ✔ |   |   |
+| [SCTS](@ref SCTS) | ✔ | ✔ | ✔ |   |   |
+
+For more information about phase methods, cf. [Theory - Trajectory Simulation and Phase Methods](@ref theory_traj_phase).
+
 ### Non-dipole Effect
+
+- `traj_nondipole = false`
+
+Determines whether the non-dipole effect is taken account in the simulation (default `false`).
+
+For more information about the non-dipole effects, cf. [Theory - Non-dipole Effects on the Trajectory Motion](@ref traj_nondipole).
+
+Currently, all targets support the inclusion of non-dipole effects.
 
 ### Accuracy Control
 
 ### GPU Acceleration (Experimental)
 
 
+
 ## Final Electron Collecting & Saving
+
+After the trajectory simulation ends, the electrons would be analyzed and collected.
+Those with positive energies finally become free electrons and would reach the detectors;
+while those with negative energies finally become rydberg states
 
 ### 2D/3D Momentum Spectrum Collecting
 
