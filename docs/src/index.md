@@ -39,9 +39,9 @@ After decades of accumulation of research and development, the trajectory simula
 
 - *Minimum prerequisites* : Julia ≥1.7
 
-- *GPU acceleration of traj. simulation* : a supported graphic card (NVIDIA is suggested)
+- *GPU acceleration of traj. simulation* : a supported graphic card (NVIDIA)
 
-- *MOADK and WFAT features* : Linux or MacOS platform, Python 3 with the [PySCF](https://github.com/pyscf/pyscf) python package installed and the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package successfully built.
+- *MOADK and WFAT features* : Linux or macOS platform, Python 3 with the [PySCF](https://github.com/pyscf/pyscf) python package installed and the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package successfully built.
 
 ### Installing the package
 
@@ -54,7 +54,7 @@ Pkg.add(url="https://github.com/TheStarAlight/SemiclassicalSFI.jl.git")
 # (@v1.8) pkg> add https://github.com/TheStarAlight/SemiclassicalSFI.jl.git
 ```
 
-It is suggested to test the package to check if the functions check if the key features (e.g., GPU acceleration and molecular calculation) work on your platform:
+It is suggested to test the package to check if the functions check if some special features (e.g., GPU acceleration and molecular calculation) work on your platform:
 
 ```julia
 Pkg.test("SemiclassicalSFI")
@@ -66,7 +66,7 @@ Pkg.test("SemiclassicalSFI")
 
     Sometimes the precompilation of the package and its dependencies fails, which usually happens on SciML's packages.
     Under such circumstances, try to delete the compiled julia code (usually stored in `~/.julia/compiled/<julia_version>`) and precompile again.
-    If the problem still exists after precompiling from scratch, you may try switching the SciML dependencies' versions in the julia, which is done by specifying the version when adding the packages:
+    If the problem still exists after precompiling from scratch, you may try switching the dependencies' versions in the julia, which is done by specifying the version when adding the packages:
     ```julia
     using Pkg
     Pkg.add(name="package_name", version="1.0")
@@ -74,11 +74,11 @@ Pkg.test("SemiclassicalSFI")
     # (@v1.8) pkg> add package_name@1.0
     ```
 
-    It is shown that *OrdinaryDiffEq@6.51* and *DiffEqGPU@1.26* runs well on Windows 10 (10.0.19044), Ubuntu (22.04.1 LTS) and Manjaro Linux (?).
+    It is shown that *OrdinaryDiffEq@6.53.3* and *DiffEqGPU@2.4.1* runs well on Windows 10 (10.0.19044) and WSL Ubuntu (22.04.1 LTS).
 
 ### Configuring Python and PySCF
 
-Currently the [MO-ADK](@ref MOADK) and [WFAT](@ref WFAT) features related to molecules rely on the [PySCF](https://github.com/pyscf/pyscf) python package, which doesn't support Windows platform. *SemiclassicalSFI.jl* calls the PySCF using the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package. There are two ways to set up the Python environment used by PyCall, here we suggest using your local Python environment for convenience.
+Currently the [MO-ADK](@ref MOADK) and [WFAT](@ref WFAT) features related to molecules rely on the [PySCF](https://github.com/pyscf/pyscf) python package. *SemiclassicalSFI.jl* calls the PySCF using the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package. There are two ways to set up the Python environment used by PyCall, here we suggest using your local Python environment for convenience.
 
 To correctly set up the configuration of PyCall, first, set the `PYTHON` environment variable to your Python executable, and build the PyCall package:
 
@@ -93,6 +93,10 @@ And don't forget to install PySCF in your Python via pip:
 ```
 $ pip3 install pyscf
 ```
+
+!!! note "Note"
+    Since the PySCF does not support the Windows, the molecular calculation must be performed on a Linux or macOS platform.
+    However, for Windows users, they may install the [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Windows Subsystem for Linux), which supports the PySCF.
 
 
 ## Contributors

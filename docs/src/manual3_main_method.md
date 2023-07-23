@@ -93,6 +93,14 @@ and can be obtained through the [`MolRotation`](@ref) method:
 MolRotation(mol)
 ```
 
+!!! note "Note: Testing molecular calculation setup"
+    The test sets of this library include molecular calculations, the user may run the tests of this library to check if the environment is correctly set up for molecular calculation:
+    ```julia
+    using Pkg
+    Pkg.test("SemiclassicalSFI")
+    # In pkg mode of REPL:
+    # (@v1.8) pkg> test SemiclassicalSFI
+    ```
 
 
 ## Initial Condition Methods
@@ -235,6 +243,7 @@ The GPU acceleration now only supports the NVIDIA graphic cards, which also requ
 !!! note "Note: Testing GPU capability"
     The test sets of this library include GPU tests, the user may run the tests of this library to check if the graphic card is ready for GPU acceleration:
     ```julia
+    using Pkg
     Pkg.test("SemiclassicalSFI")
     # In pkg mode of REPL:
     # (@v1.8) pkg> test SemiclassicalSFI
