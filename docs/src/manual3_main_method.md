@@ -57,6 +57,9 @@ mol = Molecule(atoms=["C","O"], atom_coords=[0 0 -0.180; 0 0 0.950],
                data_path="./Molecule_CarbonMonoxide.h5")
 ```
 
+!!! note "Unit of the atom coordinates"
+    The input of the atom coordinates is in **Angstrom (Å)**, which is not atomic unit (Bohr). 1 Bohr = 0.53 Å.
+
 !!! note "Data saving of the Molecule object"
     If the user specifies `data_path` in the constructor method of `Molecule`, the data would be automatically saved each time the user invokes the [`MolCalcMOADKCoeff!`](@ref) and [`MolCalcWFATData!`](@ref).
     However, if doesn't specify (in case the user does not wish to save the data), the data would not be saved, and the user has to manually invoke [`MolSaveDataAs`](@ref) to save the data afterwards.

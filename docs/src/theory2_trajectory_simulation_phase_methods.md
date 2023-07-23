@@ -40,7 +40,7 @@ At a distance from the parent ion, the electron interacts with the potential's C
 ```
 where ``\bm{r},\bm{p}`` are quantities of the electron at any time after the laser ends.
 This scheme applies for electrons with positive energy, which are able to finally escape the parent ion and reach the detector.
-For electrons with negative energy, we assume that they finally become rydberg states.
+For electrons with negative energy, we assume that they finally become Rydberg states.
 
 Finally, electrons with similar final momenta (i.e., in the same small box of the final momentum grid) would be collected by summing up the probabilities they carry: ``W_{\bm{p}} = \sum_i{W_i}``, and the final momentum spectrum is given by ``W_{\bm{p}}``.
 
@@ -50,7 +50,7 @@ Finally, electrons with similar final momenta (i.e., in the same small box of th
 ### [Non-dipole Effects on the Trajectory Motion](@id traj_nondipole)
 
 Dipole approximation is usually applied in the study of laser-matter interaction by neglecting the spatial dependence of the laser field, i.e., we let ``\bm{A}(\bm{r},t) = \bm{A}(t)``.
-However, for lasers with high intensity or frequency, the spatial dependence of the laser becomes noticeable, the dipole approximation breaks down and we have to take non-dipole effects into account.
+However, for lasers with high intensity or frequency, the spatial dependence of the laser becomes noticeable, the dipole approximation breaks down, and we have to take non-dipole effects into account.
 
 To include the first-order non-dipole effects in trajectory simulation, we first refer to the spatial dependent vector potential ``\bm{A}(\bm{r},t)``, giving its first-order expansion in space coordinates:
 ```math
@@ -68,9 +68,9 @@ H = \frac12 \left[ \bm{p}+\bm{A}(t)+\frac{z}{c}\bm{F}(t) \right]^2 + V(\bm{r}).
 Compared with the CTMC, the QTMC scheme endows each electron trajectory with a quantum phase ``\Phi`` based on the Feynman path-integral approach [^Li_2014].
 The phase gets acculmulated during the electron's excursion and is expressed as
 ```math
-\Phi = - \int_{t_0}^\infty \left[ \frac{p^2}{2} + V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t.
+\Phi = - \int_{t_0}^\infty \left[ \frac{k^2}{2} + V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t.
 ```
-where ``t_0`` is the time when the electron tunneled.
+where ``t_0`` is the time when the electron tunneled, and ``\bm{k}=\dot{\bm{r}}`` denotes the momentum. It's worth noting that in the velocity gauge, we distinguish the actual momentum/velocity ``\bm{k}`` from ``\bm{p}=\bm{k}-\bm{A}`` which denotes the canonical momentum when the laser is present, and use ``\bm{p}`` for the momentum after the laser ends (the vector potential ``\bm{A}`` vanishes and we have ``\bm{p}=\bm{k}``).
 Finally the momentum spectrum is given by coherently summing up the probability amplitude, and taking the square modulus of the summation result:
 ```math
 W_{\bm{p}} = \left| \sum_i \sqrt{W_i}\ \mathrm{e}^{\mathrm{i}\Phi_i} \right|^2.
@@ -79,7 +79,7 @@ W_{\bm{p}} = \left| \sum_i \sqrt{W_i}\ \mathrm{e}^{\mathrm{i}\Phi_i} \right|^2.
 It's also worthwhile noting that in practical implementation, the upper limit of the integral of the quantum phase ``\Phi`` doesn't have to be infinity.
 Since electrons which arrived at the same final momentum share the same energy after the laser ends (at ``t_{\mathrm{f}}``), the integral
 ```math
-\int_{t_{\mathrm{f}}}^\infty \left[ \frac{p^2}{2} + V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t
+\int_{t_{\mathrm{f}}}^\infty \left[ \frac{k^2}{2} + V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t
 ```
 is same for electrons with the same final momentum.
 Therefore, in numerical implementation, the upper limit of the phase integral can be simply set as the end of the laser, i.e., the ``t_{\mathrm{f}}``.
@@ -91,10 +91,10 @@ Therefore, in numerical implementation, the upper limit of the phase integral ca
 
 The SCTS model [^ShvetsovShilovski_2016] improves the quantum phase in the QTMC scheme, giving
 ```math
-\Phi = - \bm{k}_0\cdot\bm{r}_0 - \int_{t_0}^\infty \left[ \frac{p^2}{2} + V(\bm{r}) - \bm{r}\cdot\bm{\nabla}V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t.
+\Phi = - \bm{k}_0\cdot\bm{r}_0 - \int_{t_0}^\infty \left[ \frac{k^2}{2} + V(\bm{r}) - \bm{r}\cdot\bm{\nabla}V(\bm{r}) + I_{\mathrm{p}} \right] \mathrm{d}t.
 ```
 The difference between the SCTS phase and the QTMC lies in two aspects:
-The first is the initial phase ``\bm{k}_0\cdot\bm{r}_0``, which is non-zero for non-zero initial longitutinal momentum ``k_\parallel`` w.r.t. the non-adiabatic tunneling process.
+The first is the initial phase ``\bm{k}_0\cdot\bm{r}_0``, which is non-zero for non-zero initial longitudinal momentum ``k_\parallel`` w.r.t. the non-adiabatic tunneling process.
 The second is the ``\bm{r}\cdot\bm{\nabla}V(\bm{r})`` term in the integrand which is omitted in the QTMC scheme.
 
 For the SCTS model, the phase integral in the interval ``[t_{\mathrm{f}},\infty)`` cannot be simply neglected due to the presence of the ``\bm{r}\cdot\bm{\nabla}V(\bm{r})`` term in the integrand.
@@ -110,7 +110,7 @@ However, the integral of this term can be reduced to an analytical expression in
 where ``\bm{r}_{\mathrm{f}}=\bm{r}(t_{\mathrm{f}})``, ``\bm{p}_{\mathrm{f}}=\bm{p}(t_{\mathrm{f}})`` and ``g = \sqrt{1+2\kappa^2 L^2} = \sqrt{1+2\kappa^2 (\bm{r}_{\mathrm{f}}\times\bm{p}_{\mathrm{f}})^2}``.
 In this way we obtain the expression of the SCTS phase that is suitable for numerical implementation:
 ```math
-\Phi = - \bm{k}_0\cdot\bm{r}_0 + I_{\mathrm{p}}t_0 - \int_{t_0}^{t_{\mathrm{f}}} \left[ \frac{p^2}{2} + V(\bm{r}) - \bm{r}\cdot\bm{\nabla}V(\bm{r}) \right] \mathrm{d}t + \Phi_{\mathrm{f}}^{\mathrm{C}}(t_{\mathrm{f}}).
+\Phi = - \bm{k}_0\cdot\bm{r}_0 + I_{\mathrm{p}}t_0 - \int_{t_0}^{t_{\mathrm{f}}} \left[ \frac{k^2}{2} + V(\bm{r}) - \bm{r}\cdot\bm{\nabla}V(\bm{r}) \right] \mathrm{d}t + \Phi_{\mathrm{f}}^{\mathrm{C}}(t_{\mathrm{f}}).
 ```
 
 [^ShvetsovShilovski_2016]: N. I. Shvetsov-Shilovski *et al.*, Semiclassical two-step model for strong-field ionization, *Phys. Rev. A* **94**, 013415 (2016). DOI: [10.1103/PhysRevA.94.013415](https://dx.doi.org/10.1103/PhysRevA.94.013415)
