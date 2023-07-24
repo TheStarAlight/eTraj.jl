@@ -28,13 +28,13 @@ TargetPotential(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.
 "Gets the force exerted on the electron from the atom (which is the neg-grad of potential)."
 TargetForce(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.soft_core)^(-1.5) .* (x,y,z)
 "Gets the trajectory function according to given parameter."
-function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Function, phaseMethod::Symbol, nonDipole::Bool; kwargs...)
+function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Function, phase_method::Symbol, non_dipole::Bool; kwargs...)
     Z  = t.nucl_charge
     Ip = t.Ip
     soft_core = t.soft_core
     # including external function call is infeasible in GPU, thus the external targetF & targetP are replaced by pure Coulomb ones.
-    return if ! nonDipole
-        if phaseMethod == :CTMC
+    return if ! non_dipole
+        if phase_method == :CTMC
             function traj_dipole_ctmc(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
@@ -46,7 +46,7 @@ function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Fun
                 du6 = tFz
                 @SVector [du1,du2,du3,du4,du5,du6]
             end
-        elseif phaseMethod == :QTMC
+        elseif phase_method == :QTMC
             function traj_dipole_qtmc(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
@@ -60,7 +60,7 @@ function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Fun
                 du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-0.5))
                 @SVector [du1,du2,du3,du4,du5,du6,du7]
             end
-        elseif phaseMethod == :SCTS
+        elseif phase_method == :SCTS
             function traj_dipole_scts(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
@@ -76,7 +76,7 @@ function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Fun
             end
         end
     else
-        if phaseMethod == :CTMC
+        if phase_method == :CTMC
             function traj_nondipole_ctmc(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
@@ -89,7 +89,7 @@ function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Fun
                 du6 = tFz - (u[4]*laserFx(t)+u[5]*laserFy(t))/c0
                 @SVector [du1,du2,du3,du4,du5,du6]
             end
-        elseif phaseMethod == :QTMC
+        elseif phase_method == :QTMC
             function traj_nondipole_qtmc(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
@@ -104,7 +104,7 @@ function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Fun
                 du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-0.5))
                 @SVector [du1,du2,du3,du4,du5,du6,du7]
             end
-        elseif phaseMethod == :SCTS
+        elseif phase_method == :SCTS
             function traj_nondipole_scts(u,p,t)
                 # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
                 tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])

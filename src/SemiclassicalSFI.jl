@@ -29,7 +29,7 @@ Performs a semiclassical simulation with given parameters.
 
 # Parameters
 
-## Required params. for all methods:
+## Required params. for all:
 - `init_cond_method = <:ADK|:SFA|:SFAAE|:WFAT|:MOADK>`  : Method of electrons' initial conditions. Currently supports `:ADK`, `:SFA`, `:SFAAE` for atoms and `:WFAT`, `:MOADK` for molecules.
 - `laser::Laser`                                        : Parameters of the laser field.
 - `target::Target`                                      : Parameters of the target.
@@ -49,7 +49,7 @@ Performs a semiclassical simulation with given parameters.
 - `mc_kp_num`   : Number of kp (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
 - `mc_kp_max`   : Maximum value of momentum's transversal component (perpendicular to field direction).
 
-## Optional params. for all methods:
+## Optional params. for all:
 - `save_path`                                       : Output HDF5 file path.
 - `save_3D_spec = false`                            : Determines whether the 3D momentum spectrum is saved (if not, will save 2D) (default `false`).
 - `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `CTMC`). Currently `:QTMC` and `:SCTS` only supports atom targets.
@@ -184,7 +184,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #* save as HDF5.
     if isfile(save_path)
         @warn "[performSFI] File \"$save_path\" already exists. Saving at \"$(default_filename())\"."
-        save_path = "$(default_filename()).h5"
+        save_path = default_filename()
     end
     begin
         dict_out = OrderedDict{Symbol,Any}()
@@ -195,7 +195,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                 dict_out[:version] = v.version
             end
         end
-        # req. params. for all methods
+        # req. params. for all
         dict_out[:init_cond_method]     = init_cond_method
         dict_out[:laser]                = Lasers.Serialize(laser)
         dict_out[:target]               = Targets.Serialize(target)
@@ -269,7 +269,7 @@ function launch_and_collect!( init,
                             ryd_prob_final,
                             ryd_prob_sum_temp,
                             ryd_prob_collect,
-                            classical_rates;
+                            classical_prob;
                             laser               ::Laser,
                             target              ::Target,
                             traj_t_final        ::Real,
@@ -294,21 +294,21 @@ function launch_and_collect!( init,
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
     nthreads = Threads.nthreads()
-    class_rates_ion              = zeros(nthreads)
-    class_rates_ion_uncollected  = zeros(nthreads)
-    class_rates_ryd              = zeros(nthreads)
-    class_rates_ryd_uncollected  = zeros(nthreads)
+    class_prob_ion              = zeros(nthreads)
+    class_prob_ion_uncollected  = zeros(nthreads)
+    class_prob_ryd              = zeros(nthreads)
+    class_prob_ryd_uncollected  = zeros(nthreads)
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 6 : 7 # x,y,z,px,py,pz[,phase]
-    trajODEProb::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,prob_dim)), Float64.((0,traj_t_final)))
-    initTraj::Function =
+    traj_ODE_prob::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,prob_dim)), Float64.((0,traj_t_final)))
+    init_traj::Function =
         if prob_dim == 6
             (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]),     tspan = (init[7,i],Float64(traj_t_final)))
         else
             (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],Float64(traj_t_final)))
         end
-    ensemble_prob::EnsembleProblem = EnsembleProblem(trajODEProb, prob_func=initTraj, safetycopy=false)
+    ensemble_prob::EnsembleProblem = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
     sol =
         if ! traj_GPU
             solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
@@ -341,7 +341,7 @@ function launch_and_collect!( init,
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
         if E_inf ≥ 0    # finally ionized.
-            class_rates_ion[threadid] += init[8,i]
+            class_prob_ion[threadid] += init[8,i]
             p_inf = sqrt(2E_inf)
             a_vec = p_vec × L_vec - nucl_charge * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
@@ -362,15 +362,15 @@ function launch_and_collect!( init,
             end
             if checkbounds(Bool, ion_prob_collect, pxIdx,pyIdx,pzIdx, threadid)
                 if traj_phase_method == :CTMC
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += init[8,i] # ionRate
+                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += init[8,i] # prob
                 else
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(init[8,i])*exp(1im*init[9,i]) # sqrt(ionRate)*phaseFactor
+                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(init[8,i])*exp(1im*init[9,i]) # sqrt(prob)*phase_factor
                 end
             else
-                class_rates_ion_uncollected[threadid] += init[8,i]
+                class_prob_ion_uncollected[threadid] += init[8,i]
             end
         else            # finally become rydberg.
-            class_rates_ryd[threadid] += init[8,i]
+            class_prob_ryd[threadid] += init[8,i]
             if final_ryd_collect
                 n = round(Int, nucl_charge / sqrt(-2E_inf))
                 l = round(Int, (sqrt(1.0+4L2)-1.0)/2)
@@ -385,10 +385,10 @@ function launch_and_collect!( init,
                         ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += sqrt(init[8,i])*exp(1im*init[9,i])
                     end
                 else
-                    class_rates_ryd_uncollected[threadid] += init[8,i]
+                    class_prob_ryd_uncollected[threadid] += init[8,i]
                 end
             else
-                class_rates_ryd_uncollected[threadid] += init[8,i]
+                class_prob_ryd_uncollected[threadid] += init[8,i]
             end
         end
     end
@@ -398,10 +398,10 @@ function launch_and_collect!( init,
         sum!(ryd_prob_sum_temp, ryd_prob_collect)
         ryd_prob_final .+= ryd_prob_sum_temp
     end
-    classical_rates[:ion]                += sum(class_rates_ion)
-    classical_rates[:ion_uncollected]    += sum(class_rates_ion_uncollected)
-    classical_rates[:ryd]                += sum(class_rates_ryd)
-    classical_rates[:ryd_uncollected]    += sum(class_rates_ryd_uncollected)
+    classical_prob[:ion]                += sum(class_prob_ion)
+    classical_prob[:ion_uncollected]    += sum(class_prob_ion_uncollected)
+    classical_prob[:ryd]                += sum(class_prob_ryd)
+    classical_prob[:ryd_uncollected]    += sum(class_prob_ryd_uncollected)
 end
 
 function default_filename()
