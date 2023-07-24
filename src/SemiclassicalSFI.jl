@@ -185,6 +185,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             ryd_prob_final = abs2.(ryd_prob_final)
         end
     end
+    prob_cut_off = 1e-20
+    map!(x->ifelse(x>prob_cut_off,x,0.0), ion_prob_final, ion_prob_final)   # cut off small values to allow efficient compression of the output file.
     #* save as HDF5.
     if isfile(save_path)
         @warn "[performSFI] File \"$save_path\" already exists. Saving at \"$(default_filename())\"."
