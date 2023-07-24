@@ -94,7 +94,7 @@ And don't forget to install PySCF in your Python via pip:
 $ pip3 install pyscf
 ```
 
-!!! note "Note"
+!!! tip "Note"
     Since the PySCF does not support the Windows, the molecular calculation must be performed on a Linux or macOS platform.
     However, for Windows users, they may install the [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Windows Subsystem for Linux), which supports the PySCF.
 

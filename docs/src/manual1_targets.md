@@ -100,7 +100,7 @@ Evaluation of the structure coefficients depends on the external quantum chemist
 The [`Targets.MolecularCalculators`](@ref) module undertakes the task of communication with the external quantum packages.
 Currently only the [`PySCFMolecularCalculator`](@ref) is implemented.
 
-!!! note "Customized calculation parameters"
+!!! tip "Customized calculation parameters"
     When invoking `MolCalcMOADKCoeff!` and `MolCalcWFATData!` to perform calculation of structure coefficients, customized calculation parameters can be passed to the `kwargs` of these methods.
     These parameters would be passed to the constructor method of the `MolecularCalculator` (e.g., the `basis` parameter of the [`PySCFMolecularCalculator`](@ref)), as well as the [`MolecularCalculators.calcStructFactorData`](@ref), [`MolecularCalculators.calcMOADKCoeff`](@ref) methods.
     Refer to their documentation below for more information.

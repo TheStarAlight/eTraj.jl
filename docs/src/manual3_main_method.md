@@ -57,10 +57,10 @@ mol = Molecule(atoms=["C","O"], atom_coords=[0 0 -0.180; 0 0 0.950],
                data_path="./Molecule_CarbonMonoxide.h5")
 ```
 
-!!! note "Unit of the atom coordinates"
+!!! warning "Unit of the atom coordinates"
     The input of the atom coordinates is in **Angstrom (Å)**, which is not atomic unit (Bohr). 1 Bohr = 0.53 Å.
 
-!!! note "Data saving of the Molecule object"
+!!! tip "Data saving of the Molecule object"
     If the user specifies `data_path` in the constructor method of `Molecule`, the data would be automatically saved each time the user invokes the [`MolCalcMOADKCoeff!`](@ref) and [`MolCalcWFATData!`](@ref).
     However, if doesn't specify (in case the user does not wish to save the data), the data would not be saved, and the user has to manually invoke [`MolSaveDataAs`](@ref) to save the data afterwards.
 
@@ -96,7 +96,7 @@ and can be obtained through the [`MolRotation`](@ref) method:
 MolRotation(mol)
 ```
 
-!!! note "Note: Testing molecular calculation setup"
+!!! tip "Testing molecular calculation setup"
     The test sets of this library include molecular calculations, the user may run the tests of this library to check if the environment is correctly set up for molecular calculation:
     ```julia
     using Pkg
@@ -182,6 +182,9 @@ and in the ``k_z`` dimension, there are `ss_kz_num` equidistant samples in the i
 
 The step sampling method is supported for all initial condition methods.
 
+!!! warning "ss_kz_num should be an even number"
+    Under the dipole case, electrons with zero initial ``k_z`` would remain zero ``k_z``, which may induce some problems in the step-length choice of the ODE solver and result in "final electron with anomalously large momentum" warning. Thus the sampling on the ``k_z`` direction should avoid zero. Setting `ss_kz_num` to an even number is a good choice.
+
 ### Monte-Carlo Sampling
 
 In the Monte-Carlo sampling scheme, the `sample_t_num` time samples are randomly chosen in the `sample_t_intv`;
@@ -243,7 +246,7 @@ Determines whether to enable GPU acceleration in trajectory simulation (default 
 The ordinary differential equations related to the electrons' classical trajectories can also be solved by GPU via the [DiffEqGPU.jl](https://github.com/SciML/DiffEqGPU.jl) package.
 The GPU acceleration now only supports the NVIDIA graphic cards, which also requires the CUDA driver to be correctly installed.
 
-!!! note "Note: Testing GPU capability"
+!!! tip "Testing GPU capability"
     The test sets of this library include GPU tests, the user may run the tests of this library to check if the graphic card is ready for GPU acceleration:
     ```julia
     using Pkg
