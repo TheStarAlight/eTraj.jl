@@ -345,9 +345,21 @@ function launch_and_collect!( init,
             p_inf = sqrt(2E_inf)
             a_vec = p_vec × L_vec - nucl_charge * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
-            pxIdx = round(Int, (p_inf_vec[1]+final_p_max[1])/(final_p_max[1]/final_p_num[1]*2))
-            pyIdx = round(Int, (p_inf_vec[2]+final_p_max[2])/(final_p_max[2]/final_p_num[2]*2))
-            pzIdx = round(Int, (p_inf_vec[3]+final_p_max[3])/(final_p_max[3]/final_p_num[3]*2))
+            if final_p_num[1]>1
+                pxIdx = round(Int, (p_inf_vec[1]+final_p_max[1])/(final_p_max[1]/final_p_num[1]*2))
+            else
+                pxIdx = 1   # without this step, only electrons with positive p_x component would be collected, the same for p_y and p_z.
+            end
+            if final_p_num[2]>1
+                pyIdx = round(Int, (p_inf_vec[2]+final_p_max[2])/(final_p_max[2]/final_p_num[2]*2))
+            else
+                pyIdx = 1
+            end
+            if final_p_num[3]>1
+                pzIdx = round(Int, (p_inf_vec[3]+final_p_max[3])/(final_p_max[3]/final_p_num[3]*2))
+            else
+                pzIdx = 1
+            end
             if checkbounds(Bool, ion_prob_collect, pxIdx,pyIdx,pzIdx, threadid)
                 if traj_phase_method == :CTMC
                     ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += init[8,i] # ionRate
