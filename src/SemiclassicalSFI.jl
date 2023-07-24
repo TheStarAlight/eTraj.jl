@@ -43,7 +43,7 @@ Performs a semiclassical simulation with given parameters.
 - `ss_kd_max`   : Boundary of kd (momentum's component along transverse direction (in xy plane)) samples.
 - `ss_kd_num`   : Number of kd (momentum's component along transverse direction (in xy plane)) samples.
 - `ss_kz_max`   : Boundary of kz (momentum's component along propagation direction (z ax.)) samples.
-- `ss_kz_num`   : Number of kz (momentum's component along propagation direction (z ax.)) samples.
+- `ss_kz_num`   : Number of kz (momentum's component along propagation direction (z ax.)) samples (an even number is required).
 
 ## Required params. for Monte-Carlo-sampling methods:
 - `mc_kp_num`   : Number of kp (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
@@ -110,6 +110,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                         #* opt. params. for atomic ADK method
                     adk_tun_exit        ::Symbol    = :IpF
                     )
+    #* check parameters
+    if !sample_monte_carlo && isodd(ss_kz_num)
+        @warn "[performSFI] ss_kz_num=$(ss_kz_num) is an odd number, which may result in anomalous final electron states. Please choose an even number to avoid such problem."
+    end
     #* pack up all parameters.
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (init_cond_method, laser, target, sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
