@@ -55,11 +55,12 @@ Performs a semiclassical simulation with given parameters.
 - `save_3D_spec = false`                            : Determines whether the 3D momentum spectrum is saved (if not, will only save 2D by flattening on the xy plane) (default `false`).
 - `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `CTMC`). Currently `:QTMC` and `:SCTS` only supports atom targets.
 - `traj_rtol = 1e-6`                                : Relative error tolerance when solving classical trajectories using adaptive methods (default `1e-6`).
-- `traj_nondipole = false`                          : Determines whether non-dipole effect is taken account in the simulation (default `false`).
-- `traj_GPU = false`                                : [Experimental] Determines whether GPU acceleration in trajectory simulation is used (default `false`).
+- `traj_nondipole = false`                          : Determines whether the non-dipole effect is taken account in the simulation (default `false`).
+- `traj_GPU = false`                                : [Experimental] Determines whether to enable GPU acceleration in trajectory simulation (default `false`).
+- `sample_cutoff_limit = 1e-16`                     : The cut-off limit of the probability of the sampled electron, electrons with probabilities lower than the limit would be discarded.
 - `sample_monte_carlo = false`                      : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`). Currently only supports ADK.
 - `final_ryd_collect = false`                       : Determines whether rydberg final states are collected (default `false`).
-- `final_ryd_n_max`                                 : Determines the maximum principle quantum number n for rydberg final states to be collected.
+- `final_ryd_n_max`                                 : The maximum principle quantum number n for rydberg final states to be collected.
 
 ## Optional params. for atomic SFA, SFA-AE and ADK methods:
 - `rate_prefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`  : Prefix of the exponential term in the ionization rate (default `:ExpRate`).
@@ -99,6 +100,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     traj_rtol           ::Real      = 1e-6,
                     traj_nondipole      ::Bool      = false,
                     traj_GPU            ::Bool      = false,
+                    sample_cutoff_limit ::Real      = 1e-16,
                     sample_monte_carlo  ::Bool      = false,
                     final_ryd_collect   ::Bool      = false,
                     final_ryd_n_max     ::Integer   = 0,
@@ -128,7 +130,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     @pack! kwargs= (init_cond_method, laser, target, sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
                     mc_kp_num, mc_kp_max,
-                    traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
+                    traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_cutoff_limit, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
                     moadk_orbit_m,
                     adk_tun_exit)
@@ -168,18 +170,17 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     #   * launch electrons and collect
     prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
     prog2 = Progress(batch_num(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
-    warn_num = 0    # number of warnings of empty batches.
-    max_warn_num = 5
+    cont_empty_bat = 0    # number of continous empty batches.
+    warn_thr_cont_empty_bat = 20  # if the number of continous empty batches reaches the threshold, will throw a warning.
     for batchId in 1:batch_num(sp)
         init = gen_electron_batch(sp, batchId)
         if isnothing(init)
-            warn_num += 1
-            if warn_num < max_warn_num
-                @warn "[performSFI] The electron sample provider yields no electron sample in batch #$batchId, probably due to zero field strength."
-            elseif warn_num == max_warn_num
-                @warn "[performSFI] The electron sample provider yields no electron sample in batch #$batchId, probably due to zero field strength. Similar warnings would be suppressed."
+            cont_empty_bat += 1
+            if cont_empty_bat == warn_thr_cont_empty_bat
+                @warn "[performSFI] The electron sample provider yields no electron sample in the previous $(warn_thr_cont_empty_bat) batches #$(batchId-warn_thr_cont_empty_bat+1)~#$batchId, probably due to too weak field strength."
             end
         else
+            cont_empty_bat = 0
             launch_and_collect!(init,
                                 ion_prob_final, ion_prob_sum_temp, ion_prob_collect,
                                 ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect,
@@ -194,8 +195,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             ryd_prob_final = abs2.(ryd_prob_final)
         end
     end
-    prob_cut_off = 1e-20
-    map!(x->ifelse(x>prob_cut_off,x,0.0), ion_prob_final, ion_prob_final)   # cut off small values to allow efficient compression of the output file.
     #* save as HDF5.
     begin
         dict_out = OrderedDict{Symbol,Any}()
@@ -233,6 +232,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         dict_out[:traj_rtol]            = traj_rtol
         dict_out[:traj_nondipole]       = traj_nondipole
         dict_out[:traj_GPU]             = traj_GPU
+        dict_out[:sample_cutoff_limit]  = sample_cutoff_limit
         dict_out[:sample_monte_carlo]   = sample_monte_carlo
         dict_out[:final_ryd_collect]    = final_ryd_collect
         dict_out[:final_ryd_n_max]      = final_ryd_n_max

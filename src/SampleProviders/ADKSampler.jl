@@ -11,13 +11,15 @@ struct ADKSampler <: ElectronSampleProvider
     ss_kz_samples   ::AbstractVector;
     mc_kp_num       ::Integer;
     mc_kp_max       ::Real;
+    cutoff_limit    ::Real;
     phase_method    ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
-    rate_prefix     ::Symbol;           # currently supports :ExpRate.
+    rate_prefix     ::Symbol;           # currently supports :ExpRate, :ExpPre, :ExpJac, :Full.
     ADK_tun_exit    ::Symbol;           # currently supports :IpF, :FDM, :Para.
     function ADKSampler(;   laser               ::Laser,
                             target              ::SAEAtomBase,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Int,
+                            sample_cutoff_limit ::Real,
                             sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Symbol,
@@ -66,12 +68,13 @@ struct ADKSampler <: ElectronSampleProvider
         end
         # check sampling parameters.
         @assert (sample_t_num>0) "[ADKSampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[ADKSampler] Invalid cut-off limit $sample_cutoff_limit."
         if ! sample_monte_carlo    # check SS sampling parameters.
             @assert (ss_kd_num>0 && ss_kz_num>0) "[ADKSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         else                    # check MC sampling parameters.
-            @assert (sample_t_intv[1] < sample_t_intv[2]) "[ADKSampler] Invalid sampling time span $sample_t_intv."
-            @assert (mc_kp_num>0) "[ADKSampler] Invalid batch size $mc_kp_num."
-            @assert (mc_kp_max>0) "[ADKSampler] Invalid sampling kt_max $mc_kp_max."
+            @assert (sample_t_intv[1] < sample_t_intv[2]) "[ADKSampler] Invalid sampling time interval $sample_t_intv."
+            @assert (mc_kp_num>0) "[ADKSampler] Invalid sampling kp_num $mc_kp_num."
+            @assert (mc_kp_max>0) "[ADKSampler] Invalid sampling kp_max $mc_kp_max."
         end
         # finish initialization.
         return if ! sample_monte_carlo
@@ -80,7 +83,7 @@ struct ADKSampler <: ElectronSampleProvider
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 0,0,    # for MC params. pass meaningless values
-                traj_phase_method,rate_prefix,adk_tun_exit)
+                sample_cutoff_limit,traj_phase_method,rate_prefix,adk_tun_exit)
         else
             t_samples = rand(sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1]
             new(laser,target,
@@ -88,7 +91,7 @@ struct ADKSampler <: ElectronSampleProvider
                 t_samples,
                 0:0,0:0,    # for SS params. pass meaningless values
                 mc_kp_num, mc_kp_max,
-                traj_phase_method,rate_prefix,adk_tun_exit)
+                sample_cutoff_limit,traj_phase_method,rate_prefix,adk_tun_exit)
         end
     end
 end
@@ -112,14 +115,14 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
     if Ft == 0
         return nothing
     end
-    # determining tunneling exit position.
+    # determining tunneling exit position. here Ip_eff=Ip+k0^2/2
     r_exit =
         if      sp.ADK_tun_exit == :IpF
-            Ip / Ft
+            Ip_eff -> Ip_eff / Ft
         elseif  sp.ADK_tun_exit == :FDM
-            (Ip + sqrt(Ip^2 - 4Ft)) / 2Ft
+            Ip_eff -> (Ip_eff + sqrt(Ip_eff^2 - 4Ft)) / 2Ft
         elseif  sp.ADK_tun_exit == :Para
-            (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
+            Ip_eff -> (Ip_eff + sqrt(Ip_eff^2 - 4*(1-sqrt(Ip_eff/2))*Ft)) / 2Ft
         end
     # determining ADK rate. ADKRate(F,φ,kd,kz)
     ADKRate::Function =
@@ -146,32 +149,43 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
                 end
             end
         end
-    dim = (sp.phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    phase_method = sp.phase_method
+    dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    cutoff_limit = sp.cutoff_limit
+
+    sample_count_thread = zeros(Int,nthreads())
+    init_thread = if ! sp.monte_carlo
+        zeros(Float64, dim, nthreads(), length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
+    else
+        zeros(Float64, dim, nthreads(), sp.mc_kp_num)
+    end
+
     if ! sp.monte_carlo
-        kdNum, kzNum = length(sp.ss_kd_samples), length(sp.ss_kz_samples)
-        init = zeros(Float64, dim, kdNum, kzNum) # initial condition
-        x0 = r_exit*cos(φ)
-        y0 = r_exit*sin(φ)
-        z0 = 0.0
+        kd_samples = sp.ss_kd_samples
+        kz_samples = sp.ss_kz_samples
+        kdNum, kzNum = length(kd_samples), length(kz_samples)
         @threads for ikd in 1:kdNum
-            kd0 = sp.ss_kd_samples[ikd]
-            kx0 = kd0*-sin(φ)
-            ky0 = kd0* cos(φ)
             for ikz in 1:kzNum
-                kz0 = sp.ss_kz_samples[ikz]
-                init[1:8,ikd,ikz] = [x0,y0,z0,kx0,ky0,kz0,t,ADKRate(Ft,φ,kd0,kz0)]
-                if sp.phase_method != :CTMC
-                    init[9,ikd,ikz] = 0.0
+                kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
+                kx0 = kd0*-sin(φ)
+                ky0 = kd0* cos(φ)
+                r0 = r_exit(Ip+(kd0^2+kz0^2)/2)
+                x0 = r0*cos(φ)
+                y0 = r0*sin(φ)
+                z0 = 0.0
+                rate = ADKRate(Ft,φ,kd0,kz0)
+                if rate < cutoff_limit
+                    continue    # discard the sample
+                end
+                sample_count_thread[threadid()] += 1
+                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate]
+                if phase_method != :CTMC
+                    init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0
                 end
             end
         end
-        return reshape(init,dim,:)
     else
-        init = zeros(Float64, dim, sp.mc_kp_num)
         kpMax = sp.mc_kp_max
-        x0 = r_exit*cos(φ)
-        y0 = r_exit*sin(φ)
-        z0 = 0.0
         @threads for i in 1:sp.mc_kp_num
             # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
             kd0, kz0 = (rand()-0.5)*2kpMax, (rand()-0.5)*2kpMax
@@ -180,11 +194,31 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
             end
             kx0 = kd0*-sin(φ)
             ky0 = kd0* cos(φ)
-            init[1:8,i] = [x0,y0,z0,kx0,ky0,kz0,t,ADKRate(Ft,φ,kd0,kz0)]
-            if sp.phase_method != :CTMC
-                init[9,i] = 0.0
+            r0 = r_exit(Ip+(kd0^2+kz0^2)/2)
+            x0 = r0*cos(φ)
+            y0 = r0*sin(φ)
+            z0 = 0.0
+            rate = ADKRate(Ft,φ,kd0,kz0)
+            if rate < cutoff_limit
+                continue    # discard the sample
+            end
+            sample_count_thread[threadid()] += 1
+            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate]
+            if phase_method != :CTMC
+                init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0
             end
         end
-        return init
     end
+    if sum(sample_count_thread) == 0
+        # @warn "[ADKSampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
+        return nothing
+    end
+    # collect electron samples from different threads.
+    init = zeros(Float64, dim, sum(sample_count_thread))
+    N = 0
+    for i in 1:nthreads()
+        init[:,N+1:N+sample_count_thread[i]] = init_thread[:,i,1:sample_count_thread[i]]
+        N += sample_count_thread[i]
+    end
+    return init
 end

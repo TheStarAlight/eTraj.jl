@@ -10,12 +10,14 @@ struct SFASampler <: ElectronSampleProvider
     t_samples       ::AbstractVector;
     ss_kd_samples   ::AbstractVector;
     ss_kz_samples   ::AbstractVector;
+    cutoff_limit    ::Real;
     phase_method    ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
-    rate_prefix     ::Symbol;           # currently supports :ExpRate.
+    rate_prefix     ::Symbol;           # currently supports :ExpRate, :ExpPre, :ExpJac, :Full.
     function SFASampler(;   laser               ::Laser,
                             target              ::SAEAtomBase,
-                            sample_t_intv   ::Tuple{<:Real,<:Real},
+                            sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Integer,
+                            sample_cutoff_limit ::Real,
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Symbol,
                             ss_kd_max           ::Real,
@@ -36,12 +38,13 @@ struct SFASampler <: ElectronSampleProvider
         end
         # check sampling parameters.
         @assert (sample_t_num>0) "[SFASampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[SFASampler] Invalid cut-off limit $sample_cutoff_limit."
         @assert (ss_kd_num>0 && ss_kz_num>0) "[SFASampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         # finish initialization.
         return new(laser, target,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                traj_phase_method, rate_prefix
+                sample_cutoff_limit, traj_phase_method, rate_prefix
                 )
     end
 end
@@ -69,13 +72,19 @@ function gen_electron_batch(sp::SFASampler, batchId::Int)
     if Ftr == 0
         return nothing
     end
-    kdNum, kzNum = length(sp.ss_kd_samples), length(sp.ss_kz_samples)
-    dim = (sp.phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    rate_prefix = sp.rate_prefix
+    phase_method = sp.phase_method
+    dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    cutoff_limit = sp.cutoff_limit
+    kd_samples = sp.ss_kd_samples
+    kz_samples = sp.ss_kz_samples
+    kdNum, kzNum = length(kd_samples), length(kz_samples)
+
     sample_count_thread = zeros(Int,nthreads())
     init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
 
     "Saddle-point equation."
-    function saddle_point_equation(AxF,AyF,tr,ti,kd,kz)
+    @inline function saddle_point_equation(AxF,AyF,tr,ti,kd,kz)
         Axt = AxF(tr+1im*ti)
         Ayt = AyF(tr+1im*ti)
         px =  kd*imag(Ayt)/sqrt(imag(Axt)^2+imag(Ayt)^2) - real(Axt)
@@ -83,9 +92,20 @@ function gen_electron_batch(sp::SFASampler, batchId::Int)
         return SVector(real(((px+Axt)^2+(py+Ayt)^2+kz^2)/2 + Ip))
     end
 
+    @inline function px_(AxF,AyF,tr,ti,kd)
+        ts = tr+1im*ti   # saddle point time
+        Axts, Ayts = AxF(ts), AyF(ts)
+        return kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
+    end
+    @inline function py_(AxF,AyF,tr,ti,kd)
+        ts = tr+1im*ti   # saddle point time
+        Axts, Ayts = AxF(ts), AyF(ts)
+        return -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
+    end
+
     @threads for ikd in 1:kdNum
         for ikz in 1:kzNum
-            kd, kz = sp.ss_kd_samples[ikd], sp.ss_kz_samples[ikz]
+            kd, kz = kd_samples[ikd], kz_samples[ikz]
             spe((ti,)) = saddle_point_equation(Ax,Ay,tr,ti,kd,kz)
             ti_sol = nlsolve(spe, [asinh(ω/Ftr*sqrt(kd^2+kz^2+2Ip))/ω])
             ti = 0.0
@@ -95,18 +115,7 @@ function gen_electron_batch(sp::SFASampler, batchId::Int)
             else
                 continue
             end
-            sample_count_thread[threadid()] += 1
 
-            @inline function px_(AxF,AyF,tr,ti,kd)
-                ts = tr+1im*ti   # saddle point time
-                Axts, Ayts = AxF(ts), AyF(ts)
-                return kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
-            end
-            @inline function py_(AxF,AyF,tr,ti,kd)
-                ts = tr+1im*ti   # saddle point time
-                Axts, Ayts = AxF(ts), AyF(ts)
-                return -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
-            end
             px = px_(Ax,Ay,tr,ti,kd)
             py = py_(Ax,Ay,tr,ti,kd)
             # px =  kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
@@ -119,10 +128,14 @@ function gen_electron_batch(sp::SFASampler, batchId::Int)
             ky0 = py+Ay(tr)
             kz0 = kz
             rate = exp(2*imag(S))
-            if sp.rate_prefix == :ExpPre || sp.rate_prefix == :Full
+            if rate < cutoff_limit
+                continue
+            end
+            sample_count_thread[threadid()] += 1
+            if rate_prefix == :ExpPre || rate_prefix == :Full
                 rate /= abs((px+Ax(tr+1im*ti))*Fx(tr+1im*ti)+(py+Ay(tr+1im*ti))*Fy(tr+1im*ti))^α
             end
-            if sp.rate_prefix == :ExpJac || sp.rate_prefix == :Full
+            if rate_prefix == :ExpJac || rate_prefix == :Full
                 dt = 0.01
                 dk = 0.01
                 spe_t_p_dt((ti,)) = saddle_point_equation(Ax,Ay,tr+dt,ti,kd,kz)
@@ -140,17 +153,15 @@ function gen_electron_batch(sp::SFASampler, batchId::Int)
                 rate *= abs(dpxdtr*dpydkd-dpxdkd*dpydtr)/(4dt*dk)
             end
             init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
-            if sp.phase_method != :CTMC
+            if phase_method != :CTMC
                 init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0
             end
         end
     end
 
     if sum(sample_count_thread) == 0
+        # @warn "[SFASampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
         return nothing
-    end
-    if sum(sample_count_thread) < kdNum*kzNum
-        @warn "[SFASampler] Found no root in $(kdNum*kzNum-sum(sample_count_thread)) saddle-point equations in electron batch #$batchId."
     end
     # collect electron samples from different threads.
     init = zeros(Float64, dim, sum(sample_count_thread))
