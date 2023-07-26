@@ -9,12 +9,14 @@ struct SFAAESampler <: ElectronSampleProvider
     t_samples       ::AbstractVector;
     ss_kd_samples   ::AbstractVector;
     ss_kz_samples   ::AbstractVector;
+    cutoff_limit    ::Real;
     phase_method    ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
-    rate_prefix     ::Symbol;           # currently supports :ExpRate.
+    rate_prefix     ::Symbol;           # currently supports :ExpRate, :ExpPre, :ExpJac, :Full.
     function SFAAESampler(; laser               ::Laser,
                             target              ::SAEAtomBase,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Integer,
+                            sample_cutoff_limit ::Real,
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Symbol,
                             ss_kd_max           ::Real,
@@ -42,12 +44,13 @@ struct SFAAESampler <: ElectronSampleProvider
         end
         # check sampling parameters.
         @assert (sample_t_num>0) "[SFAAESampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[SFAAESampler] Invalid cut-off limit $sample_cutoff_limit."
         @assert (ss_kd_num>0 && ss_kz_num>0) "[SFAAESampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         # finish initialization.
         return new(laser, target,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                traj_phase_method, rate_prefix
+                sample_cutoff_limit, traj_phase_method, rate_prefix
                 )
     end
 end
@@ -75,8 +78,6 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
     if Ft == 0
         return nothing
     end
-    kdNum, kzNum = length(sp.ss_kd_samples), length(sp.ss_kz_samples)
-    dim = (sp.phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
     rate::Function =
         if  sp.rate_prefix == :ExpRate
             ADKRateExp(sp.target)
@@ -84,48 +85,62 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
             ADKRate_Exp = ADKRateExp(sp.target)
             α = 1.0+Z/sqrt(2Ip)
             if  sp.rate_prefix == :ExpPre
-                function ADKRate_ExpPre(F,φ,kd,kz)
+                @inline function ADKRate_ExpPre(F,φ,kd,kz)
                     return ADKRate_Exp(F,φ,kd,kz) / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             elseif  sp.rate_prefix == :ExpJac
-                function ADKRate_ExpJac(F,φ,kd,kz)
+                @inline function ADKRate_ExpJac(F,φ,kd,kz)
                     transform((tr,kd_)) = SVector(kd_*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd_*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
                     jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
                     return ADKRate_Exp(F,φ,kd,kz) * jac
                 end
             elseif  sp.rate_prefix == :Full
-                function ADKRate_Full(F,φ,kd,kz)
+                @inline function ADKRate_Full(F,φ,kd,kz)
                     transform((tr,kd_)) = SVector(kd_*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd_*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
                     jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
                     return ADKRate_Exp(F,φ,kd,kz) * jac / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             end
         end
-    F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-p⟂⋅F'
-    r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
+    @inline F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-p⟂⋅F'
+    @inline r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
+    phase_method = sp.phase_method
+    dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    cutoff_limit = sp.cutoff_limit
+    kd_samples = sp.ss_kd_samples
+    kz_samples = sp.ss_kz_samples
+    kdNum, kzNum = length(kd_samples), length(kz_samples)
+
     sample_count_thread = zeros(Int,nthreads())
     init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
 
     @threads for ikd in 1:kdNum
         for ikz in 1:kzNum
-            kd0, kz0 = sp.ss_kd_samples[ikd], sp.ss_kz_samples[ikz]
+            kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
             kx0 = kd0*-sin(φ)
             ky0 = kd0* cos(φ)
             F2eff_ = F2eff(kx0,ky0)
-            if F2eff_ > 0
-                sample_count_thread[threadid()] += 1
-            else
+            if F2eff_ ≤ 0
                 continue
             end
             r0 = r_exit(kx0,ky0)
             x0 = r0*cos(φ)
             y0 = r0*sin(φ)
             z0 = 0.0
-            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate(sqrt(F2eff_),φ,kd0,kz0)]
-            if sp.phase_method != :CTMC
+            rate_ = rate(sqrt(F2eff_),φ,kd0,kz0)
+            if rate_ < cutoff_limit
+                continue
+            end
+            sample_count_thread[threadid()] += 1
+            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate_]
+            if phase_method != :CTMC
                 init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0
             end
         end
+    end
+    if sum(sample_count_thread) == 0
+        # @warn "[SFAAESampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
+        return nothing
     end
     # collect electron samples from different threads.
     init = zeros(Float64, dim, sum(sample_count_thread))

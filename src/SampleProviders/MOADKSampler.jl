@@ -9,24 +9,27 @@ struct MOADKSampler <: ElectronSampleProvider
     t_samples       ::AbstractVector;
     ss_kd_samples   ::AbstractVector;
     ss_kz_samples   ::AbstractVector;
+    cutoff_limit    ::Real;
     tun_exit        ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     ion_orbit_idx   ::Integer;
     ion_orbit_m     ::Integer;
 
-    function MOADKSampler(; laser           ::Laser,
-                            target          ::Molecule,
-                            sample_t_intv   ::Tuple{<:Real,<:Real},
-                            sample_t_num    ::Integer,
-                            ss_kd_max       ::Real,
-                            ss_kd_num       ::Integer,
-                            ss_kz_max       ::Real,
-                            ss_kz_num       ::Integer,
-                            mol_orbit_idx   ::Integer,
-                            moadk_orbit_m   ::Integer,
+    function MOADKSampler(; laser               ::Laser,
+                            target              ::Molecule,
+                            sample_t_intv       ::Tuple{<:Real,<:Real},
+                            sample_t_num        ::Integer,
+                            ss_kd_max           ::Real,
+                            ss_kd_num           ::Integer,
+                            ss_kz_max           ::Real,
+                            ss_kz_num           ::Integer,
+                            sample_cutoff_limit ::Real,
+                            mol_orbit_idx       ::Integer,
+                            moadk_orbit_m       ::Integer,
                             kwargs...   # kwargs are surplus params.
                             )
         # check sampling parameters.
         @assert (sample_t_num>0) "[MOADKSampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[MOADKSampler] Invalid cut-off limit $sample_cutoff_limit."
         @assert (ss_kd_num>0 && ss_kz_num>0) "[MOADKSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         # if coefficients are not available, calculate it.
         if ! (mol_orbit_idx in MolMOADKAvailableIndices(target))
@@ -55,7 +58,7 @@ struct MOADKSampler <: ElectronSampleProvider
         return new( laser, target,
                     range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                     range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                    tun_exit,
+                    sample_cutoff_limit, tun_exit,
                     mol_orbit_idx, moadk_orbit_m)
     end
 end
@@ -82,12 +85,12 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
     κ  = sqrt(2Ip)
     Z  = AsympNuclCharge(sp.target)
 
-    # determining tunneling exit position (using ADK's parabolic tunneling exit method if tunExit=:Para)
+    # determining tunneling exit position (using ADK's parabolic tunneling exit method if tun_exit=:Para)
     r_exit =
         if sp.tun_exit == :Para
-            (Ip + sqrt(Ip^2 - 4*(1-sqrt(Ip/2))*Ft)) / 2Ft
+            Ip_eff -> (Ip_eff + sqrt(Ip_eff^2 - 4*(1-sqrt(Ip_eff/2))*Ft)) / 2Ft
         else
-            Ip / Ft
+            Ip_eff -> Ip_eff / Ft
         end
 
     # determining Euler angles (β,γ) (α contributes nothing to Γ, thus is neglected)
@@ -106,7 +109,7 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
     for m_ in -lMax:lMax
         B_data[m_+lMax+1] = MolMOADKStructureFactor_B(sp.target, sp.ion_orbit_idx, sp.ion_orbit_m, m_, β, γ)
     end
-    ion_rate::Function =
+    rate::Function =
         function (F,kd,kz)
             Γsum = 0.
             for m_ in -lMax:lMax
@@ -116,19 +119,42 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
         end
     # generating samples
     dim = 8
-    kdNum, kzNum = length(sp.ss_kd_samples), length(sp.ss_kz_samples)
-    init = zeros(Float64, dim, kdNum, kzNum) # initial condition
-    x0 = r_exit*cos(φ_exit)
-    y0 = r_exit*sin(φ_exit)
-    z0 = 0.
+    kd_samples = sp.ss_kd_samples
+    kz_samples = sp.ss_kz_samples
+    kdNum, kzNum = length(kd_samples), length(kz_samples)
+    cutoff_limit = sp.cutoff_limit
+
+    sample_count_thread = zeros(Int,nthreads())
+    init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
+
     @threads for ikd in 1:kdNum
-        kd0 = sp.ss_kd_samples[ikd]
-        kx0 = kd0*-sin(φ_exit)
-        ky0 = kd0* cos(φ_exit)
         for ikz in 1:kzNum
-            kz0 = sp.ss_kz_samples[ikz]
-            init[1:8,ikd,ikz] = [x0,y0,z0,kx0,ky0,kz0,t,ion_rate(Ft,kd0,kz0)]
+            kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
+            kx0 = kd0*-sin(φ_exit)
+            ky0 = kd0* cos(φ_exit)
+            r0 = r_exit(Ip+(kd0^2+kz0^2)/2)
+            x0 = r0*cos(φ_exit)
+            y0 = r0*sin(φ_exit)
+            z0 = 0.0
+            rate_ = rate(Ft,kd0,kz0)
+            if rate_ < cutoff_limit
+                continue    # discard the sample
+            end
+            sample_count_thread[threadid()] += 1
+            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate_]
         end
     end
-    return reshape(init,dim,:)
+    if sum(sample_count_thread) == 0
+        # @warn "[MOADKSampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
+        return nothing
+    end
+    # collect electron samples from different threads.
+    init = zeros(Float64, dim, sum(sample_count_thread))
+    N = 0
+    for i in 1:nthreads()
+        init[:,N+1:N+sample_count_thread[i]] = init_thread[:,i,1:sample_count_thread[i]]
+        N += sample_count_thread[i]
+    end
+    return init
+
 end
