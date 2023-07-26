@@ -69,13 +69,13 @@ function gen_electron_batch(sp::SFASampler, batchId::Int)
     Z   = AsympNuclCharge(sp.target)
     Ip  = IonPotential(sp.target)
     α   = 1.0+Z/sqrt(2Ip)
-    if Ftr == 0
+    cutoff_limit = sp.cutoff_limit
+    if Ftr == 0 || ADKRateExp(sp.target)(Ftr,0.0,0.0) < cutoff_limit
         return nothing
     end
     rate_prefix = sp.rate_prefix
     phase_method = sp.phase_method
     dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
-    cutoff_limit = sp.cutoff_limit
     kd_samples = sp.ss_kd_samples
     kz_samples = sp.ss_kz_samples
     kdNum, kzNum = length(kd_samples), length(kz_samples)

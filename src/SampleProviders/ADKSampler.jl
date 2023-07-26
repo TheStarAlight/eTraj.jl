@@ -112,7 +112,8 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
     φ  = atan(-Fyt,-Fxt)
     Z  = AsympNuclCharge(sp.target)
     Ip = IonPotential(sp.target)
-    if Ft == 0
+    cutoff_limit = sp.cutoff_limit
+    if Ft == 0 || ADKRateExp(sp.target)(Ft,0.0,0.0) < cutoff_limit
         return nothing
     end
     # determining tunneling exit position. here Ip_eff=Ip+k0^2/2
@@ -151,7 +152,6 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
         end
     phase_method = sp.phase_method
     dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
-    cutoff_limit = sp.cutoff_limit
 
     sample_count_thread = zeros(Int,nthreads())
     init_thread = if ! sp.monte_carlo
