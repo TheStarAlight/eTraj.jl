@@ -80,7 +80,7 @@ function gen_electron_batch(sp::WFATSampler, batchId::Int)
     κ  = sqrt(2Ip)
     Z  = AsympNuclCharge(sp.target)
     cutoff_limit = sp.cutoff_limit
-    if Ft == 0 || ADKRateExp(sp.target)(Ft,0.0,0.0) < cutoff_limit
+    if Ft == 0 || ADKRateExp(sp.target)(Ip,Ft,0.0,0.0) < cutoff_limit
         return nothing
     end
 
