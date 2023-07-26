@@ -11,8 +11,8 @@ struct HydrogenLikeAtom <: SAEAtomBase
     "Name of the atom."
     name::String;
     "Initializes a new instance of HydrogenLikeAtom."
-    HydrogenLikeAtom( Ip, Z, soft_core=0.01, name="[NA]") = new(Ip, Z, soft_core, name)
-    HydrogenLikeAtom(;Ip, Z, soft_core=0.01, name="[NA]") = new(Ip, Z, soft_core, name)
+    HydrogenLikeAtom( Ip, Z, soft_core=0.2, name="[NA]") = new(Ip, Z, soft_core, name)
+    HydrogenLikeAtom(;Ip, Z, soft_core=0.2, name="[NA]") = new(Ip, Z, soft_core, name)
 end
 
 "Gets the ionization potential of the atom."
