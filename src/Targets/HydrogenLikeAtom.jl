@@ -125,11 +125,10 @@ end
 """
 Gets the exponential term of ADK rate which depends on
 Field strength `F`,
-Azimuthal angle of field `φ`,
 momentum's transverse component `kd` (in xy plane),
 and propagation-direction (which is Z axis) component `kz`.
 """
-ADKRateExp(t::HydrogenLikeAtom) = (F,φ,kd,kz) -> exp(-2(kd^2+kz^2+2*t.Ip)^1.5/3F)
+ADKRateExp(t::HydrogenLikeAtom) = (F,kd,kz) -> exp(-2(kd^2+kz^2+2*t.Ip)^1.5/3F)
 
 "Prints the information of the atom."
 Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge), soft_core=$(t.soft_core)\n")
