@@ -176,10 +176,15 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         init = gen_electron_batch(sp, batchId)
         if isnothing(init)
             cont_empty_bat += 1
-            if cont_empty_bat == warn_thr_cont_empty_bat
-                @warn "[performSFI] The electron sample provider yields no electron sample in the previous $(warn_thr_cont_empty_bat) batches #$(batchId-warn_thr_cont_empty_bat+1)~#$batchId, probably due to too weak field strength."
+            if batchId == batch_num(sp)
+                if cont_empty_bat > warn_thr_cont_empty_bat
+                    @warn "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
+                end
             end
         else
+            if cont_empty_bat > warn_thr_cont_empty_bat # count the total continous empty batches and throw the warning.
+                @warn "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
+            end
             cont_empty_bat = 0
             launch_and_collect!(init,
                                 ion_prob_final, ion_prob_sum_temp, ion_prob_collect,
