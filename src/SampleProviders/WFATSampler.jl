@@ -79,7 +79,8 @@ function gen_electron_batch(sp::WFATSampler, batchId::Int)
     Ip = IonPotential(sp.target, sp.ion_orbit_idx)
     κ  = sqrt(2Ip)
     Z  = AsympNuclCharge(sp.target)
-    if Ft == 0
+    cutoff_limit = sp.cutoff_limit
+    if Ft == 0 || ADKRateExp(sp.target)(Ip,Ft,0.0,0.0) < cutoff_limit
         return nothing
     end
 
@@ -123,7 +124,6 @@ function gen_electron_batch(sp::WFATSampler, batchId::Int)
     kd_samples = sp.ss_kd_samples
     kz_samples = sp.ss_kz_samples
     kdNum, kzNum = length(kd_samples), length(kz_samples)
-    cutoff_limit = sp.cutoff_limit
 
     sample_count_thread = zeros(Int,nthreads())
     init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)

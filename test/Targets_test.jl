@@ -8,8 +8,8 @@ using Test
 
     @info "Testing HydrogenLikeAtom ..."
     @testset verbose=true "HydrogenLikeAtom" begin
-        t1 = HydrogenLikeAtom(Ip=0.5,Z=1.0,soft_core=0.01,name="H")
-        t2 = HydrogenLikeAtom(0.5,1.0,0.01,"H")
+        t1 = HydrogenLikeAtom(Ip=0.5,Z=1.0,soft_core=0.2,name="H")
+        t2 = HydrogenLikeAtom(0.5,1.0,0.2,"H")
         t3 = HAtom()
         @test t1 == t2 == t3
         @test begin
@@ -18,12 +18,12 @@ using Test
         end
         @test IonPotential(t1)       == 0.5
         @test AsympNuclCharge(t1)    == 1
-        @test SoftCore(t1)           == 0.01
+        @test SoftCore(t1)           == 0.2
         @test TargetName(t1)         == "H"
-        @test TargetPotential(t1)(1.0,1.0,1.0) ≈ -1/sqrt(3.01)
-        @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (3.01)^(-1.5))
+        @test TargetPotential(t1)(1.0,1.0,1.0) ≈ -1/sqrt(3.2)
+        @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (3.2)^(-1.5))
         #@test TrajectoryFunction(t) #TODO: add this test after revising the code.
-        @test ADKRateExp(t1)(0.1,0.0,1.0,1.0) ≈ exp(-2*3.0^1.5/0.3)
+        @test ADKRateExp(t1)(0.1,1.0,1.0) ≈ exp(-2*3.0^1.5/0.3)
     end
 
     @info "Testing SAEAtom ..."
@@ -42,7 +42,7 @@ using Test
         @test TargetPotential(t1)(1.0,1.0,1.0) ≈ - (1.0 + 1.230723*exp(-0.6620055*1.73205081) + -1.325040*1.73205081*exp(-1.236224*1.73205081) + -0.2307230*exp(-0.4804286*1.73205081)) / 1.73205081
         @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (1.73205081^(-3) * (1.0 + 1.230723*(1+0.6620055*1.73205081)*exp(-0.6620055*1.73205081) + -0.2307230*(1+0.4804286*1.73205081)*exp(-0.4804286*1.73205081)) + -1.325040*1.236224/1.73205081 * exp(-1.236224*1.73205081)))
         #@test TrajectoryFunction(t) #TODO: add this test after revising the code.
-        @test ADKRateExp(t1)(0.1,0.0,1.0,1.0) ≈ exp(-2*(2.0+2*0.9035698802)^1.5/0.3)
+        @test ADKRateExp(t1)(0.1,1.0,1.0) ≈ exp(-2*(2.0+2*0.9035698802)^1.5/0.3)
     end
 
     @info "Testing Molecule ..."

@@ -762,6 +762,15 @@ function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function,
     end
 end
 
+"""
+Gets the exponential term of ADK rate which depends on
+ionization potential `Ip`,
+field strength `F`,
+momentum's transverse component `kd` (in xy plane),
+and propagation-direction (which is Z axis) component `kz`.
+"""
+ADKRateExp(t::Molecule) = (Ip,F,kd,kz) -> exp(-2(kd^2+kz^2+2*Ip)^1.5/3F)
+
 function Base.show(io::IO, mol::Molecule)
     print(io, "Molecule [$(mol.name)]")
     if mol.energy_data_available

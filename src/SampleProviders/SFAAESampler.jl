@@ -75,7 +75,8 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
     φ   = atan(-Fyt,-Fxt)
     Z   = AsympNuclCharge(sp.target)
     Ip  = IonPotential(sp.target)
-    if Ft == 0
+    cutoff_limit = sp.cutoff_limit
+    if Ft == 0 || ADKRateExp(sp.target)(Ft,0.0,0.0) < cutoff_limit
         return nothing
     end
     rate::Function =
@@ -85,20 +86,20 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
             ADKRate_Exp = ADKRateExp(sp.target)
             α = 1.0+Z/sqrt(2Ip)
             if  sp.rate_prefix == :ExpPre
-                @inline function ADKRate_ExpPre(F,φ,kd,kz)
-                    return ADKRate_Exp(F,φ,kd,kz) / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
+                @inline function ADKRate_ExpPre(F,kd,kz)
+                    return ADKRate_Exp(F,kd,kz) / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             elseif  sp.rate_prefix == :ExpJac
-                @inline function ADKRate_ExpJac(F,φ,kd,kz)
+                @inline function ADKRate_ExpJac(F,kd,kz)
                     transform((tr,kd_)) = SVector(kd_*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd_*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
                     jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
-                    return ADKRate_Exp(F,φ,kd,kz) * jac
+                    return ADKRate_Exp(F,kd,kz) * jac
                 end
             elseif  sp.rate_prefix == :Full
-                @inline function ADKRate_Full(F,φ,kd,kz)
+                @inline function ADKRate_Full(F,kd,kz)
                     transform((tr,kd_)) = SVector(kd_*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd_*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
                     jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
-                    return ADKRate_Exp(F,φ,kd,kz) * jac / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
+                    return ADKRate_Exp(F,kd,kz) * jac / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             end
         end
@@ -106,7 +107,6 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
     @inline r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
     phase_method = sp.phase_method
     dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
-    cutoff_limit = sp.cutoff_limit
     kd_samples = sp.ss_kd_samples
     kz_samples = sp.ss_kz_samples
     kdNum, kzNum = length(kd_samples), length(kz_samples)
@@ -127,7 +127,7 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
             x0 = r0*cos(φ)
             y0 = r0*sin(φ)
             z0 = 0.0
-            rate_ = rate(sqrt(F2eff_),φ,kd0,kz0)
+            rate_ = rate(sqrt(F2eff_),kd0,kz0)
             if rate_ < cutoff_limit
                 continue
             end

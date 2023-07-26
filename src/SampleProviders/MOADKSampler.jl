@@ -76,14 +76,15 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
     Fxt = Fx(t)
     Fyt = Fy(t)
     Ft = hypot(Fxt,Fyt)
-    if Ft == 0
-        return nothing
-    end
     φ_field = atan( Fyt, Fxt)   # direction of field vector F.
     φ_exit  = atan(-Fyt,-Fxt)   # direction of tunneling exit, which is opposite to F.
     Ip = IonPotential(sp.target, sp.ion_orbit_idx)
     κ  = sqrt(2Ip)
     Z  = AsympNuclCharge(sp.target)
+    cutoff_limit = sp.cutoff_limit
+    if Ft == 0 || ADKRateExp(sp.target)(Ip,Ft,0.0,0.0) < cutoff_limit
+        return nothing
+    end
 
     # determining tunneling exit position (using ADK's parabolic tunneling exit method if tun_exit=:Para)
     r_exit =
@@ -122,7 +123,6 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
     kd_samples = sp.ss_kd_samples
     kz_samples = sp.ss_kz_samples
     kdNum, kzNum = length(kd_samples), length(kz_samples)
-    cutoff_limit = sp.cutoff_limit
 
     sample_count_thread = zeros(Int,nthreads())
     init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)

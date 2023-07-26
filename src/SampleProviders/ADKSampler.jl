@@ -112,7 +112,8 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
     φ  = atan(-Fyt,-Fxt)
     Z  = AsympNuclCharge(sp.target)
     Ip = IonPotential(sp.target)
-    if Ft == 0
+    cutoff_limit = sp.cutoff_limit
+    if Ft == 0 || ADKRateExp(sp.target)(Ft,0.0,0.0) < cutoff_limit
         return nothing
     end
     # determining tunneling exit position. here Ip_eff=Ip+k0^2/2
@@ -132,26 +133,25 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
             ADKRate_Exp = ADKRateExp(sp.target)
             α = 1.0+Z/sqrt(2Ip)
             if  sp.rate_prefix == :ExpPre
-                function ADKRate_ExpPre(F,φ,kd,kz)
-                    return ADKRate_Exp(F,φ,kd,kz) / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
+                function ADKRate_ExpPre(F,kd,kz)
+                    return ADKRate_Exp(F,kd,kz) / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             elseif  sp.rate_prefix == :ExpJac
-                function ADKRate_ExpJac(F,φ,kd,kz)
+                function ADKRate_ExpJac(F,kd,kz)
                     transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
                     jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
-                    return ADKRate_Exp(F,φ,kd,kz) * jac
+                    return ADKRate_Exp(F,kd,kz) * jac
                 end
             elseif  sp.rate_prefix == :Full
-                function ADKRate_Full(F,φ,kd,kz)
+                function ADKRate_Full(F,kd,kz)
                     transform((tr,kd)) = SVector(kd*Fy(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ax(tr), -kd*Fx(tr)/sqrt(Fx(tr)^2+Fy(tr)^2) - Ay(tr))
                     jac = abs(det(ForwardDiff.jacobian(transform,SVector(t,kd))))
-                    return ADKRate_Exp(F,φ,kd,kz) * jac / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
+                    return ADKRate_Exp(F,kd,kz) * jac / ((kd^2+kz^2+2Ip)*Ft^2)^(0.5α)
                 end
             end
         end
     phase_method = sp.phase_method
     dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
-    cutoff_limit = sp.cutoff_limit
 
     sample_count_thread = zeros(Int,nthreads())
     init_thread = if ! sp.monte_carlo
@@ -173,7 +173,7 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
                 x0 = r0*cos(φ)
                 y0 = r0*sin(φ)
                 z0 = 0.0
-                rate = ADKRate(Ft,φ,kd0,kz0)
+                rate = ADKRate(Ft,kd0,kz0)
                 if rate < cutoff_limit
                     continue    # discard the sample
                 end
@@ -198,7 +198,7 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
             x0 = r0*cos(φ)
             y0 = r0*sin(φ)
             z0 = 0.0
-            rate = ADKRate(Ft,φ,kd0,kz0)
+            rate = ADKRate(Ft,kd0,kz0)
             if rate < cutoff_limit
                 continue    # discard the sample
             end
