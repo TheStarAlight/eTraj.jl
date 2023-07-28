@@ -169,6 +169,8 @@ There are two ways of sampling in these coordinates, namely *step sampling* and 
 
 - `sample_t_num` : Number of time samples.
 
+- `sample_cutoff_limit = 1e-16` : The cut-off limit of the probability of the sampled electron, electrons with probabilities lower than the limit would be discarded (default `1e-16`).
+
 ### Step Sampling
 
 In the step sampling scheme, the `sample_t_num` time samples are uniformly distributed in the interval `sample_t_intv`.

@@ -29,7 +29,7 @@ A monochromatic laser is composed of the carrier wave ``\cos{(\omega t+\phi)}`` 
 Given the amplitude of the vector potential ``A_0``, the time-dependent vector potential of the laser,
 which we assume to propagate in ``z`` direction and have ``x`` axis as the principle axis of polarization, reads
 ```math
-\bm{A}(t) =  A_0 f_{\mathrm{env}}(t) \cos{(\omega t+\phi)} \left( \bm{e}_x + \varepsilon \bm{e}_y \right),
+\bm{A}(t) =  A_0 f_{\mathrm{env}}(t) \left[ \cos{(\omega t+\phi)} \bm{e}_x + \varepsilon \sin{(\omega t+\phi)} \bm{e}_y \right],
 ```
 where ``\varepsilon`` is the ellipticity.
 
