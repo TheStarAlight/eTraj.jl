@@ -168,8 +168,9 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         classical_prob[:ryd]                = 0.
         classical_prob[:ryd_uncollected]    = 0.
     #   * launch electrons and collect
-    prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
-    prog2 = Progress(batch_num(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
+    batchNum = batch_num(sp)
+    prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting ...", color = :cyan, spinner = true)
+    prog2 = Progress(batchNum; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
     cont_empty_bat = 0    # number of continous empty batches.
     warn_thr_cont_empty_bat = 20  # if the number of continous empty batches reaches the threshold, will throw a warning.
     for batchId in 1:batch_num(sp)
@@ -191,7 +192,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                                 ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect,
                                 classical_prob; kwargs...)
         end
-        next!(prog1,spinner=raw"-\|/"); next!(prog2);
+        next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$batchId/$batchNum]"); next!(prog2);
     end
     finish!(prog1); finish!(prog2); println();
     if traj_phase_method != :CTMC
