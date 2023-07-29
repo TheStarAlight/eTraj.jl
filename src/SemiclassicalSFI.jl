@@ -173,6 +173,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     prog2 = Progress(batchNum; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
     cont_empty_bat = 0    # number of continous empty batches.
     warn_thr_cont_empty_bat = 20  # if the number of continous empty batches reaches the threshold, will throw a warning.
+    n_eff_traj = 0  # number of effective trajectories that are launched.
     for batchId in 1:batch_num(sp)
         init = gen_electron_batch(sp, batchId)
         if isnothing(init)
@@ -187,12 +188,13 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                 @warn "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
             end
             cont_empty_bat = 0
+            n_eff_traj += size(init,2)
             launch_and_collect!(init,
                                 ion_prob_final, ion_prob_sum_temp, ion_prob_collect,
                                 ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect,
                                 classical_prob; kwargs...)
         end
-        next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$batchId/$batchNum]"); next!(prog2);
+        next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$batchId/$batchNum, $(n_eff_traj) electrons collected]"); next!(prog2);
     end
     finish!(prog1); finish!(prog2); println();
     if traj_phase_method != :CTMC
@@ -275,6 +277,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         file["ryd_prob"] = classical_prob[:ryd]
         file["ryd_prob_uncollected"] = classical_prob[:ryd_uncollected]
     end
+    file["num_effective_traj"] = n_eff_traj
     close(file)
     @info "Task finished, data saved at \"$(save_path)\"."
 end
