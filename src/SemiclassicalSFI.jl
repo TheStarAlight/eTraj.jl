@@ -351,6 +351,7 @@ function launch_and_collect!( init,
             continue
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i][end][7])
+        prob = init[8,i]
         if traj_phase_method == :SCTS # asymptotic Coulomb phase correction term in SCTS
             sqrtb = (2Ip)^(-0.5)
             g = sqrt(1+2Ip*((y*pz-z*py)^2+(z*px-x*pz)^2+(x*py-y*px)^2))
@@ -362,7 +363,7 @@ function launch_and_collect!( init,
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
         if E_inf ≥ 0    # finally ionized.
-            class_prob_ion[threadid] += init[8,i]
+            class_prob_ion[threadid] += prob
             p_inf = sqrt(2E_inf)
             a_vec = p_vec × L_vec - nucl_charge * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
@@ -383,15 +384,15 @@ function launch_and_collect!( init,
             end
             if checkbounds(Bool, ion_prob_collect, pxIdx,pyIdx,pzIdx, threadid)
                 if traj_phase_method == :CTMC
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += init[8,i] # prob
+                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += prob # prob
                 else
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(init[8,i])*exp(1im*init[9,i]) # sqrt(prob)*phase_factor
+                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
-                class_prob_ion_uncollected[threadid] += init[8,i]
+                class_prob_ion_uncollected[threadid] += prob
             end
         else            # finally become rydberg.
-            class_prob_ryd[threadid] += init[8,i]
+            class_prob_ryd[threadid] += prob
             if final_ryd_collect
                 n = round(Int, nucl_charge / sqrt(-2E_inf))
                 l = round(Int, (sqrt(1.0+4L2)-1.0)/2)
@@ -401,15 +402,15 @@ function launch_and_collect!( init,
                 mIdx = m+final_ryd_n_max
                 if checkbounds(Bool, ryd_prob_collect, nIdx,lIdx,mIdx, threadid)
                     if traj_phase_method == :CTMC
-                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += init[8,i]
+                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += prob
                     else
-                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += sqrt(init[8,i])*exp(1im*init[9,i])
+                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += sqrt(prob)*exp(1im*phase)
                     end
                 else
-                    class_prob_ryd_uncollected[threadid] += init[8,i]
+                    class_prob_ryd_uncollected[threadid] += prob
                 end
             else
-                class_prob_ryd_uncollected[threadid] += init[8,i]
+                class_prob_ryd_uncollected[threadid] += prob
             end
         end
     end
