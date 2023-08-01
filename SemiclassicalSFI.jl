@@ -299,7 +299,7 @@ function launchAndCollect!( init,
                 if simu_phaseMethod == :CTMC
                     ionProbCollect[pxIdx,pyIdx,pzIdx, threadid()] += init[8,i] # ionRate
                 else
-                    ionProbCollect[pxIdx,pyIdx,pzIdx, threadid()] += sqrt(init[8,i])*exp(1im*init[9,i]) # sqrt(ionRate)*phaseFactor
+                    ionProbCollect[pxIdx,pyIdx,pzIdx, threadid()] += sqrt(init[8,i])*exp(1im*phase) # sqrt(ionRate)*phaseFactor
                 end
             else
                 classRates_ion_uncollected[threadid()] += init[8,i]
@@ -317,7 +317,7 @@ function launchAndCollect!( init,
                     if simu_phaseMethod == :CTMC
                         rydProbCollect[nIdx,lIdx,mIdx,threadid()] += init[8,i]
                     else
-                        rydProbCollect[nIdx,lIdx,mIdx,threadid()] += sqrt(init[8,i])*exp(1im*init[9,i])
+                        rydProbCollect[nIdx,lIdx,mIdx,threadid()] += sqrt(init[8,i])*exp(1im*phase)
                     end
                 else
                     classRates_ryd_uncollected[threadid()] += init[8,i]
