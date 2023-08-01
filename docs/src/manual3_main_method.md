@@ -272,7 +272,7 @@ This library provides some parameters to customize the collecting and saving pro
 
 - `final_p_max = (pxMax,pyMax,pzMax)` : Boundaries of final momentum spectrum collected in three dimensions.
 - `final_p_num = (pxNum,pyNum,pzNum)` : Numbers of final momentum spectrum collected in three dimensions.
-- `save_3D_spec = false` : Determines whether to save the 3D momentum spectrum (otherwise 2D) (default `false`).
+- `save_3D_spec = false` : Determines whether the 3D momentum spectrum is saved (if not, will only save 2D by flattening on the xy plane) (default `false`).
 
 Electrons with positive final energies would be collected and placed on the 3D momentum grid determined by `final_p_max` and `final_p_num`.
 When setting `save_3D_spec = false`, the three-dimensional final momentum spectrum would be squashed into two-dimensional ones (by summing over the z axis).
@@ -300,15 +300,31 @@ If the parameter is left unspecified or an error occurs when trying to write to 
 Apart from the information related to the momentum and Rydberg spectrum, an abstract encoded in YAML, which contains necessary input parameters, is also saved in the `abstract` entry of the output file.
 
 The output file can be opened and accessed using the [HDF5.jl](https://github.com/JuliaIO/HDF5.jl) or [JLD2.jl](https://github.com/JuliaIO/JLD2.jl) packages.
-Below shows the structure of a typical output file.
-
+Below shows the structure of typical output files.
 ```
+# saving only 2D momentum spectrum
 🗂️ HDF5.File
 ├─ 🔢 abstract
+├─ 🔢 info
 ├─ 🔢 ion_prob
 ├─ 🔢 ion_prob_uncollected
 ├─ 🔢 momentum_spec_2D
+├─ 🔢 num_effective_traj
 ├─ 🔢 px
 └─ 🔢 py
+```
+```
+# saving 3D momentum spectrum
+🗂️ HDF5.File
+├─ 🔢 abstract
+├─ 🔢 info
+├─ 🔢 ion_prob
+├─ 🔢 ion_prob_uncollected
+├─ 🔢 momentum_spec_2D
+├─ 🔢 momentum_spec_3D
+├─ 🔢 num_effective_traj
+├─ 🔢 px
+├─ 🔢 py
+└─ 🔢 pz
 ```
 
