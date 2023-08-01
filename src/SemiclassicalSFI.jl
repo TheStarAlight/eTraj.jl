@@ -168,32 +168,34 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         classical_prob[:ryd]                = 0.
         classical_prob[:ryd_uncollected]    = 0.
     #   * launch electrons and collect
-    prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
-    prog2 = Progress(batch_num(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
+    batchNum = batch_num(sp)
+    prog = Progress(batchNum; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true)
     cont_empty_bat = 0    # number of continous empty batches.
     warn_thr_cont_empty_bat = 20  # if the number of continous empty batches reaches the threshold, will throw a warning.
+    n_eff_traj = 0  # number of effective trajectories that are launched.
     for batchId in 1:batch_num(sp)
         init = gen_electron_batch(sp, batchId)
         if isnothing(init)
             cont_empty_bat += 1
             if batchId == batch_num(sp)
                 if cont_empty_bat > warn_thr_cont_empty_bat
-                    @warn "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
+                    @debug "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
                 end
             end
         else
             if cont_empty_bat > warn_thr_cont_empty_bat # count the total continous empty batches and throw the warning.
-                @warn "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
+                @debug "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
             end
             cont_empty_bat = 0
+            n_eff_traj += size(init,2)
             launch_and_collect!(init,
                                 ion_prob_final, ion_prob_sum_temp, ion_prob_collect,
                                 ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect,
                                 classical_prob; kwargs...)
         end
-        next!(prog1,spinner=raw"-\|/"); next!(prog2);
+        next!(prog,desc="Launching electrons and collecting ... [batch #$batchId/$batchNum, $(n_eff_traj) electrons collected]")
     end
-    finish!(prog1); finish!(prog2); println();
+    finish!(prog); println();
     if traj_phase_method != :CTMC
         ion_prob_final = abs2.(ion_prob_final)
         if final_ryd_collect
@@ -274,6 +276,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         file["ryd_prob"] = classical_prob[:ryd]
         file["ryd_prob_uncollected"] = classical_prob[:ryd_uncollected]
     end
+    file["num_effective_traj"] = n_eff_traj
     close(file)
     @info "Task finished, data saved at \"$(save_path)\"."
 end
@@ -347,6 +350,7 @@ function launch_and_collect!( init,
             continue
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i][end][7])
+        prob = init[8,i]
         if traj_phase_method == :SCTS # asymptotic Coulomb phase correction term in SCTS
             sqrtb = (2Ip)^(-0.5)
             g = sqrt(1+2Ip*((y*pz-z*py)^2+(z*px-x*pz)^2+(x*py-y*px)^2))
@@ -358,7 +362,7 @@ function launch_and_collect!( init,
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
         if E_inf ≥ 0    # finally ionized.
-            class_prob_ion[threadid] += init[8,i]
+            class_prob_ion[threadid] += prob
             p_inf = sqrt(2E_inf)
             a_vec = p_vec × L_vec - nucl_charge * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
@@ -379,15 +383,15 @@ function launch_and_collect!( init,
             end
             if checkbounds(Bool, ion_prob_collect, pxIdx,pyIdx,pzIdx, threadid)
                 if traj_phase_method == :CTMC
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += init[8,i] # prob
+                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += prob # prob
                 else
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(init[8,i])*exp(1im*init[9,i]) # sqrt(prob)*phase_factor
+                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
-                class_prob_ion_uncollected[threadid] += init[8,i]
+                class_prob_ion_uncollected[threadid] += prob
             end
         else            # finally become rydberg.
-            class_prob_ryd[threadid] += init[8,i]
+            class_prob_ryd[threadid] += prob
             if final_ryd_collect
                 n = round(Int, nucl_charge / sqrt(-2E_inf))
                 l = round(Int, (sqrt(1.0+4L2)-1.0)/2)
@@ -397,15 +401,15 @@ function launch_and_collect!( init,
                 mIdx = m+final_ryd_n_max
                 if checkbounds(Bool, ryd_prob_collect, nIdx,lIdx,mIdx, threadid)
                     if traj_phase_method == :CTMC
-                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += init[8,i]
+                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += prob
                     else
-                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += sqrt(init[8,i])*exp(1im*init[9,i])
+                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += sqrt(prob)*exp(1im*phase)
                     end
                 else
-                    class_prob_ryd_uncollected[threadid] += init[8,i]
+                    class_prob_ryd_uncollected[threadid] += prob
                 end
             else
-                class_prob_ryd_uncollected[threadid] += init[8,i]
+                class_prob_ryd_uncollected[threadid] += prob
             end
         end
     end
@@ -425,6 +429,40 @@ function default_filename()
     Y,M,D = yearmonthday(now())
     h,m,s = hour(now()), minute(now()), second(now())
     return "SCSFI-$(string(Y,pad=4))$(string(M,pad=2))$(string(D,pad=2))-$(string(h,pad=2))$(string(m,pad=2))$(string(s,pad=2)).h5"
+end
+
+"Solves a single batch of electron whose initial conditions are contained in `init`, generated by the `*SampleProvider`."
+function _debug_solve_init_traj(;
+            init,
+            laser               ::Laser,
+            target              ::Target,
+            traj_t_final        ::Real,
+            traj_phase_method   ::Symbol,
+            traj_rtol           ::Real,
+            traj_nondipole      ::Bool,
+            traj_GPU            ::Bool,
+            save_everystep      ::Bool = true,  # note: GPU doesn't support saving everystep.
+            kwargs...
+            )
+    Fx::Function    = LaserFx(laser)
+    Fy::Function    = LaserFy(laser)
+    traj::Function  = TrajectoryFunction(target, Fx,Fy,traj_phase_method,traj_nondipole)
+    batch_size = size(init,2)
+    prob_dim = (traj_phase_method == :CTMC) ? 6 : 7 # x,y,z,px,py,pz[,phase]
+    traj_ODE_prob::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,prob_dim)), Float64.((0,traj_t_final)))
+    init_traj::Function =
+        if prob_dim == 6
+            (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]),     tspan = (init[7,i],Float64(traj_t_final)))
+        else
+            (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],Float64(traj_t_final)))
+        end
+    ensemble_prob::EnsembleProblem = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
+    sol =
+        if ! traj_GPU
+            solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=save_everystep)
+        else
+            solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=save_everystep)
+        end
 end
 
 end
