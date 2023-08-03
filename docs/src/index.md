@@ -74,7 +74,7 @@ Pkg.test("SemiclassicalSFI")
     # (@v1.8) pkg> add package_name@1.0
     ```
 
-    It is shown that *OrdinaryDiffEq@6.53.3* and *DiffEqGPU@2.4.1* runs well on Windows 10 (10.0.19044) and WSL Ubuntu (22.04.1 LTS).
+    It is shown that *OrdinaryDiffEq@6.53.3* and *DiffEqGPU@2.4.1* runs well on Windows 10 (10.0.19044), WSL Ubuntu (22.04.1 LTS) and Manjaro Linux (Uranos 23.0.0).
 
 ### Configuring Python and PySCF
 

@@ -1,6 +1,7 @@
 # === example_phase_methods_SCTS.jl ===
 #
 # To investigate the difference between the phase methods QTMC and SCTS, we emplopyed the QTMC and SCTS as the phase methods during the trajectory simulation.
+# The parameters are taken from [Phys. Rev. A 94, 013415 (2016)].
 # This is the SCTS task.
 #
 # To run the example, a julia intepreter (version ≥ 1.7) with the *SemiclassicalSFI* package (and its dependencies) installed is required.

@@ -260,6 +260,11 @@ The GPU acceleration now only supports the NVIDIA graphic cards, which also requ
 !!! compat "Note: Experimental feature"
     GPU acceleration is an experimental feature of the package and the API may change in the near future.
 
+!!! note "Note: GPU acceleration efficiency"
+    The GPU's advantage of speed over CPU may not be so obvious in the trajectory simulation.
+    Sometimes the program is even slower when using GPU.
+    Thus it's better to benchmark for specific hardware and choose the most efficient option.
+
 ## Final Electron Collecting & Saving
 
 After the trajectory simulation ends, the electrons would be analyzed and collected.
@@ -277,7 +282,7 @@ This library provides some parameters to customize the collecting and saving pro
 Electrons with positive final energies would be collected and placed on the 3D momentum grid determined by `final_p_max` and `final_p_num`.
 When setting `save_3D_spec = false`, the three-dimensional final momentum spectrum would be squashed into two-dimensional ones (by summing over the z axis).
 
-The ``p_x``, ``p_y`` and ``p_z`` grids would be saved in entries that are named after `px`, `py` and `pz` respectively in the output file, and the final momentum spectrum would be saved in the `momentum_spec_2D` or `momentum_spec_3D` entry.
+The ``p_x``, ``p_y`` and ``p_z`` grids would be saved in entries that are named after `px`, `py` and `pz` respectively in the output file, and the final momentum spectrum would be saved in the `momentum_spec_2D` or `momentum_spec_3D` entry (compressed to reduce the file size).
 
 ### Rydberg Final State Collecting
 
