@@ -12,7 +12,6 @@ struct MOADKSampler <: ElectronSampleProvider
     cutoff_limit    ::Real;
     tun_exit        ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
     ion_orbit_idx   ::Integer;
-    ion_orbit_m     ::Integer;
 
     function MOADKSampler(; laser               ::Laser,
                             target              ::Molecule,
@@ -24,7 +23,6 @@ struct MOADKSampler <: ElectronSampleProvider
                             ss_kz_num           ::Integer,
                             sample_cutoff_limit ::Real,
                             mol_orbit_idx       ::Integer,
-                            moadk_orbit_m       ::Integer,
                             kwargs...   # kwargs are surplus params.
                             )
         # check sampling parameters.
@@ -32,8 +30,8 @@ struct MOADKSampler <: ElectronSampleProvider
         @assert (sample_cutoff_limit≥0) "[MOADKSampler] Invalid cut-off limit $sample_cutoff_limit."
         @assert (ss_kd_num>0 && ss_kz_num>0) "[MOADKSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         # if coefficients are not available, calculate it.
-        if ! (mol_orbit_idx in MolMOADKAvailableIndices(target))
-            MolCalcMOADKCoeff!(target, mol_orbit_idx)
+        if ! (mol_orbit_idx in MolAsympCoeffAvailableIndices(target))
+            MolCalcAsympCoeff!(target, mol_orbit_idx)
         end
         # check Keldysh parameter & over-barrier condition.
         Ip = IonPotential(target, mol_orbit_idx)
@@ -52,14 +50,12 @@ struct MOADKSampler <: ElectronSampleProvider
         elseif F0 ≥ F_crit*2/3
             @warn "[MOADKSampler] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
         end
-        # check moadk m.
-        @assert moadk_orbit_m≥0 "[MOADKSampler] `moadk_orbit_m` should be non-negative."
         # finish initialization
         return new( laser, target,
                     range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                     range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                     sample_cutoff_limit, tun_exit,
-                    mol_orbit_idx, moadk_orbit_m)
+                    mol_orbit_idx)
     end
 end
 
@@ -105,10 +101,10 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
     # determining tunneling rate Γ.
     # the total tunneling rate consists of partial rates of different m' : Γ = ∑ Γ_m'
     # the partial rate consists of a structural part |B_m'|²/(2^|m'|*|m'|!) and a field part W_m'(F) = κ^(-|m'|) * (2κ²/F)^(2Z/κ-|m'|-1) * exp(-2κ³/3F)
-    lMax = MolMOADKCoeff_lMax(sp.target, sp.ion_orbit_idx)
+    lMax = MolAsympCoeff_lMax(sp.target, sp.ion_orbit_idx)
     B_data = zeros(ComplexF64, 2lMax+1) # to get B(m_), call B_data[m_+lMax+1]
     for m_ in -lMax:lMax
-        B_data[m_+lMax+1] = MolMOADKStructureFactor_B(sp.target, sp.ion_orbit_idx, sp.ion_orbit_m, m_, β, γ)
+        B_data[m_+lMax+1] = MolMOADKStructureFactor_B(sp.target, sp.ion_orbit_idx, m_, β, γ)
     end
     rate::Function =
         function (F,kd,kz)

@@ -37,18 +37,18 @@ mutable struct Molecule <: Target
     # WFAT IntData
     wfat_data_available::Bool;
     "Available orbital indices of WFAT IntData."
-    wfat_orbital_indices::Set
+    wfat_orbital_indices::Set;
     "WFAT IntData of the molecule's molecular orbitals."
     wfat_intdata::Dict;
     "Orbital dipole moment of the molecule's molecular orbitals."
     wfat_μ::Dict;
 
-    # MOADK Coeff
-    moadk_data_available::Bool;
-    "Available orbital indices of MOADK coefficients."
-    moadk_orbital_indices::Set;
-    "MOADK coefficients of the molecule's molecular orbitals."
-    moadk_coeff::Dict;
+    # Asymptotic Coeff
+    asymp_coeff_available::Bool;
+    "Available orbital indices of asymptotic coefficients."
+    asymp_coeff_orbital_indices::Set;
+    "Asymptotic coefficients of the molecule's molecular orbitals."
+    asymp_coeff::Dict;
 
     #* properties that would not be stored in data
 
@@ -78,7 +78,7 @@ mutable struct Molecule <: Target
                     atoms, atom_coords, charge, name,
                     false, nothing, -1,             # energy_data
                     false, Set(), Dict(), Dict(),   # wfat_data
-                    false, Set(), Dict(),           # moadk_data
+                    false, Set(), Dict(),           # asymp_coeff
                     rot_α,rot_β,rot_γ)
         if ! (data_path=="")
             MolSaveDataAs(mol, data_path)
@@ -96,42 +96,42 @@ mutable struct Molecule <: Target
     function Molecule(data_path::String, rot_α=0.,rot_β=0.,rot_γ=0.)
         file = h5open(data_path,"r")
         # reads MolInfo
-        MolInfo = open_group(file, "MolInfo")
-        atoms = read_dataset(MolInfo, "atoms")
-        atom_coords = read_dataset(MolInfo, "atom_coords")
-        charge = read_dataset(MolInfo, "charge")
-        name = read_dataset(MolInfo, "name")
+        info_group = open_group(file, "Info")
+        atoms = read_dataset(info_group, "atoms")
+        atom_coords = read_dataset(info_group, "atom_coords")
+        charge = read_dataset(info_group, "charge")
+        name = read_dataset(info_group, "name")
         # reads MolEnergy
-        energy_data_available = haskey(file, "MolEnergy")
+        energy_data_available = haskey(file, "Energy")
         energy_levels = nothing
         HOMO_index = -1
         if energy_data_available
-            MolEnergy = open_group(file, "MolEnergy")
-            energy_levels = read_dataset(MolEnergy, "energy_levels")
-            HOMO_index = read_dataset(MolEnergy, "HOMO_index")
+            energy_group = open_group(file, "Energy")
+            energy_levels = read_dataset(energy_group, "energy_levels")
+            HOMO_index = read_dataset(energy_group, "HOMO_index")
         end
-        # reads WFAT
-        wfat_data_available = haskey(file, "WFAT")
+        # reads WFAT data
+        wfat_data_available = haskey(file, "WFAT Data")
         wfat_orbital_indices = Set()
         wfat_intdata = Dict()
         wfat_μ = Dict()
         if wfat_data_available
-            wfat = open_group(file, "WFAT")
-            wfat_orbital_indices = Set(read_dataset(wfat, "orbital_indices"))
+            wfat_group = open_group(file, "WFAT Data")
+            wfat_orbital_indices = Set(read_dataset(wfat_group, "orbital_indices"))
             for idx in wfat_orbital_indices
-                wfat_intdata[idx] = read_dataset(wfat, "intdata_$idx")
-                wfat_μ[idx] = read_dataset(wfat, "μ_$idx")
+                wfat_intdata[idx] = read_dataset(wfat_group, "intdata_$idx")
+                wfat_μ[idx] = read_dataset(wfat_group, "μ_$idx")
             end
         end
-        # reads MOADK
-        moadk_data_available = haskey(file, "MOADK")
-        moadk_orbital_indices = Set()
-        moadk_coeff = Dict()
-        if moadk_data_available
-            moadk = open_group(file, "MOADK")
-            moadk_orbital_indices = Set(read_dataset(moadk, "orbital_indices"))
-            for idx in moadk_orbital_indices
-                moadk_coeff[idx] = read_dataset(moadk, "coeff_$idx")
+        # reads asymptotic coefficients
+        asymp_coeff_available = haskey(file, "Asymptotic Coefficients")
+        asymp_coeff_orbital_indices = Set()
+        asymp_coeff = Dict()
+        if asymp_coeff_available
+            asymp_coeff_group = open_group(file, "Asymptotic Coefficients")
+            asymp_coeff_orbital_indices = Set(read_dataset(asymp_coeff_group, "orbital_indices"))
+            for idx in asymp_coeff_orbital_indices
+                asymp_coeff[idx] = read_dataset(asymp_coeff_group, "coeff_$idx")
             end
         end
 
@@ -141,7 +141,7 @@ mutable struct Molecule <: Target
                     atoms, atom_coords, charge, name,
                     energy_data_available, energy_levels, HOMO_index,
                     wfat_data_available, wfat_orbital_indices, wfat_intdata, wfat_μ,
-                    moadk_data_available, moadk_orbital_indices, moadk_coeff,
+                    asymp_coeff_available, asymp_coeff_orbital_indices, asymp_coeff,
                     rot_α,rot_β,rot_γ)
     end
 end
@@ -287,72 +287,74 @@ function MolWFATMaxChannels(mol::Molecule, orbitIdx_relHOMO::Integer)
     return (nξMax, mMax)
 end
 
-"Gets the available orbital indices (relative to HOMO) of the molecule's MOADK coefficients."
-function MolMOADKAvailableIndices(mol::Molecule)
-    return if mol.moadk_data_available
-        mol.moadk_orbital_indices
+"Gets the available orbital indices (relative to HOMO) of the molecule's asymptotic coefficients."
+function MolAsympCoeffAvailableIndices(mol::Molecule)
+    return if mol.asymp_coeff_available
+        mol.asymp_coeff_orbital_indices
     else
         Set()
     end
 end
 """
-Gets the MOADK coefficients.
+Gets the asymptotic coefficients of the molecule.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 """
-function MolMOADKCoeffs(mol::Molecule, orbitIdx_relHOMO::Integer=0)
+function MolAsympCoeff(mol::Molecule, orbitIdx_relHOMO::Integer=0)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
-    if ! (mol.moadk_data_available || (orbitIdx_relHOMO in mol.moadk_orbital_indices))
-        MolCalcMOADKCoeff!(mol, orbitIdx_relHOMO)
+    if ! (mol.asymp_coeff_available || (orbitIdx_relHOMO in mol.asymp_coeff_orbital_indices))
+        MolCalcAsympCoeff!(mol, orbitIdx_relHOMO)
     end
-    return mol.moadk_coeff[orbitIdx_relHOMO]
+    return mol.asymp_coeff[orbitIdx_relHOMO]
 end
 """
-Gets the MOADK structure factor \$B_m(m')\$ according to the given Euler angles `β` and `γ` (ZYZ convention).
+Gets the MOADK structure factor \$B(m')\$ according to the given Euler angles `β` and `γ` (ZYZ convention).
 Note: the rotational Euler angles of the molecule would not be applied.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
-- `m`   : Magnetic quantum number m=0,1,⋯ depending on the orbital symmetry (|m| up to 6 is calculated by default).
 - `m_`  : Magnetic quantum number m'=⋯,-1,0,1,⋯.
 - `β`   : Euler angle β, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 - `γ`   : Euler angle γ, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 """
-function MolMOADKStructureFactor_B(mol::Molecule, orbitIdx_relHOMO::Integer, m::Integer, m_::Integer, β,γ)
+function MolMOADKStructureFactor_B(mol::Molecule, orbitIdx_relHOMO::Integer, m_::Integer, β,γ)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
-    if ! (mol.moadk_data_available || (orbitIdx_relHOMO in mol.moadk_orbital_indices))
-        MolCalcMOADKCoeff!(mol, orbitIdx_relHOMO)
+    if ! (mol.asymp_coeff_available || (orbitIdx_relHOMO in mol.asymp_coeff_orbital_indices))
+        MolCalcAsympCoeff!(mol, orbitIdx_relHOMO)
     end
     @assert (typeof(β)<:Real && typeof(γ)<:Real) || ((typeof(β)<:AbstractVector{T} where T<:Real) && (typeof(γ)<:AbstractVector{T} where T<:Real) && size(β,1)==size(γ,1)) "[Molecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
-    moadk_coeff = mol.moadk_coeff[orbitIdx_relHOMO]
-    l_max = size(moadk_coeff, 1) - 1
-    if abs(m)>l_max
-        @error "[Molecule] The given |m|=$(abs(m)) is larger than the maximum value $(l_max), zero value would be returned."
-        return typeof(β)<:Real ? 0.0 : repeat([0.0],size(β,1))
-    end
-    Q_lm(l,m) = (-1)^m * sqrt((2l+1)*factorial(l+abs(m))/2/factorial(l-abs(m)))
+    asymp_coeff = mol.asymp_coeff[orbitIdx_relHOMO]
+    l_max = size(asymp_coeff, 1) - 1
+    Q_lm(l,m) = (-1)^((m+abs(m))/2) * sqrt((2l+1)*factorial(l+abs(m))/2/factorial(l-abs(m)))
 
     if typeof(β)<:Real  # passed as a `Real` value
         sum = zero(ComplexF64)
-        for l in abs(m_):l_max
-            sum += moadk_coeff[l+1,m+1] * Q_lm(l,m_) * WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
+        for l in abs(m_):l_max, m in -l:l
+            sum += asymp_coeff[l+1,m+l+1] * Q_lm(l,m_) * WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
         end
         return sum
     else    # passed as a Vector
         sum = zeros(ComplexF64, size(β))
-        for l in abs(m_):l_max
-            sum .+= moadk_coeff[l+1,m+1] * Q_lm(l,m_) * @. WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
+        for l in abs(m_):l_max, m in -l:l
+            sum .+= asymp_coeff[l+1,m+l+1] * Q_lm(l,m_) * @. WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
         end
         return sum
     end
 end
 
 """
-Gets the maximum value of l calculated in the MOADK coefficients.
+Gets the maximum value of l calculated in the asymptotic coefficients.
 """
-function MolMOADKCoeff_lMax(mol::Molecule, orbitIdx_relHOMO::Integer)
-    return size(MolMOADKCoeffs(mol, orbitIdx_relHOMO), 1) - 1
+function MolAsympCoeff_lMax(mol::Molecule, orbitIdx_relHOMO::Integer)
+    return size(MolAsympCoeff(mol, orbitIdx_relHOMO), 1) - 1
+end
+
+"""
+Gets the maximum value of m calculated in the asymptotic coefficients.
+"""
+function MolAsympCoeff_mMax(mol::Molecule, orbitIdx_relHOMO::Integer)
+    return size(MolAsympCoeff(mol, orbitIdx_relHOMO), 2) - 1
 end
 
 "Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
@@ -397,10 +399,10 @@ function _MolSaveEnergyData(mol::Molecule, file::HDF5.File)
     if ! mol.energy_data_available
         return
     end
-    if ! haskey(file,"MolEnergy")
-        create_group(file,"MolEnergy")
+    if ! haskey(file,"Energy")
+        create_group(file,"Energy")
     end
-    g = open_group(file, "MolEnergy")
+    g = open_group(file, "Energy")
     haskey(g,"energy_levels") && delete_object(g,"energy_levels")   # HDF5 doesn't support overwriting.
     haskey(g,"HOMO_index") && delete_object(g,"HOMO_index")
     write_dataset(g,"energy_levels",mol.energy_levels)
@@ -412,7 +414,7 @@ function _MolSaveEnergyData(mol::Molecule)
         return
     end
     if ! isfile(mol.data_path)
-        error("[Molecule] Destination file \"$(mol.data_path)\" not exists.")
+        error("[Molecule] Destination file \"$(mol.data_path)\" does not exist.")
     end
     file = h5open(mol.data_path,"r+")
     _MolSaveEnergyData(mol,file)
@@ -434,9 +436,7 @@ function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::
         mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
     if ! mol.energy_data_available  # won't replace if the data exists.
-        mol.energy_data_available = true
-        mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
-        mol.HOMO_index = MolecularCalculators.HOMOIndex(mol.mol_calc)
+        MolCalcEnergyData!(mol, MCType)
     end
     mol.wfat_data_available = true
     if isnothing(mol.wfat_orbital_indices)
@@ -445,7 +445,7 @@ function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::
         mol.wfat_μ = Dict()
     end
     push!(mol.wfat_orbital_indices, orbitIdx_relHOMO)
-    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calcStructFactorData(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calc_WFAT_data(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
     _MolSaveWFATData(mol,orbitIdx_relHOMO)
 end
 function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
@@ -453,10 +453,10 @@ function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Inte
     if ! mol.wfat_data_available
         return
     end
-    if ! haskey(file,"WFAT")
-        create_group(file,"WFAT")
+    if ! haskey(file,"WFAT Data")
+        create_group(file,"WFAT Data")
     end
-    g = open_group(file, "WFAT")
+    g = open_group(file, "WFAT Data")
     if ! haskey(g, "orbital_indices")
         write_dataset(g,"orbital_indices",Vector{Int32}())     # directly passing an empty array [] results in error.
     end
@@ -474,7 +474,7 @@ function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Integer)
         return
     end
     if ! isfile(mol.data_path)
-        error("[Molecule] Destination file \"$(mol.data_path)\" not exists.")
+        error("[Molecule] Destination file \"$(mol.data_path)\" does not exist.")
     end
     file = h5open(mol.data_path,"r+")
     _MolSaveWFATData(mol,file,orbitIdx_relHOMO)
@@ -482,47 +482,39 @@ function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Integer)
     @info "[Molecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 """
-Calculates the MOADK coefficients of the molecule and saves the data.
+Calculates the asymptotic coefficients of the molecule and saves the data.
 - `MCType`              : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
 - `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator`, e.g. `grid_rNum`, `l_max`.
 """
-function MolCalcMOADKCoeff!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
+function MolCalcAsympCoeff!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
             error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
         mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
-    # MOADK is applicable for diatomic molecules with molecular axis along z axis.
-    if size(mol.atoms,1) != 2
-        @warn "[Molecule] MOADK is applicable for diatomic molecules, while this Molecule has $(size(mol.atoms,1)) atom(s)."
-    elseif sum(abs.(mol.atom_coords[:,1:2])) != 0.0 # the molecular axis is not along z axis
-        @warn "[Molecule] MOADK coefficient calculation requires the molecular axis to be along z axis, while this Molecule's molecular axis is not."
-    end
     if ! mol.energy_data_available  # won't replace if the data exists.
-        mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
-        mol.HOMO_index = MolecularCalculators.HOMOIndex(mol.mol_calc)
-        mol.energy_data_available = true
+        MolCalcEnergyData!(mol, MCType)
     end
-    if isnothing(mol.moadk_orbital_indices)
-        mol.moadk_orbital_indices = Set()
-        mol.moadk_coeff = Dict()
+    if isnothing(mol.asymp_coeff_available)
+        mol.asymp_coeff_orbital_indices = Set()
+        mol.asymp_coeff = Dict()
     end
-    push!(mol.moadk_orbital_indices, orbitIdx_relHOMO)
-    mol.moadk_coeff[orbitIdx_relHOMO] = MolecularCalculators.calcMOADKCoeff(; mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
-    mol.moadk_data_available = true
-    _MolSaveMOADKCoeff(mol, orbitIdx_relHOMO)
+    push!(mol.asymp_coeff_orbital_indices, orbitIdx_relHOMO)
+    mol.asymp_coeff[orbitIdx_relHOMO] = MolecularCalculators.calc_asymp_coeff(; mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    mol.asymp_coeff_available = true
+    _MolSaveAsympCoeff(mol, orbitIdx_relHOMO)
 end
-function _MolSaveMOADKCoeff(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
+function _MolSaveAsympCoeff(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
     # this method will not close the file handle!
-    if ! mol.moadk_data_available
+    if ! mol.asymp_coeff_available
         return
     end
-    if ! haskey(file, "MOADK")
-        create_group(file, "MOADK")
+    if ! haskey(file, "Asymptotic Coefficients")
+        create_group(file, "Asymptotic Coefficients")
     end
-    g = open_group(file, "MOADK")
+    g = open_group(file, "Asymptotic Coefficients")
     if ! haskey(g, "orbital_indices")
         write_dataset(g,"orbital_indices",Vector{Int32}())     # directly passing an empty array [] results in error.
     end
@@ -530,20 +522,20 @@ function _MolSaveMOADKCoeff(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::In
     haskey(g,"orbital_indices") && delete_object(g,"orbital_indices")   # HDF5 doesn't support overwriting.
     haskey(g,"coeff_$(orbitIdx_relHOMO)") && delete_object(g,"coeff_$(orbitIdx_relHOMO)")
     write_dataset(g,"orbital_indices", indices)
-    write_dataset(g,"coeff_$(orbitIdx_relHOMO)", mol.moadk_coeff[orbitIdx_relHOMO])
+    write_dataset(g,"coeff_$(orbitIdx_relHOMO)", mol.asymp_coeff[orbitIdx_relHOMO])
 end
-function _MolSaveMOADKCoeff(mol::Molecule, orbitIdx_relHOMO::Integer)
+function _MolSaveAsympCoeff(mol::Molecule, orbitIdx_relHOMO::Integer)
     # open, write and close.
     if mol.data_path==""    # would not save if data_path is empty.
         return
     end
     if ! isfile(mol.data_path)
-        error("[Molecule] Destination file \"$(mol.data_path)\" not exists.")
+        error("[Molecule] Destination file \"$(mol.data_path)\" does not exist.")
     end
     file = h5open(mol.data_path,"r+")
-    _MolSaveMOADKCoeff(mol,file,orbitIdx_relHOMO)
+    _MolSaveAsympCoeff(mol,file,orbitIdx_relHOMO)
     close(file)
-    @info "[Molecule] MOADK coefficients of orbital index $(orbitIdx_relHOMO) saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    @info "[Molecule] Asymptotic coefficients of orbital index $(orbitIdx_relHOMO) saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
 "Saves the data of the `Molecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`)."
@@ -564,13 +556,13 @@ function MolSaveDataAs(mol::Molecule, data_path::String)
     end
     mol.data_path = data_path
     file = h5open(data_path, "w")
-    #* writes MolInfo
-    MolInfo = create_group(file, "MolInfo")
-    MolInfo["atoms"] = mol.atoms
-    MolInfo["atom_coords"] = mol.atom_coords
-    MolInfo["charge"] = mol.charge
-    MolInfo["name"] = mol.name
-    #* writes MolEnergy
+    #* writes Info
+    info_group = create_group(file, "Info")
+    info_group["atoms"] = mol.atoms
+    info_group["atom_coords"] = mol.atom_coords
+    info_group["charge"] = mol.charge
+    info_group["name"] = mol.name
+    #* writes Energy
     if mol.energy_data_available
         _MolSaveEnergyData(mol,file)
     end
@@ -580,10 +572,10 @@ function MolSaveDataAs(mol::Molecule, data_path::String)
             _MolSaveWFATData(mol,file,idx)
         end
     end
-    #* writes MOADK
-    if mol.moadk_data_available
-        for idx in mol.moadk_orbital_indices
-            _MolSaveMOADKCoeff(mol,file,idx)
+    #* writes Asymptotic Coeff
+    if mol.asymp_coeff_available
+        for idx in mol.asymp_coeff_orbital_indices
+            _MolSaveAsympCoeff(mol,file,idx)
         end
     end
 
@@ -640,7 +632,7 @@ function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function,
                 @SVector [du1,du2,du3,du4,du5,du6]
             end
         else
-            #TODO: QTMC & SCTS can be added if any theory on phase comes out.
+            #TODO: QTMC & SCTS.
         end
     else
         if phase_method == :CTMC
@@ -657,7 +649,7 @@ function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function,
                 @SVector [du1,du2,du3,du4,du5,du6]
             end
         else
-            #TODO: QTMC & SCTS can be added if any theory on phase comes out.
+            #TODO: QTMC & SCTS.
         end
     end
 end

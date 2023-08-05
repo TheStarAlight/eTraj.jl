@@ -17,9 +17,9 @@ export ADKRateExp
 export Molecule
 export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolEnergyDataAvailable, MolHOMOEnergy, MolHOMOIndex
 export MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolWFATMaxChannels
-export MolMOADKAvailableIndices, MolMOADKCoeffs, MolMOADKStructureFactor_B, MolMOADKCoeff_lMax
+export MolAsympCoeffAvailableIndices, MolAsympCoeff, MolAsympCoeff_lMax, MolMOADKStructureFactor_B
 export MolRotation, SetMolRotation, MolExportAtomInfo
-export MolCalcEnergyData!, MolCalcWFATData!, MolCalcMOADKCoeff!, MolSaveDataAs
+export MolCalcEnergyData!, MolCalcWFATData!, MolCalcAsympCoeff!, MolSaveDataAs
 
 export MolecularCalculators
 export PySCFMolecularCalculator

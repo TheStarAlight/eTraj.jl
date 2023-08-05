@@ -68,9 +68,6 @@ Performs a semiclassical simulation with given parameters.
 ## Optional params. for target `Molecule`:
 - `mol_orbit_idx = 0`   : Index of the ionizing orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1) (default `0`).
 
-## Optional params. for MO-ADK method:
-- `moadk_orbit_m = 0`   : Magnetic quantum number m of the ionizing orbital along the z axis. m = 0,1,2 indicate σ, π and δ respectively (default `0`).
-
 ## Optional params. for ADK method:
 - `adk_tun_exit = <:IpF|:FDM|:Para>` : Tunneling exit method for ADK methods (when `init_cond_method==:ADK`) (default `:IpF`).
 
@@ -108,8 +105,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     rate_prefix         ::Symbol    = :ExpRate,
                         #* opt. params. for target `Molecule`
                     mol_orbit_idx       ::Integer   = 0,
-                        #* opt. params. for molecular MOADK method
-                    moadk_orbit_m       ::Integer   = 0,
                         #* opt. params. for atomic ADK method
                     adk_tun_exit        ::Symbol    = :IpF
                     )
@@ -132,7 +127,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     mc_kp_num, mc_kp_max,
                     traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_cutoff_limit, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
-                    moadk_orbit_m,
                     adk_tun_exit)
     #* initialize sample provider.
     sp::ElectronSampleProvider = init_sampler(;kwargs...)
@@ -250,10 +244,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         # opt. params. for target `Molecule`
         if typeof(target) <: Targets.Molecule
             dict_out[:mol_orbit_idx]    = mol_orbit_idx
-        end
-        # opt. params. for molecular MOADK method
-        if init_cond_method == :MOADK
-            dict_out[:moadk_orbit_m]    = moadk_orbit_m
         end
         # opt. params. for atomic ADK method
         if init_cond_method == :ADK

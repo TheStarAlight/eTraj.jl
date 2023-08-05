@@ -99,10 +99,10 @@ function DipoleMomentum(mc::PySCFMolecularCalculator)
 end
 
 """
-Calculates the DATA used in structure factor calculation in WFAT of the given molecule.
+Calculates the data used in WFAT structure factor calculation of the given molecule.
 
 # Returns
-`(μ, IntData)`  : Orbital dipole momentum and the IntData which stores the integrals.
+`(μ, int_data)` : Orbital dipole momentum and the array which stores the integrals.
 
 # Parameters
 - `mc`              : The molecular calculator.
@@ -115,22 +115,23 @@ Calculates the DATA used in structure factor calculation in WFAT of the given mo
 - `sf_mMax`         : The maximum number of |m| used in calculation (default 3).
 - `sf_lMax`         : The maximum angular quantum number l used in calculation (default 6).
 """
-function calcStructFactorData(; mc::PySCFMolecularCalculator,
-                                orbitIdx_relHOMO::Int = 0,
-                                grid_rNum::Int  = 200,
-                                grid_rMax::Real = 10.,
-                                grid_θNum::Int  = 60,
-                                grid_ϕNum::Int  = 60,
-                                sf_nξMax ::Int = 5,
-                                sf_mMax  ::Int = 5,
-                                sf_lMax  ::Int = 10,
-                                kwargs...)
+function calc_WFAT_data(;
+                        mc::PySCFMolecularCalculator,
+                        orbitIdx_relHOMO::Int = 0,
+                        grid_rNum::Int  = 200,
+                        grid_rMax::Real = 10.,
+                        grid_θNum::Int  = 60,
+                        grid_ϕNum::Int  = 60,
+                        sf_nξMax ::Int = 5,
+                        sf_mMax  ::Int = 5,
+                        sf_lMax  ::Int = 10,
+                        kwargs...)
     # == PROCEDURE ==
     # 0. Obtain the coefficients (finished in the initialization).
     # 1. Calculate the effective core potential.
     # 2. Calculate the integrals and save them as output.
 
-    @info "[PySCFMolecularCalculator] Running calculation of structure factor data... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
+    @info "[PySCFMolecularCalculator] Running calculation of WFAT structure factor data... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
 
     #* Preprocess molecular information
 
@@ -440,25 +441,25 @@ function calcStructFactorData(; mc::PySCFMolecularCalculator,
     prog21 = ProgressUnknown(dt=0.2, desc="Calculating the integrals... ($((sf_nξMax+1)*(2*sf_mMax+1)*(sf_lMax+1)^2) integrals)", color = :cyan, spinner = true)
     prog22 = Progress((sf_nξMax+1)*(2*sf_mMax+1)*(sf_lMax+1)^2; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
 
-    # `IntData` would store the final data: The integral I(nξ,m,l,m')=∫Ω(nξ,m,l,m')*Vc_ψ0(r)*dV.
+    # `int_data` would store the final data: The integral I(nξ,m,l,m')=∫Ω(nξ,m,l,m')*Vc_ψ0(r)*dV.
     # nξ=0,1,⋯,nξMax;  m=0,±1,⋯,±mMax;  l=0,1,⋯,lMax;  m'=-l,-l+1,⋯,0,1,⋯,l.
     # Obtain I(nξ,m,l,m') by indexing [nξ+1, m+mMax+1, l+1, m'+l+1]
-    IntData = zeros(ComplexF64, sf_nξMax+1, 2*sf_mMax+1, sf_lMax+1, 2*sf_lMax+1)
+    int_data = zeros(ComplexF64, sf_nξMax+1, 2*sf_mMax+1, sf_lMax+1, 2*sf_lMax+1)
     Vc_ψ0_dV = Vc_ψ0 .* dV
     for nξ in 0:sf_nξMax
     for m in -sf_mMax:sf_mMax
     for l in 0:sf_lMax
     for m_ in -l:l
-        IntData[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = Folds.mapreduce(i->conj(Ω_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N)
+        int_data[nξ+1, m+sf_mMax+1, l+1, m_+l+1] = Folds.mapreduce(i->conj(Ω_precomp(nξ,m,l,m_,i))*Vc_ψ0_dV[i], +, 1:N)
         next!(prog21,spinner=raw"-\|/"); next!(prog22)
     end; end; end; end
     finish!(prog21); finish!(prog22); println()
 
-    return μ, IntData
+    return μ, int_data
 end
 
 """
-Calculates the MOADK coefficients of the given molecule.
+Calculates the asymptotic coefficients (used in MO-ADK and MO-SFA) of the given molecule.
 
 # Parameters
 - `mc`              : The molecular calculator.
@@ -468,22 +469,19 @@ Calculates the MOADK coefficients of the given molecule.
 - `grid_θNum`       : The number of angular grid in the θ direction (default 60).
 - `grid_ϕNum`       : The number of angular grid in the ϕ direction (default 60).
 - `l_max`           : The maximum number of l calculated (default 6).
-- `m_max`           : The maximum number of m calculated (default 3).
 """
-function calcMOADKCoeff(;
-                        mc::PySCFMolecularCalculator,
-                        orbitIdx_relHOMO::Int = 0,
-                        grid_rNum::Int  = 200,
-                        grid_rReg::Tuple{<:Real,<:Real} = (3,8),
-                        grid_θNum::Int  = 60,
-                        grid_ϕNum::Int  = 60,
-                        l_max::Int      = 6,
-                        m_max::Int      = 3,
-                        kwargs...)
+function calc_asymp_coeff(;
+                            mc::PySCFMolecularCalculator,
+                            orbitIdx_relHOMO::Int = 0,
+                            grid_rNum::Int  = 200,
+                            grid_rReg::Tuple{<:Real,<:Real} = (3,8),
+                            grid_θNum::Int  = 60,
+                            grid_ϕNum::Int  = 60,
+                            l_max::Int      = 6,
+                            kwargs...)
 
-    @info "[PySCFMolecularCalculator] Running calculation of MOADK coefficients... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
+    @info "[PySCFMolecularCalculator] Running calculation of asymptotic coefficients... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
 
-    @assert l_max ≥ m_max "[PySCFMolecularCalculator] l_max ≥ m_max is required."
     #* Preprocess molecular information
 
     pymol = mc._pymol   # storing the molecule's info and the basis's info.
@@ -537,9 +535,9 @@ function calcMOADKCoeff(;
     pt_xyz = hcat(pt_x,pt_y,pt_z)
 
     #* defines output
-    # C_lm stores the MOADK coefficients, l=0,⋯,lMax; m=0,⋯,mMax.
-    # to obtain C_lm, refer to index [l+1,m+1].
-    C_lm = zeros(l_max+1, m_max+1)
+    # C_lm stores the asymptotic coefficients, l=0,⋯,lMax; m=-l,⋯,l.
+    # to obtain C_lm, refer to index [l+1,m+l+1].
+    C_lm = zeros(l_max+1, 2l_max+1)
 
     #* Calculate the wavefunction ψ0
     χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
@@ -548,8 +546,8 @@ function calcMOADKCoeff(;
 
     #* Calculate F_lm(r) and fit C_lm.
     #*  project ψ0 to spherical harmonics Y_lm, obtaining F_lm(r).
-    Threads.@threads for m in 0:m_max
-        for l in m:l_max
+    Threads.@threads for l in 0:l_max
+        for m in -l:l
             F_lm = zeros(ComplexF64, grid_rNum)
             Y_lm = SphericalHarmonics.sphericalharmonic.(θ_grid, ϕ_grid'; l=l, m=m)
             # obtain F_lm(r)
@@ -569,7 +567,7 @@ function calcMOADKCoeff(;
                 elseif abs((conf_int[2]-conf_int[1])/coeff) > 0.5   # the error is too large
                     @warn "[PySCFMolecularCalculator] The fit result of molecular wavefunction (l=$l, m=$m) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
                 else
-                    C_lm[l+1,m+1] += coeff
+                    C_lm[l+1,m+l+1] += coeff
                 end
             end
         end
