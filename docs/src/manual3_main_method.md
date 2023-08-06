@@ -61,19 +61,19 @@ mol = Molecule(atoms=["C","O"], atom_coords=[0 0 -0.180; 0 0 0.950],
     The input of the atom coordinates is in **Angstrom (Å)**, which is not atomic unit (Bohr). 1 Bohr = 0.53 Å.
 
 !!! tip "Data saving of the Molecule object"
-    If the user specifies `data_path` in the constructor method of `Molecule`, the data would be automatically saved each time the user invokes the [`MolCalcMOADKCoeff!`](@ref) and [`MolCalcWFATData!`](@ref).
+    If the user specifies `data_path` in the constructor method of `Molecule`, the data would be automatically saved each time the user invokes the [`MolCalcAsympCoeff!`](@ref) and [`MolCalcWFATData!`](@ref).
     However, if doesn't specify (in case the user does not wish to save the data), the data would not be saved, and the user has to manually invoke [`MolSaveDataAs`](@ref) to save the data afterwards.
 
 
-#### Calculate MO-ADK Coefficients
+#### Calculate Asymptotic Coefficients
 
-To calculate the [MO-ADK](@ref MOADK) coefficients of the `Molecule` object, invoke the [`MolCalcMOADKCoeff!`](@ref) method:
+To calculate the asymptotic coefficients of the `Molecule` object which is used in MO-SFA and [MO-ADK](@ref MOADK), invoke the [`MolCalcAsympCoeff!`](@ref) method:
 ```julia
-MolCalcMOADKCoeff!(mol)
+MolCalcAsympCoeff!(mol)
 ```
 
 For typical small molecules, using default parameters usually gives satisfactory results.
-However, for special demands, the user may refer to the documentation of [`MolCalcMOADKCoeff!`](@ref) and [`Targets.MolecularCalculators.calcMOADKCoeff`](@ref) for more calculation parameters.
+However, for special demands, the user may refer to the documentation of [`MolCalcAsympCoeff!`](@ref) and [`Targets.MolecularCalculators.calc_asymp_coeff`](@ref) for more calculation parameters.
 
 #### Calculate WFAT Data
 
@@ -83,7 +83,7 @@ MolCalcWFATData!(mol, orbitIdx_relHOMO = 0)
 ```
 
 To obtain the data of other orbitals besides HOMO, the user may alter the `orbitIdx_relHOMO` parameter.
-For custom calculation parameters, refer to the documentation of [`MolCalcWFATData!`](@ref) and [`Targets.MolecularCalculators.calcStructFactorData`](@ref).
+For custom calculation parameters, refer to the documentation of [`MolCalcWFATData!`](@ref) and [`Targets.MolecularCalculators.calc_WFAT_data`](@ref).
 
 #### Setting the Molecule's Orientation
 

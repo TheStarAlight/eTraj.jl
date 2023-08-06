@@ -93,20 +93,20 @@ Targets.MolSaveDataAs
 
 ### Molecular-SFI Data Preparation
 
-To use the molecular strong-field ionization theories such as the MO-ADK and WFAT to provide the intitial conditions of the electrons, the structure coefficients of the `Molecule` have to be calculated beforehand and stored in the object.
-Cf. the documentation of [`MolCalcMOADKCoeff!`](@ref) and [`MolCalcWFATData!`](@ref).
+To use the molecular strong-field ionization theories such as the MO-SFA, MO-ADK and WFAT to provide the intitial conditions of the electrons, the structure coefficients of the `Molecule` have to be calculated beforehand and stored in the object.
+Cf. the documentation of [`MolCalcAsympCoeff!`](@ref) and [`MolCalcWFATData!`](@ref).
 
 Evaluation of the structure coefficients depends on the external quantum chemistry packages.
 The [`Targets.MolecularCalculators`](@ref) module undertakes the task of communication with the external quantum packages.
 Currently only the [`PySCFMolecularCalculator`](@ref) is implemented.
 
 !!! tip "Customized calculation parameters"
-    When invoking `MolCalcMOADKCoeff!` and `MolCalcWFATData!` to perform calculation of structure coefficients, customized calculation parameters can be passed to the `kwargs` of these methods.
-    These parameters would be passed to the constructor method of the `MolecularCalculator` (e.g., the `basis` parameter of the [`PySCFMolecularCalculator`](@ref)), as well as the [`MolecularCalculators.calcStructFactorData`](@ref), [`MolecularCalculators.calcMOADKCoeff`](@ref) methods.
+    When invoking `MolCalcAsympCoeff!` and `MolCalcWFATData!` to perform calculation of structure coefficients, customized calculation parameters can be passed to the `kwargs` of these methods.
+    These parameters would be passed to the constructor method of the `MolecularCalculator` (e.g., the `basis` parameter of the [`PySCFMolecularCalculator`](@ref)), as well as the [`MolecularCalculators.calc_asymp_coeff`](@ref), [`MolecularCalculators.calc_WFAT_data`](@ref) methods.
     Refer to their documentation below for more information.
 
 ```@docs
-Targets.MolCalcMOADKCoeff!
+Targets.MolCalcAsympCoeff!
 Targets.MolCalcWFATData!
 ```
 
@@ -116,8 +116,8 @@ Targets.MolecularCalculators.PySCFMolecularCalculator
 ```
 
 ```@docs
-Targets.MolecularCalculators.calcStructFactorData
-Targets.MolecularCalculators.calcMOADKCoeff
+Targets.MolecularCalculators.calc_asymp_coeff
+Targets.MolecularCalculators.calc_WFAT_data
 ```
 
 ### Molecule's Orientation
