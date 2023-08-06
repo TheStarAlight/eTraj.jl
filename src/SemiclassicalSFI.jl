@@ -68,9 +68,6 @@ Performs a semiclassical simulation with given parameters.
 ## Optional params. for target `Molecule`:
 - `mol_orbit_idx = 0`   : Index of the ionizing orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1) (default `0`).
 
-## Optional params. for MO-ADK method:
-- `moadk_orbit_m = 0`   : Magnetic quantum number m of the ionizing orbital along the z axis. m = 0,1,2 indicate σ, π and δ respectively (default `0`).
-
 ## Optional params. for ADK method:
 - `adk_tun_exit = <:IpF|:FDM|:Para>` : Tunneling exit method for ADK methods (when `init_cond_method==:ADK`) (default `:IpF`).
 
@@ -108,8 +105,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     rate_prefix         ::Symbol    = :ExpRate,
                         #* opt. params. for target `Molecule`
                     mol_orbit_idx       ::Integer   = 0,
-                        #* opt. params. for molecular MOADK method
-                    moadk_orbit_m       ::Integer   = 0,
                         #* opt. params. for atomic ADK method
                     adk_tun_exit        ::Symbol    = :IpF
                     )
@@ -132,7 +127,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     mc_kp_num, mc_kp_max,
                     traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_cutoff_limit, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
-                    moadk_orbit_m,
                     adk_tun_exit)
     #* initialize sample provider.
     sp::ElectronSampleProvider = init_sampler(;kwargs...)
@@ -169,33 +163,21 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         classical_prob[:ryd_uncollected]    = 0.
     #   * launch electrons and collect
     batchNum = batch_num(sp)
-    prog = Progress(batchNum; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true)
-    cont_empty_bat = 0    # number of continous empty batches.
-    warn_thr_cont_empty_bat = 20  # if the number of continous empty batches reaches the threshold, will throw a warning.
+    prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
+    prog2 = Progress(batch_num(sp); dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
     n_eff_traj = 0  # number of effective trajectories that are launched.
     for batchId in 1:batch_num(sp)
         init = gen_electron_batch(sp, batchId)
-        if isnothing(init)
-            cont_empty_bat += 1
-            if batchId == batch_num(sp)
-                if cont_empty_bat > warn_thr_cont_empty_bat
-                    @debug "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
-                end
-            end
-        else
-            if cont_empty_bat > warn_thr_cont_empty_bat # count the total continous empty batches and throw the warning.
-                @debug "[performSFI] The electron sample provider yields no electron sample in the previous $(cont_empty_bat) batches #$(batchId-cont_empty_bat)~#$(batchId-1), probably due to too weak field strength."
-            end
-            cont_empty_bat = 0
+        if ! isnothing(init)
             n_eff_traj += size(init,2)
             launch_and_collect!(init,
                                 ion_prob_final, ion_prob_sum_temp, ion_prob_collect,
                                 ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect,
                                 classical_prob; kwargs...)
         end
-        next!(prog,desc="Launching electrons and collecting ... [batch #$batchId/$batchNum, $(n_eff_traj) electrons collected]")
+        next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$batchId/$batchNum, $(n_eff_traj) electrons collected]"); next!(prog2);
     end
-    finish!(prog); println();
+    finish!(prog1); finish!(prog2); println();
     if traj_phase_method != :CTMC
         ion_prob_final = abs2.(ion_prob_final)
         if final_ryd_collect
@@ -250,10 +232,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         # opt. params. for target `Molecule`
         if typeof(target) <: Targets.Molecule
             dict_out[:mol_orbit_idx]    = mol_orbit_idx
-        end
-        # opt. params. for molecular MOADK method
-        if init_cond_method == :MOADK
-            dict_out[:moadk_orbit_m]    = moadk_orbit_m
         end
         # opt. params. for atomic ADK method
         if init_cond_method == :ADK

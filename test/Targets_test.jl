@@ -77,10 +77,10 @@ using Test
             @test reduce(*, abs.(μ) .<= [1e-10,1e-10,1e-10])
             @test IntData[1,1,3,1] ≈ -4.240521134419741e-5 - 2.6425097195784973e-19im
         end
-        @test reduce(*, abs2.(MolWFATStructureFactor_G(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.662226956020088, 2.761095365444768])
-        @test MolMOADKAvailableIndices(m3) == Set([0])
-        @test MolMOADKCoeffs(m3, 0)[1,1] ≈ 2.47486649
-        @test reduce(*, abs2.(MolMOADKStructureFactor_B(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [4.90607965289471, 2.36850621912187])
+        @test reduce(*, abs2.(MolWFATStructureFactor_G(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.6622283, 2.76111319])
+        @test MolAsympCoeffAvailableIndices(m3) == Set([0])
+        @test MolAsympCoeff(m3, 0)[1,1] ≈ 2.47486649
+        @test reduce(*, abs2.(MolMOADKStructureFactor_B(m3,0,0,[0.0,π/2],[0.0,0.0])) .≈ [4.9060796, 2.372916312])
         begin
             @test begin
                 SetMolRotation(m3,π,π/2,π/3)
@@ -92,7 +92,7 @@ using Test
             end
         end
         @test MolExportAtomInfo(m3) == "H [0.0, 0.0, -0.375]; H [0.0, 0.0, 0.375]"
-        # MolCalcEnergyData!, _MolSaveEnergyData, MolCalcWFATData!, _MolSaveWFATData, MolSaveDataAs are not included in the test
+        # MolCalcEnergyData!, _MolSaveEnergyData, MolCalcWFATData!, MolCalcAsympCoeff!, _MolSaveWFATData, MolSaveDataAs are not included in the test
         @test IonPotential(m3)      == -MolHOMOEnergy(m3)
         @test IonPotential(m3,0)    == -MolHOMOEnergy(m3)
         @test AsympNuclCharge(m3)   == 1
