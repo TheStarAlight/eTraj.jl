@@ -18,6 +18,69 @@ Depth = 3
 CurrentModule = SemiclassicalSFI.Targets
 ```
 
+```@setup manual_targets
+using SemiclassicalSFI
+using SemiclassicalSFI.Targets
+```
+
+## List of Available Properties and Methods
+
+The available properties and methods of the targets are listed below.
+To obtain a property of the target, invoke the property as a method and pass the target object as an argument. The following shows an example.
+
+```@repl manual_targets
+t = HeAtom()
+IonPotential(t)
+V = TargetPotential(t)
+V(1.0,0.0,0.0)
+```
+
+### Atoms
+
+|                   |[`HydrogenLikeAtom`](@ref) | [`SAEAtom`](@ref) |
+|:------------------|:-:|:-:|
+|`IonPotential`     | ✔ | ✔ |
+|`AsympNuclCharge`  | ✔ | ✔ |
+|`SoftCore`         | ✔ |   |
+|`TargetName`       | ✔ | ✔ |
+|`TargetPotential`  | ✔ | ✔ |
+|`TargetForce`      | ✔ | ✔ |
+
+### Molecule
+
+#### Properties
+
+| property name                 | params                        | example                           |
+|:------------------------------|:------------------------------|:----------------------------------|
+|`MolAtoms`                     | --                            |`["H","H"]`                        |
+|`MolAtomCoords`                | --                            |`[0.0 0.0 -0.375; 0.0 0.0 0.375]`  |
+|`MolCharge`                    | --                            |`0`                                |
+|`MolEnergyDataAvailable`       | --                            |`true`                             |
+|`MolEnergyLevels`              | --                            |`[-0.590975, 0.174188, ...]`       |
+|`MolHOMOIndex`                 | --                            |`1`                                |
+|`MolHOMOEnergy`                | --                            |`-0.590975`                        |
+|`MolWFATAvailableIndices`      | --                            |`Set([0])`                         |
+|`MolWFATData`                  |`orbitIdx_relHOMO=0`           | --                                |
+|`MolWFATStructureFactor_G`     |`orbitIdx_relHOMO=0,nξ,m,β,γ`  |`1.91369 - 1.46476e-33im`          |
+|`MolAsympCoeffAvailableIndices`| --                            |`Set([0])`                         |
+|`MolAsympCoeff`                |`orbitIdx_relHOMO=0`           | --                                |
+|`MolMOADKStructureFactor_B`    |`orbitIdx_relHOMO=0,m_,β,γ`    |`2.21496 + 0.0im`                  |
+|[`MolRotation`](@ref)          | --                            |`(0.0,0.0,0.0)`                    |
+|`IonPotential`                 |`orbitIdx_relHOMO=0`           |`0.590975`                         |
+|`AsympNuclCharge`              | --                            |`1`                                |
+|`TargetName`                   | --                            |`"Hydrogen"`                       |
+|`TargetPotential`              | --                            | --                                |
+|`TargetForce`                  | --                            | --                                |
+
+#### Methods
+
+| method name                   | params                                |
+|:------------------------------|:--------------------------------------|
+|[`SetMolRotation`](@ref)       |`α,β,γ` or `(α,β,γ)`                   |
+|`MolCalcEnergyData!`           |`orbitIdx_relHOMO=0, MCType, kwargs...`|
+|[`MolCalcWFATData!`](@ref)     |`orbitIdx_relHOMO=0, MCType, kwargs...`|
+|[`MolCalcAsympCoeff!`](@ref)   |`orbitIdx_relHOMO=0, MCType, kwargs...`|
+
 ## Hydrogen-Like Atom
 
 A hydrogen-like atom has a potential of the form
