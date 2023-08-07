@@ -231,16 +231,16 @@ The molecular ADK (MO-ADK) theory generalizes the original ADK theory by extendi
 
 In the MO-ADK theory, the wavefunction of a linear molecule's ionizing orbital behaves asymptotically as
 ```math
-\psi_0^{(m)}(\bm{r}) \sim \sum_l F_l(r) Y_{lm}(\theta,\phi)
+\psi_0(\bm{r}) \sim \sum_{lm} F_{lm}(r) Y_{lm}(\theta,\phi)
 ```
-in the molecular frame (MF) when ``r\rightarrow\infty``, where ``m`` denotes the magnetic quantum number along the molecular axis (``m=0,1,2`` denotes ``\sigma,\pi`` and ``\delta`` symmetries respectively).
-Assigning ``\kappa=\sqrt{2I_{\mathrm{p}}}``, the ``F_l(r)`` has the following asymptotic behavior when ``r\rightarrow\infty``:
+in the molecular frame (MF) when ``r\rightarrow\infty``.
+Assigning ``\kappa=\sqrt{2I_{\mathrm{p}}}``, the ``F_{lm}(r)`` has the following asymptotic behavior when ``r\rightarrow\infty``:
 ```math
-F_l(r) \sim C_l r^{Z/\kappa-1} \mathrm{e}^{-\kappa r}.
+F_{lm}(r) \sim C_{lm} r^{Z/\kappa-1} \mathrm{e}^{-\kappa r}.
 ```
-In numerical implementation we obtain the parameters ``C_l`` by fitting the above expression [^Zhang_2015], and the ``F_l(r)`` is found by the spherical-harmonic expansion of the wavefunction:
+In numerical implementation we obtain the parameters ``C_{lm}`` by fitting the above expression [^Zhang_2015], and the ``F_{lm}(r)`` is found by the spherical-harmonic expansion of the wavefunction:
 ```math
-F_l(r) = \int \mathrm{d}\bm{\Omega} Y_{lm}^{*}(\bm{\Omega}) \psi_0^{(m)}(\bm{r}).
+F_{lm}(r) = \int \mathrm{d}\bm{\Omega} Y_{lm}^{*}(\bm{\Omega}) \psi_0(\bm{r}).
 ```
 
 [^Zhang_2015]: Zhang, B. *et al.*, SLIMP: Strong Laser Interaction Model Package for Atoms and Molecules. *Comp. Phys. Comm.* **192**, 330–341 (2015). DOI: [10.1016/j.cpc.2015.02.031](https://dx.doi.org/10.1016/j.cpc.2015.02.031)
@@ -253,11 +253,11 @@ The angle-dependent tunneling ionization rate in the MO-ADK theory reads
 where the molecule's orientation is described using a set of Euler angles ``\hat{\bm{R}} = (\alpha,\beta,\gamma)`` (``z-y'-z''`` convention), which represents the rotational transformation from the MF to the LF; ``B_{m'}(\beta,\gamma)`` are the structural parameters which depend on the molecule's orbital wavefunction (here we omitted the ``\alpha`` dependence because the structural parameters are independent of ``\alpha``).
 The structural parameters ``B_{m'}(\beta,\gamma)`` have the following expression:
 ```math
-B_{m'}(\beta,\gamma) = C_l d_{m' m}^{l}(\beta) \mathrm{e}^{-\mathrm{i}m\gamma} Q_{l m'},
+B_{m'}(\beta,\gamma) = \sum_{lm} C_{lm} d_{m' m}^{l}(\beta) \mathrm{e}^{-\mathrm{i}m\gamma} Q_{l m'},
 ```
 with ``d_{m' m}^{l}(\beta)`` being the Wigner-``d`` rotation matrix, and
 ```math
-Q_{l m'} = (-1)^{m'} \sqrt{\frac{(2l+1)(l+|m'|)!}{2(l-|m'|)!}}.
+Q_{l m'} = (-1)^{(m'+|m'|)/2} \sqrt{\frac{(2l+1)(l+|m'|)!}{2(l-|m'|)!}}.
 ```
 
 To ultilize the MO-ADK theory to provide the initial conditions in the trajectory simulation, we simply adopt the result of the atomic ADK theory:
