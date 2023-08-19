@@ -18,6 +18,7 @@ OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
@@ -30,9 +31,9 @@ YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 libcint_jll = "574b78ca-bebd-517c-801d-4735c93a9686"
 
 [compat]
-OrdinaryDiffEq = "≥ 6.51"
-DiffEqGPU = "≥ 2.4.1"
 CUDA = "≥ 4.0"
+DiffEqGPU = "≥ 2.4.1"
+OrdinaryDiffEq = "≥ 6.51"
 julia = "≥ 1.7"
 
 [extras]

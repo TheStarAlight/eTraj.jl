@@ -8,8 +8,8 @@ using Test
 
     @info "Testing HydrogenLikeAtom ..."
     @testset verbose=true "HydrogenLikeAtom" begin
-        t1 = HydrogenLikeAtom(Ip=0.5,Z=1.0,soft_core=0.2,name="H")
-        t2 = HydrogenLikeAtom(0.5,1.0,0.2,"H")
+        t1 = HydrogenLikeAtom(Ip=0.5,Z=1,l=0,m=0,soft_core=0.2,name="H")
+        t2 = HydrogenLikeAtom(0.5,1,0,0,0.2,"H")
         t3 = HAtom()
         @test t1 == t2 == t3
         @test begin
@@ -18,18 +18,18 @@ using Test
         end
         @test IonPotential(t1)       == 0.5
         @test AsympNuclCharge(t1)    == 1
+        @test AngularQuantumNumber(t1) == 0
+        @test MagneticQuantumNumber(t1) == 0
         @test SoftCore(t1)           == 0.2
         @test TargetName(t1)         == "H"
         @test TargetPotential(t1)(1.0,1.0,1.0) ≈ -1/sqrt(3.2)
         @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (3.2)^(-1.5))
-        #@test TrajectoryFunction(t) #TODO: add this test after revising the code.
-        @test ADKRateExp(t1)(0.1,1.0,1.0) ≈ exp(-2*3.0^1.5/0.3)
     end
 
     @info "Testing SAEAtom ..."
     @testset verbose=true "SAEAtom" begin
-        t1 = SAEAtom(Ip=0.9035698802, Z=1.0, a1= 1.230723 , b1=0.6620055, a2=-1.325040 , b2=1.236224 , a3=-0.2307230 , b3=0.4804286, name="He")
-        t2 = SAEAtom(0.9035698802, 1.0, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
+        t1 = SAEAtom(Ip=0.9035698802, Z=1, l=0, m=0, a1= 1.230723 , b1=0.6620055, a2=-1.325040 , b2=1.236224 , a3=-0.2307230 , b3=0.4804286, name="He")
+        t2 = SAEAtom(0.9035698802, 1, 0, 0, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
         t3 = HeAtom()
         @test t1 == t2 == t3
         @test begin
@@ -37,12 +37,12 @@ using Test
             true
         end
         @test IonPotential(t1)       ≈ 0.9035698802
-        @test AsympNuclCharge(t1)    ≈ 1.0
+        @test AsympNuclCharge(t1)    ≈ 1
+        @test AngularQuantumNumber(t1) == 0
+        @test MagneticQuantumNumber(t1) == 0
         @test TargetName(t1)         == "He"
         @test TargetPotential(t1)(1.0,1.0,1.0) ≈ - (1.0 + 1.230723*exp(-0.6620055*1.73205081) + -1.325040*1.73205081*exp(-1.236224*1.73205081) + -0.2307230*exp(-0.4804286*1.73205081)) / 1.73205081
         @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (1.73205081^(-3) * (1.0 + 1.230723*(1+0.6620055*1.73205081)*exp(-0.6620055*1.73205081) + -0.2307230*(1+0.4804286*1.73205081)*exp(-0.4804286*1.73205081)) + -1.325040*1.236224/1.73205081 * exp(-1.236224*1.73205081)))
-        #@test TrajectoryFunction(t) #TODO: add this test after revising the code.
-        @test ADKRateExp(t1)(0.1,1.0,1.0) ≈ exp(-2*(2.0+2*0.9035698802)^1.5/0.3)
     end
 
     @info "Testing Molecule ..."
@@ -80,14 +80,13 @@ using Test
         @test reduce(*, abs2.(MolWFATStructureFactor_G(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.6622283, 2.76111319])
         @test MolAsympCoeffAvailableIndices(m3) == Set([0])
         @test MolAsympCoeff(m3, 0)[1,1] ≈ 2.47486649
-        @test reduce(*, abs2.(MolMOADKStructureFactor_B(m3,0,0,[0.0,π/2],[0.0,0.0])) .≈ [4.9060796, 2.372916312])
         begin
             @test begin
-                SetMolRotation(m3,π,π/2,π/3)
+                SetMolRotation!(m3,π,π/2,π/3)
                 reduce(*, MolRotation(m3) .≈ (π,π/2,π/3))
             end
             @test begin
-                SetMolRotation(m3,(π/2,π/3,π/4))
+                SetMolRotation!(m3,(π/2,π/3,π/4))
                 reduce(*, MolRotation(m3) .≈ (π/2,π/3,π/4))
             end
         end
@@ -99,6 +98,5 @@ using Test
         @test TargetName(m3)        == "Hydrogen"
         @test TargetPotential(m3)(1.0,1.0,1.0) == -0.5
         @test reduce(*, TargetForce(m3)(1.0,1.0,1.0) .== (-1/8,-1/8,-1/8))
-        #@test TrajectoryFunction(t) #TODO: add this test after revising the code.
     end
 end

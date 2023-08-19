@@ -1,4 +1,3 @@
-using StaticArrays
 
 "Represents a Hydrogen-like atom."
 struct HydrogenLikeAtom <: SAEAtomBase
@@ -6,19 +5,32 @@ struct HydrogenLikeAtom <: SAEAtomBase
     Ip;
     "Asymptotic charge of the inner nucleus."
     nucl_charge;
+    "Angular quantum number l."
+    l;
+    "Magnetic quantum number m."
+    m;
     "Soft core parameter of the atom."
     soft_core;
     "Name of the atom."
     name::String;
     "Initializes a new instance of HydrogenLikeAtom."
-    HydrogenLikeAtom( Ip, Z, soft_core=0.2, name="[NA]") = new(Ip, Z, soft_core, name)
-    HydrogenLikeAtom(;Ip, Z, soft_core=0.2, name="[NA]") = new(Ip, Z, soft_core, name)
+    function HydrogenLikeAtom(Ip, Z::Integer, l::Integer=0, m::Integer=0, soft_core=0.2, name="[NA]")
+        @assert Ip>0 "[HydrogenLikeAtom] Ip should be positive."
+        @assert l≥0 && m≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
+        @assert soft_core≥0 "[HydrogenLikeAtom] Soft core should be non-negative."
+        new(Ip, Z, l, m, soft_core, name)
+    end
+    HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, soft_core=0.2, name="[NA]") = HydrogenLikeAtom(Ip, Z, l, m, soft_core, name)
 end
 
 "Gets the ionization potential of the atom."
 IonPotential(t::HydrogenLikeAtom) = t.Ip
 "Gets the asymptotic nuclear charge of the atom."
 AsympNuclCharge(t::HydrogenLikeAtom) = t.nucl_charge
+"Gets the angular quantum number l of the atom."
+AngularQuantumNumber(t::HydrogenLikeAtom) = t.l
+"Gets the magnetic quantum number m of the atom."
+MagneticQuantumNumber(t::HydrogenLikeAtom) = t.m
 "Gets the soft core parameter of the atom."
 SoftCore(t::HydrogenLikeAtom) = t.soft_core
 "Gets the name of the atom."
@@ -27,6 +39,8 @@ TargetName(t::HydrogenLikeAtom) = t.name
 TargetPotential(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.soft_core)^(-0.5)
 "Gets the force exerted on the electron from the atom (which is the neg-grad of potential)."
 TargetForce(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.soft_core)^(-1.5) .* (x,y,z)
+
+using StaticArrays
 "Gets the trajectory function according to given parameter."
 function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Function, phase_method::Symbol, non_dipole::Bool; kwargs...)
     Z  = t.nucl_charge
@@ -122,16 +136,12 @@ function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Fun
         end
     end
 end
-"""
-Gets the exponential term of ADK rate which depends on
-Field strength `F`,
-momentum's transverse component `kd` (in xy plane),
-and propagation-direction (which is Z axis) component `kz`.
-"""
-ADKRateExp(t::HydrogenLikeAtom) = (F,kd,kz) -> exp(-2(kd^2+kz^2+2*t.Ip)^1.5/3F)
 
+using Printf
 "Prints the information of the atom."
-Base.show(io::IO, t::HydrogenLikeAtom) = print(io, "[HydrogenLikeAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge), soft_core=$(t.soft_core)\n")
+function Base.show(io::IO, t::HydrogenLikeAtom)
+    @printf(io, "[HydrogenLikeAtom] Atom %s, Ip=%.4f, Z=%i, soft_core=%.4f\n", t.name, t.Ip, t.nucl_charge, t.soft_core)
+end
 
 using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
@@ -140,8 +150,10 @@ function Serialize(t::HydrogenLikeAtom)
     type        = typeof(t)
     Ip          = t.Ip
     nucl_charge = t.nucl_charge
+    l           = t.l
+    m           = t.m
     soft_core   = t.soft_core
     name        = t.name
-    @pack! dict = (type, Ip, nucl_charge, soft_core, name)
+    @pack! dict = (type, Ip, nucl_charge, l, m, soft_core, name)
     return dict
 end

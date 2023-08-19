@@ -308,40 +308,6 @@ function MolAsympCoeff(mol::Molecule, orbitIdx_relHOMO::Integer=0)
     end
     return mol.asymp_coeff[orbitIdx_relHOMO]
 end
-"""
-Gets the MOADK structure factor \$B(m')\$ according to the given Euler angles `β` and `γ` (ZYZ convention).
-Note: the rotational Euler angles of the molecule would not be applied.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
-- `m_`  : Magnetic quantum number m'=⋯,-1,0,1,⋯.
-- `β`   : Euler angle β, can be passed as a `Real` value or an `AbstractVector` of `Real`.
-- `γ`   : Euler angle γ, can be passed as a `Real` value or an `AbstractVector` of `Real`.
-"""
-function MolMOADKStructureFactor_B(mol::Molecule, orbitIdx_relHOMO::Integer, m_::Integer, β,γ)
-    if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
-    end
-    if ! (mol.asymp_coeff_available || (orbitIdx_relHOMO in mol.asymp_coeff_orbital_indices))
-        MolCalcAsympCoeff!(mol, orbitIdx_relHOMO)
-    end
-    @assert (typeof(β)<:Real && typeof(γ)<:Real) || ((typeof(β)<:AbstractVector{T} where T<:Real) && (typeof(γ)<:AbstractVector{T} where T<:Real) && size(β,1)==size(γ,1)) "[Molecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
-    asymp_coeff = mol.asymp_coeff[orbitIdx_relHOMO]
-    l_max = size(asymp_coeff, 1) - 1
-    Q_lm(l,m) = (-1)^((m+abs(m))/2) * sqrt((2l+1)*factorial(l+abs(m))/2/factorial(l-abs(m)))
-
-    if typeof(β)<:Real  # passed as a `Real` value
-        sum = zero(ComplexF64)
-        for l in abs(m_):l_max, m in -l:l
-            sum += asymp_coeff[l+1,m+l+1] * Q_lm(l,m_) * WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
-        end
-        return sum
-    else    # passed as a Vector
-        sum = zeros(ComplexF64, size(β))
-        for l in abs(m_):l_max, m in -l:l
-            sum .+= asymp_coeff[l+1,m+l+1] * Q_lm(l,m_) * @. WignerD.wignerdjmn(l,m_,m,β) * exp(-1im*m_*γ)
-        end
-        return sum
-    end
-end
 
 """
 Gets the maximum value of l calculated in the asymptotic coefficients.
@@ -360,11 +326,11 @@ end
 "Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
 MolRotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
 "Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
-function SetMolRotation(mol::Molecule, α,β,γ)
+function SetMolRotation!(mol::Molecule, α,β,γ)
     mol.rot_α = α; mol.rot_β = β; mol.rot_γ = γ;
 end
-function SetMolRotation(mol::Molecule, (α,β,γ))
-    SetMolRotation(mol, α,β,γ)
+function SetMolRotation!(mol::Molecule, (α,β,γ))
+    SetMolRotation!(mol, α,β,γ)
 end
 """
 Exports the given molecule's atom information to string as `MolecularCalculator`'s input.
@@ -594,7 +560,7 @@ function IonPotential(mol::Molecule)
 end
 """
 Gets the ionization potential of the specified MO of molecule.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1).
+- `orbitIdx_relHOMO`: Index of selected orbital relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1).
 """
 function IonPotential(mol::Molecule, orbitIdx_relHOMO::Integer)
     if ! mol.energy_data_available
@@ -602,7 +568,7 @@ function IonPotential(mol::Molecule, orbitIdx_relHOMO::Integer)
     end
     idx = mol.HOMO_index+orbitIdx_relHOMO
     if ! (0<idx<size(mol.energy_levels,1))
-        error("[Molecule] Orbit index out of bound.")
+        error("[Molecule] Orbital index out of bound.")
     end
     return -mol.energy_levels[idx]
 end
@@ -654,20 +620,13 @@ function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function,
     end
 end
 
-"""
-Gets the exponential term of ADK rate which depends on
-ionization potential `Ip`,
-field strength `F`,
-momentum's transverse component `kd` (in xy plane),
-and propagation-direction (which is Z axis) component `kz`.
-"""
-ADKRateExp(t::Molecule) = (Ip,F,kd,kz) -> exp(-2(kd^2+kz^2+2*Ip)^1.5/3F)
-
+using Printf
 function Base.show(io::IO, mol::Molecule)
-    print(io, "Molecule [$(mol.name)]")
+    @printf(io, "[Molecule] %s", mol.name)
     if mol.energy_data_available
-        print(io, ", HOMO energy: $(MolHOMOEnergy(mol))\n")
+        @printf(io, ", HOMO_energy=%.4f", MolHOMOEnergy(mol))
     end
+    print(io,"\n")
 end
 
 using Parameters, OrderedCollections

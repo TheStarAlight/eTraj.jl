@@ -1,12 +1,15 @@
-using StaticArrays
 
 "Represents an atom under single-active-electron (SAE) approximation."
 struct SAEAtom <: SAEAtomBase
-# should implement TargetPotential, TargetForce, TrajectoryFunction, ADKRateExp.
+# should implement TargetPotential, TargetForce, TrajectoryFunction.
     "Ionization potential of the atom."
     Ip;
     "Asymptotic charge of the inner nucleus."
     nucl_charge;
+    "Angular quantum number l."
+    l;
+    "Magnetic quantum number m."
+    m;
     "Atomic parameters used to fit the atomic potential. See [J. Phys. B 38 2593 (2005)]"
     a1;
     b1;
@@ -17,14 +20,23 @@ struct SAEAtom <: SAEAtomBase
     "Name of the atom."
     name::String;
     "Initializes a new instance of SAEAtom."
-    SAEAtom( Ip, Z, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = new(Ip,Z,a1,b1,a2,b2,a3,b3,name)
-    SAEAtom(;Ip, Z, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = new(Ip,Z,a1,b1,a2,b2,a3,b3,name)
+    function SAEAtom( Ip, Z::Integer, l::Integer=0, m::Integer=0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
+        @assert Ip>0 "[SAEAtom] Ip should be positive."
+        @assert l≥0 && m≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
+        @assert b1≥0 && b2≥0 && b3≥0 "[SAEAtom] b1,b2,b3 should be non-negative."
+        new(Ip,Z,l,m,a1,b1,a2,b2,a3,b3,name)
+    end
+    SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = SAEAtom(Ip,Z,l,m,a1,b1,a2,b2,a3,b3,name)
 end
 
 "Gets the ionization potential of the atom."
 IonPotential(t::SAEAtom) = t.Ip
 "Gets the asymptotic nuclear charge of the atom."
 AsympNuclCharge(t::SAEAtom) = t.nucl_charge
+"Gets the angular quantum number l of the atom."
+AngularQuantumNumber(t::SAEAtom) = t.l
+"Gets the magnetic quantum number m of the atom."
+MagneticQuantumNumber(t::SAEAtom) = t.m
 "Gets the name of the atom."
 TargetName(t::SAEAtom) = t.name
 """
@@ -47,6 +59,8 @@ function TargetForce(t::SAEAtom)
         return (-x,-y,-z) .* (r^(-3) * (t.nucl_charge + t.a1*(1+t.b1*r)*exp(-t.b1*r) + t.a3*(1+t.b3*r)*exp(-t.b3*r)) + t.a2*t.b2/r * exp(-t.b2*r))
     end
 end
+
+using StaticArrays
 "Gets the trajectory function according to given parameter."
 function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, phase_method::Symbol, non_dipole::Bool; kwargs...)
     Z  = t.nucl_charge
@@ -147,16 +161,12 @@ function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, ph
         end
     end
 end
-"""
-Gets the exponential term of ADK rate which depends on
-Field strength `F`,
-momentum's transverse component `kd` (in xy plane),
-and propagation-direction (which is Z axis) component `kz`.
-"""
-ADKRateExp(t::SAEAtom) = (F,kd,kz) -> exp(-2(kd^2+kz^2+2*t.Ip)^1.5/3F)
 
+using Printf
 "Prints the information of the atom."
-Base.show(io::IO, t::SAEAtom) = print(io, "[SAEAtom] Atom $(t.name), Ip=$(t.Ip), Z=$(t.nucl_charge)\n")
+function Base.show(io::IO, t::SAEAtom)
+    @printf(io, "[SAEAtom] Atom %s, Ip=%.4f, Z=%i\n", t.name, t.Ip, t.nucl_charge)
+end
 
 using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
@@ -165,6 +175,8 @@ function Serialize(t::SAEAtom)
     type        = typeof(t)
     Ip          = t.Ip
     nucl_charge = t.nucl_charge
+    l           = t.l
+    m           = t.m
     name        = t.name
     a1 = t.a1
     b1 = t.b1
@@ -172,6 +184,6 @@ function Serialize(t::SAEAtom)
     b2 = t.b2
     a3 = t.a3
     b3 = t.b3
-    @pack! dict = (type, Ip, nucl_charge, a1,b1,a2,b2,a3,b3, name)
+    @pack! dict = (type, Ip, nucl_charge, l, m, a1,b1,a2,b2,a3,b3, name)
     return dict
 end
