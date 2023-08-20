@@ -173,10 +173,45 @@ function LaserFy(l::GaussianLaser)
     end
 end
 
+using Printf
 "Prints the information about the laser."
-Base.show(io::IO, l::GaussianLaser) = println(io,"[MonochromaticLaser] Envelope Gaussian, Wavelength=$(l.wave_len) nm, Temporal width $(l.spread_cyc_num) cycle(s) [FWHM $(FWHM_Duration(l)*24.19e-3) fs], ε=$(l.ellip)"
-                                                * (l.ellip==0 ? " [Linearly polarized]" : "") * (abs(l.ellip)==1 ? " [Circularly polarized]" : "")
-                                                * ", PrincipleAxisAzimuth=$(l.azi/π*180)°" * (l.t_shift==0 ? "" : ", Peaks at t₀=$(l.t_shift) a.u.") * (l.cep==0 ? "" : ", CEP=$(l.cep)"))
+function Base.show(io::IO, l::GaussianLaser)
+    print(io, "[MonochromaticLaser] Envelope Gaussian, ")
+    if isinteger(l.wave_len)
+        @printf(io, "wavelen=%i nm, ", l.wave_len)
+    else
+        @printf(io, "wavelen=%.2f nm, ", l.wave_len)
+    end
+    if isinteger(l.spread_cyc_num)
+        @printf(io, "temporal width %i cycle(s) [FWHM %.2f fs], ", l.spread_cyc_num, FWHM_Duration(l)*24.19e-3)
+    else
+        @printf(io, "temporal width %.2f cycle(s) [FWHM %.2f fs], ", l.spread_cyc_num, FWHM_Duration(l)*24.19e-3)
+    end
+    if isinteger(l.ellip)
+        @printf(io, "ε=%i", l.ellip)
+    else
+        @printf(io, "ε=%.2f", l.ellip)
+    end
+    if l.ellip == 0
+        print(io, " [linearly polarized]")
+    elseif abs(l.ellip) == 1
+        print(io, " [circularly polarized]")
+    end
+    if l.t_shift != 0
+        if isinteger(l.t_shift)
+            @printf(io, ", peaks @ t=%i a.u.", l.t_shift)
+        else
+            @printf(io, ", peaks @ t=%.2f a.u.", l.t_shift)
+        end
+    end
+    if l.cep != 0
+        @printf(io, ", CEP=%.2f π", l.cep/π)
+    end
+    if l.azi != 0
+        @printf(io, ", prin_ax_azimuth=%.2f°", l.azi/π*180)
+    end
+    print(io,"\n")
+end
 
 using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
