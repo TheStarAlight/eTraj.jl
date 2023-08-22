@@ -11,7 +11,7 @@ export Serialize
 
 export SAEAtomBase, SAEAtom, HydrogenLikeAtom
 export HAtom, He1pAtom, Li2pAtom, HeAtom, NeAtom, Ne1pAtom, Ne2pAtom, ArAtom, Ar1pAtom, Ar2pAtom, VAtom, NiAtom, KrAtom, Kr1pAtom, RbAtom, NbAtom, PdAtom, XeAtom, Xe1pAtom, TaAtom
-export AngularQuantumNumber, MagneticQuantumNumber, SoftCore
+export AngularQuantumNumber, MagneticQuantumNumber, AsympCoeff, SoftCore
 
 export Molecule
 export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolEnergyDataAvailable, MolHOMOEnergy, MolHOMOIndex

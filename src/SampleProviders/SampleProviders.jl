@@ -26,6 +26,8 @@ end
 
 abstract type ElectronSampleProvider end
 
+include("shared_methods.jl")
+
 include("ADKSampler.jl")
 include("SFASampler.jl")
 include("SFAAESampler.jl")

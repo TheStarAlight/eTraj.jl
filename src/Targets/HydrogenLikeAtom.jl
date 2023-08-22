@@ -33,6 +33,13 @@ AngularQuantumNumber(t::HydrogenLikeAtom) = t.l
 MagneticQuantumNumber(t::HydrogenLikeAtom) = t.m
 "Gets the soft core parameter of the atom."
 SoftCore(t::HydrogenLikeAtom) = t.soft_core
+
+using SpecialFunctions
+"Gets the asymptotic coefficient C_κl of the atom using the Hartree approximation formula."
+function AsympCoeff(t::HydrogenLikeAtom)
+    n = t.nucl_charge/sqrt(2*t.Ip)
+    return 2^(n-1) / sqrt(n*gamma(n+t.l+1)*gamma(n-t.l))
+end
 "Gets the name of the atom."
 TargetName(t::HydrogenLikeAtom) = t.name
 "Gets the potential function of the atom."

@@ -37,6 +37,13 @@ AsympNuclCharge(t::SAEAtom) = t.nucl_charge
 AngularQuantumNumber(t::SAEAtom) = t.l
 "Gets the magnetic quantum number m of the atom."
 MagneticQuantumNumber(t::SAEAtom) = t.m
+
+using SpecialFunctions
+"Gets the asymptotic coefficient C_κl of the atom using the Hartree approximation formula."
+function AsympCoeff(t::SAEAtom)
+    n = t.nucl_charge/sqrt(2*t.Ip)
+    return 2^(n-1) / sqrt(n*gamma(n+t.l+1)*gamma(n-t.l))
+end
 "Gets the name of the atom."
 TargetName(t::SAEAtom) = t.name
 """
