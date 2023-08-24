@@ -135,8 +135,6 @@ function calc_WFAT_data(;
 
     #* Preprocess molecular information
 
-    pyscf = mc._pyscf
-    pyscf_df = pyimport("pyscf.df")
     pymol = mc._pymol   # storing the molecule's info and the basis's info.
     task  = mc._pytask  # storing the calculation result.
 
@@ -556,7 +554,7 @@ function calc_asymp_coeff(;
                 F_lm[ir] += conj(Y_lm[iθ,iϕ]) * ψ0[i] * dΩ[i]
             end
             # fit C_lm
-            @. model(x,p) = p[1] * x^(Z/κ-1) * exp(-κ*x)
+            @. model(r,p) = p[1] * 2 * κ^(3/2) * (κ*r)^(Z/κ-1) * exp(-κ*r)
             p0 = [1.0]
             if sum(abs.(real.(F_lm))) > 1e-10
                 fit_re = curve_fit(model, r_grid, real.(F_lm), p0)

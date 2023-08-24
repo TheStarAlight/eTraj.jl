@@ -316,13 +316,6 @@ function MolAsympCoeff_lMax(mol::Molecule, orbitIdx_relHOMO::Integer)
     return size(MolAsympCoeff(mol, orbitIdx_relHOMO), 1) - 1
 end
 
-"""
-Gets the maximum value of m calculated in the asymptotic coefficients.
-"""
-function MolAsympCoeff_mMax(mol::Molecule, orbitIdx_relHOMO::Integer)
-    return size(MolAsympCoeff(mol, orbitIdx_relHOMO), 2) - 1
-end
-
 "Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
 MolRotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
 "Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
