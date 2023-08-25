@@ -1,6 +1,9 @@
 
-using LinearAlgebra
-
+using Printf
+using Base.Threads
+using SpecialFunctions
+using StaticArrays
+using Random
 "Sample provider which yields initial electron samples through ADK rate formula."
 struct ADKSampler <: ElectronSampleProvider
     laser   ::Laser;
@@ -15,6 +18,7 @@ struct ADKSampler <: ElectronSampleProvider
     phase_method;   # currently supports :CTMC, :QTMC, :SCTS.
     rate_prefix;    # supports :Exp, :Full or a combination of {:Pre|:PreCC, :Jac}.
     ADK_tun_exit;   # currently supports :IpF, :FDM, :Para.
+
     function ADKSampler(;
                         laser               ::Laser,
                         target              ::SAEAtomBase,
@@ -79,9 +83,9 @@ struct ADKSampler <: ElectronSampleProvider
         end
         # check Keldysh parameter.
         if γ0 ≥ 0.5
-            @warn "[ADKSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+            @warn "[ADKSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
         elseif γ0 ≥ 1.0
-            @warn "[ADKSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            @warn "[ADKSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # check sampling parameters.
         @assert (sample_t_num>0) "[ADKSampler] Invalid time sample number $sample_t_num."
@@ -102,7 +106,7 @@ struct ADKSampler <: ElectronSampleProvider
                 0,0,        # for MC params. pass meaningless values
                 sample_cutoff_limit,traj_phase_method,rate_prefix,adk_tun_exit)
         else
-            t_samples = rand(sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1]
+            t_samples = rand(MersenneTwister(1), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1]
             new(laser,target,
                 sample_monte_carlo,
                 t_samples,
@@ -117,9 +121,6 @@ function batch_num(sp::ADKSampler)
     return length(sp.t_samples)
 end
 
-using SpecialFunctions
-using StaticArrays
-using Random
 "Generates a batch of electrons of `batchId` from `sp` using ADK method."
 function gen_electron_batch(sp::ADKSampler, batchId::Int)
     t = sp.t_samples[batchId]
