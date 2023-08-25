@@ -7,7 +7,7 @@ struct ADKSampler <: ElectronSampleProvider
     target  ::SAEAtomBase;  # ADK only supports [SAEAtomBase].
     monte_carlo;
     t_samples;
-    ss_kp_samples;
+    ss_kd_samples;
     ss_kz_samples;
     mc_kt_num;
     mc_kt_max;
@@ -26,8 +26,8 @@ struct ADKSampler <: ElectronSampleProvider
                         rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
                         adk_tun_exit        ::Symbol,
                             #* for step-sampling (!rate_monteCarlo)
-                        ss_kp_max           ::Real,
-                        ss_kp_num           ::Int,
+                        ss_kd_max           ::Real,
+                        ss_kd_num           ::Int,
                         ss_kz_max           ::Real,
                         ss_kz_num           ::Int,
                             #* for Monte-Carlo-sampling (rate_monteCarlo)
@@ -87,7 +87,7 @@ struct ADKSampler <: ElectronSampleProvider
         @assert (sample_t_num>0) "[ADKSampler] Invalid time sample number $sample_t_num."
         @assert (sample_cutoff_limit≥0) "[ADKSampler] Invalid cut-off limit $sample_cutoff_limit."
         if ! sample_monte_carlo # check SS sampling parameters.
-            @assert (ss_kp_num>0 && ss_kz_num>0) "[ADKSampler] Invalid kp/kz sample number $ss_kp_num/$ss_kz_num."
+            @assert (ss_kd_num>0 && ss_kz_num>0) "[ADKSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         else                    # check MC sampling parameters.
             @assert (sample_t_intv[1] < sample_t_intv[2]) "[ADKSampler] Invalid sampling time interval $sample_t_intv."
             @assert (mc_kt_num>0) "[ADKSampler] Invalid sampling kt_num $mc_kt_num."
@@ -98,7 +98,7 @@ struct ADKSampler <: ElectronSampleProvider
             new(laser,target,
                 sample_monte_carlo,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
-                range(-abs(ss_kp_max),abs(ss_kp_max);length=ss_kp_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
+                range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 0,0,        # for MC params. pass meaningless values
                 sample_cutoff_limit,traj_phase_method,rate_prefix,adk_tun_exit)
         else
@@ -128,7 +128,7 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
     Fxt = Fx(t)
     Fyt = Fy(t)
     Ft  = hypot(Fxt,Fyt)
-    F0 = LaserF0(sp.laser)
+    F0  = LaserF0(sp.laser)
     φ   = atan(-Fyt,-Fxt)
     Z   = AsympNuclCharge(sp.target)
     Ip  = IonPotential(sp.target)
@@ -137,7 +137,7 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
     C   = AsympCoeff(sp.target)
     γ0  = AngFreq(sp.laser) * sqrt(2Ip) / F0
     prefix = sp.rate_prefix
-    @inline ADKAmpExp(F,Ip,kp,kz) = exp(-(kp^2+kz^2+2*Ip)^1.5/3F)
+    @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     cutoff_limit = sp.cutoff_limit
     if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit
         return nothing
@@ -160,31 +160,31 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
             e0 = 2.71828182845904523
             c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ft^(-n) * (1+2γ0/e0)^(-n)
             @inline ti(kt2) = sqrt(κ^2+kt2)/Ft
-            # kx = kp * -sin(φ)
-            # ky = kp *  cos(φ)
-            pre(kp,kz) = c * C * sph_harm_lm_khat(l,m, (@SVector [kp*-sin(φ),kp*cos(φ),kz]) .- (1im*ti(kp^2+kz^2)) .* normalize(@SVector [Fxt,Fyt,0]), (Fxt,Fyt)) /
-                            ((kp^2+kz^2)*Ft^2)^((n+1)/4)
-            pre_cc(kp,kz) = c_cc * C * sph_harm_lm_khat(l,m, (@SVector [kp*-sin(φ),kp*cos(φ),kz]) .- (1im*ti(kp^2+kz^2)) .* normalize(@SVector [Fxt,Fyt,0]), (Fxt,Fyt)) /
-                            ((kp^2+kz^2)*Ft^2)^((n+1)/4)
+            # kx = kd * -sin(φ)
+            # ky = kd *  cos(φ)
+            pre(kd,kz) = c * C * sph_harm_lm_khat(l,m, (@SVector [kd*-sin(φ),kd*cos(φ),kz]) .- (1im*ti(kd^2+kz^2)) .* normalize(@SVector [Fxt,Fyt,0]), (Fxt,Fyt)) /
+                            ((kd^2+kz^2)*Ft^2)^((n+1)/4)
+            pre_cc(kd,kz) = c_cc * C * sph_harm_lm_khat(l,m, (@SVector [kd*-sin(φ),kd*cos(φ),kz]) .- (1im*ti(kd^2+kz^2)) .* normalize(@SVector [Fxt,Fyt,0]), (Fxt,Fyt)) /
+                            ((kd^2+kz^2)*Ft^2)^((n+1)/4)
             jac = Ft
             # returns
             if isempty(prefix)
-                rate_exp(kp,kz) = ADKAmpExp(Ft,Ip,kp,kz)
+                rate_exp(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz)
             else
                 if :Pre in prefix
                     if :Jac in prefix
-                        rate_pre_jac(kp,kz) = ADKAmpExp(Ft,Ip,kp,kz) * pre(kp,kz) * jac
+                        rate_pre_jac(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz) * jac
                     else
-                        rate_pre(kp,kz) = ADKAmpExp(Ft,Ip,kp,kz) * pre(kp,kz)
+                        rate_pre(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz)
                     end
                 elseif :PreCC in prefix
                     if :Jac in prefix
-                        rate_precc_jac(kp,kz) = ADKAmpExp(Ft,Ip,kp,kz) * pre_cc(kp,kz) * jac
+                        rate_precc_jac(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz) * jac
                     else
-                        rate_precc(kp,kz) = ADKAmpExp(Ft,Ip,kp,kz) * pre_cc(kp,kz)
+                        rate_precc(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz)
                     end
                 else # [:Jac]
-                    rate_jac(kp,kz) = ADKAmpExp(Ft,Ip,kp,kz) * jac
+                    rate_jac(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * jac
                 end
             end
         end
@@ -193,25 +193,25 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
 
     sample_count_thread = zeros(Int,nthreads())
     init_thread = if ! sp.monte_carlo
-        zeros(Float64, dim, nthreads(), length(sp.ss_kp_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
+        zeros(Float64, dim, nthreads(), length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
     else
         zeros(Float64, dim, nthreads(), sp.mc_kt_num)
     end
 
     if ! sp.monte_carlo
-        kp_samples = sp.ss_kp_samples
+        kd_samples = sp.ss_kd_samples
         kz_samples = sp.ss_kz_samples
-        kdNum, kzNum = length(kp_samples), length(kz_samples)
+        kdNum, kzNum = length(kd_samples), length(kz_samples)
         @threads for ikd in 1:kdNum
             for ikz in 1:kzNum
-                kp0, kz0 = kp_samples[ikd], kz_samples[ikz]
-                kx0 = kp0*-sin(φ)
-                ky0 = kp0* cos(φ)
-                r0 = r_exit(Ip+(kp0^2+kz0^2)/2)
+                kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
+                kx0 = kd0*-sin(φ)
+                ky0 = kd0* cos(φ)
+                r0 = r_exit(Ip+(kd0^2+kz0^2)/2)
                 x0 = r0*cos(φ)
                 y0 = r0*sin(φ)
                 z0 = 0.0
-                amp = amplitude(kp0,kz0)
+                amp = amplitude(kd0,kz0)
                 rate = abs2(amp)
                 if rate < cutoff_limit
                     continue    # discard the sample
@@ -227,14 +227,14 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
         @threads for i in 1:sp.mc_kt_num
             # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
             rng = Random.MersenneTwister(0)
-            kp0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
-            kx0 = kp0*-sin(φ)
-            ky0 = kp0* cos(φ)
-            r0 = r_exit(Ip+(kp0^2+kz0^2)/2)
+            kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
+            kx0 = kd0*-sin(φ)
+            ky0 = kd0* cos(φ)
+            r0 = r_exit(Ip+(kd0^2+kz0^2)/2)
             x0 = r0*cos(φ)
             y0 = r0*sin(φ)
             z0 = 0.0
-            amp = amplitude(kp0,kz0)
+            amp = amplitude(kd0,kz0)
             rate = abs2(amp)
             if rate < cutoff_limit
                 continue    # discard the sample
