@@ -158,24 +158,31 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
             end
             FxdFy_FydFx = Fxt*dFyt-dFxt*Fyt
             jac(kd,kz) = abs(Ft + sqrt(kd^2+kz^2)/Ft^2*FxdFy_FydFx)
+            step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
+            dkdt = if ! sp.monte_carlo
+                step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+            else
+                step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
+            end
+
             # returns
             if isempty(prefix)
-                rate_exp(kd,kz,kx,ky) = ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz)
+                rate_exp(kd,kz,kx,ky) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz)
             else
                 if :Pre in prefix
                     if :Jac in prefix
-                        rate_pre_jac(kd,kz,kx,ky) = ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kd,kz) * jac(kd,kz)
+                        rate_pre_jac(kd,kz,kx,ky) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kd,kz) * jac(kd,kz)
                     else
-                        rate_pre(kd,kz,kx,ky) = ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kd,kz)
+                        rate_pre(kd,kz,kx,ky) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kd,kz)
                     end
                 elseif :PreCC in prefix
                     if :Jac in prefix
-                        rate_precc_jac(kd,kz,kx,ky) = ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kd,kz) * jac(kd,kz)
+                        rate_precc_jac(kd,kz,kx,ky) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kd,kz) * jac(kd,kz)
                     else
-                        rate_precc(kd,kz,kx,ky) = ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kd,kz)
+                        rate_precc(kd,kz,kx,ky) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kd,kz)
                     end
                 else # [:Jac]
-                    rate_jac(kd,kz,kx,ky) = ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * jac(kd,kz)
+                    rate_jac(kd,kz,kx,ky) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * jac(kd,kz)
                 end
             end
         end

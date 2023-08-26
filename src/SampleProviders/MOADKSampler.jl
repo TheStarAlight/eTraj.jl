@@ -165,24 +165,31 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
                       +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) /
                         ((kd^2+kz^2)*Ft^2)^((n+1)/4)
         jac = Ft
+        step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
+        dkdt = if ! sp.monte_carlo
+            step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+        else
+            step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
+        end
+
         # returns
         if isempty(prefix)
-            rate_exp(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz)
+            rate_exp(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz)
         else
             if :Pre in prefix
                 if :Jac in prefix
-                    rate_pre_jac(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz) * jac
+                    rate_pre_jac(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz) * jac
                 else
-                    rate_pre(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz)
+                    rate_pre(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz)
                 end
             elseif :PreCC in prefix
                 if :Jac in prefix
-                    rate_precc_jac(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz) * jac
+                    rate_precc_jac(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz) * jac
                 else
-                    rate_precc(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz)
+                    rate_precc(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz)
                 end
             else # [:Jac]
-                rate_jac(kd,kz) = ADKAmpExp(Ft,Ip,kd,kz) * jac
+                rate_jac(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * jac
             end
         end
     end
