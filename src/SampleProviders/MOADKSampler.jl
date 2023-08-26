@@ -6,7 +6,7 @@ using StaticArrays
 using Random
 using Rotations
 using WignerD
-"Sample provider which yields initial electron samples through MO-ADK formula."
+"Sample provider which generates initial electron samples using the MO-ADK method."
 struct MOADKSampler <: ElectronSampleProvider
     laser   ::Laser;
     target  ::Molecule; # MO-ADK only supports [Molecule]
@@ -25,7 +25,7 @@ struct MOADKSampler <: ElectronSampleProvider
                             laser               ::Laser,
                             target              ::SAEAtomBase,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
-                            sample_t_num        ::Int,
+                            sample_t_num        ::Integer,
                             sample_cutoff_limit ::Real,
                             sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
@@ -33,17 +33,14 @@ struct MOADKSampler <: ElectronSampleProvider
                             mol_orbit_idx       ::Integer,
                                 #* for step-sampling (!rate_monteCarlo)
                             ss_kd_max           ::Real,
-                            ss_kd_num           ::Int,
+                            ss_kd_num           ::Integer,
                             ss_kz_max           ::Real,
-                            ss_kz_num           ::Int,
+                            ss_kz_num           ::Integer,
                                 #* for Monte-Carlo-sampling (rate_monteCarlo)
-                            mc_kt_num           ::Int,
+                            mc_kt_num           ::Integer,
                             mc_kt_max           ::Real,
                             kwargs...   # kwargs are surplus params.
                             )
-        F0 = LaserF0(laser)
-        Ip = IonPotential(target)
-        γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         # check phase method support.
         if ! (traj_phase_method in [:CTMC, :QTMC, :SCTS])
             error("[MOADKSampler] Undefined phase method [$traj_phase_method].")
@@ -70,12 +67,6 @@ struct MOADKSampler <: ElectronSampleProvider
                 return
             end
         end
-        # check Keldysh parameter.
-        if γ0 ≥ 0.5
-            @warn "[MOADKSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
-        elseif γ0 ≥ 1.0
-            @warn "[MOADKSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] unsatisfied."
-        end
         # check sampling parameters.
         @assert (sample_t_num>0) "[MOADKSampler] Invalid time sample number $sample_t_num."
         @assert (sample_cutoff_limit≥0) "[MOADKSampler] Invalid cut-off limit $sample_cutoff_limit."
@@ -93,20 +84,29 @@ struct MOADKSampler <: ElectronSampleProvider
         if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≤ 0
             error("[MOADKSampler] The energy of the ionizing orbit is non-negative.")
         end
+        # check Keldysh parameter.
+        F0 = LaserF0(laser)
+        Ip = IonPotential(target)
+        γ0 = AngFreq(laser) * sqrt(2Ip) / F0
+        if γ0 ≥ 0.5
+            @warn "[MOADKSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+        elseif γ0 ≥ 1.0
+            @warn "[MOADKSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] unsatisfied."
+        end
         # finish initialization.
         return if ! sample_monte_carlo
             new(laser,target,
                 sample_monte_carlo,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                0,0,        # for MC params. pass meaningless values
+                0,0,        # for MC params. pass empty values
                 sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_idx)
         else
-            t_samples = rand(MersenneTwister(1), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1]
+            t_samples = sort!(rand(MersenneTwister(1), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
             new(laser,target,
                 sample_monte_carlo,
                 t_samples,
-                0:0,0:0,    # for SS params. pass meaningless values
+                0:0,0:0,    # for SS params. pass empty values
                 mc_kt_num, mc_kt_max,
                 sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_idx)
         end
@@ -140,7 +140,7 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
         return nothing
     end
 
-    # determining Euler angles (β,γ) (α contributes nothing to Γ, thus is neglected)
+    # determining Euler angles (α,β,γ)
     mol_rot = MolRotation(sp.target)
     α,β,γ = obtain_Euler(mol_rot, (Fxt,Fyt))
 
@@ -152,18 +152,11 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
         c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^(3(1-n)/2) is omitted, trivial
         e0 = 2.71828182845904523
         c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ft^(-n) * (1+2γ0/e0)^(-n)
-        @inline ti(kt2) = sqrt(κ^2+kt2)/Ft
-        # kx = kd * -sin(φ)
-        # ky = kd *  cos(φ)
+        @inline ti(kd,kz) = sqrt(κ^2+kd^2+kz^2)/Ft
+        @inline k_ts(kx,ky,kz,ti) = (kx,ky,kz) .- 1im*ti*(Fxt,Fyt,0.0)
         # C_lm = asymp_coeff[l+1,m+l+1]
-        pre(kd,kz) = c *
-            mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, (@SVector [kd*-sin(φ),kd*cos(φ),kz]) .- (1im*ti(kd^2+kz^2)) .* normalize(@SVector [Fxt,Fyt,0]), (Fxt,Fyt)),
-                      +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) /
-            ((kd^2+kz^2)*Ft^2)^((n+1)/4)
-        pre_cc(kd,kz) = c_cc *
-            mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, (@SVector [kd*-sin(φ),kd*cos(φ),kz]) .- (1im*ti(kd^2+kz^2)) .* normalize(@SVector [Fxt,Fyt,0]), (Fxt,Fyt)),
-                      +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) /
-                        ((kd^2+kz^2)*Ft^2)^((n+1)/4)
+        pre(kx,ky,kd,kz) = c * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*Ft^2)^((n+1)/4)
+        pre_cc(kx,ky,kd,kz) = c_cc * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*Ft^2)^((n+1)/4)
         jac = Ft
         step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
         dkdt = if ! sp.monte_carlo
@@ -174,22 +167,22 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
 
         # returns
         if isempty(prefix)
-            rate_exp(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz)
+            rate_exp(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz)
         else
             if :Pre in prefix
                 if :Jac in prefix
-                    rate_pre_jac(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz) * jac
+                    rate_pre_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kx,ky,kd,kz) * jac
                 else
-                    rate_pre(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kd,kz)
+                    rate_pre(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kx,ky,kd,kz)
                 end
             elseif :PreCC in prefix
                 if :Jac in prefix
-                    rate_precc_jac(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz) * jac
+                    rate_precc_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kx,ky,kd,kz) * jac
                 else
-                    rate_precc(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kd,kz)
+                    rate_precc(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kx,ky,kd,kz)
                 end
             else # [:Jac]
-                rate_jac(kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * jac
+                rate_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * jac
             end
         end
     end
@@ -217,7 +210,7 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
                 x0 = r0*cos(φ)
                 y0 = r0*sin(φ)
                 z0 = 0.0
-                amp = amplitude(kd0,kz0)
+                amp = amplitude(kx0,ky0,kd0,kz0)
                 rate = abs2(amp)
                 if rate < cutoff_limit
                     continue    # discard the sample
@@ -240,7 +233,7 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
             x0 = r0*cos(φ)
             y0 = r0*sin(φ)
             z0 = 0.0
-            amp = amplitude(kd0,kz0)
+            amp = amplitude(kx0,ky0,kd0,kz0)
             rate = abs2(amp)
             if rate < cutoff_limit
                 continue    # discard the sample

@@ -4,11 +4,13 @@ using Base.Threads
 using SpecialFunctions
 using StaticArrays
 using Random
+using Rotations
+using WignerD
 using ForwardDiff
 "Sample provider which generates initial electron samples using the SFA-AE method."
-struct SFAAESampler <: ElectronSampleProvider
+struct MOSFAAESampler <: ElectronSampleProvider
     laser   ::Laser;
-    target  ::SAEAtomBase;  # SFA-AE only supports [SAEAtomBase].
+    target  ::Molecule;  # MO-SFA-AE only supports [Molecule].
     monte_carlo;
     t_samples;
     ss_kd_samples;
@@ -18,32 +20,31 @@ struct SFAAESampler <: ElectronSampleProvider
     cutoff_limit;
     phase_method;   # currently supports :CTMC, :QTMC, :SCTS.
     rate_prefix;    # supports :Exp, :Full or a combination of {:Pre|:PreCC, :Jac}.
+    ion_orbit_idx;
 
-    function SFAAESampler(;
+    function MOSFAAESampler(;
                             laser               ::Laser,
-                            target              ::SAEAtomBase,
+                            target              ::Molecule,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
-                            sample_t_num        ::Int,
+                            sample_t_num        ::Integer,
                             sample_cutoff_limit ::Real,
                             sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
+                            mol_orbit_idx       ::Integer,
                                 #* for step-sampling (!rate_monteCarlo)
                             ss_kd_max           ::Real,
-                            ss_kd_num           ::Int,
+                            ss_kd_num           ::Integer,
                             ss_kz_max           ::Real,
-                            ss_kz_num           ::Int,
+                            ss_kz_num           ::Integer,
                                 #* for Monte-Carlo-sampling (rate_monteCarlo)
-                            mc_kt_num           ::Int,
+                            mc_kt_num           ::Integer,
                             mc_kt_max           ::Real,
                             kwargs...   # kwargs are surplus params.
                             )
-        F0 = LaserF0(laser)
-        Ip = IonPotential(target)
-        γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         # check phase method support.
         if ! (traj_phase_method in [:CTMC, :QTMC, :SCTS])
-            error("[SFAAESampler] Undefined phase method [$traj_phase_method].")
+            error("[MOSFAAESampler] Undefined phase method [$traj_phase_method].")
             return
         end
         # check rate prefix support.
@@ -53,33 +54,43 @@ struct SFAAESampler <: ElectronSampleProvider
             elseif rate_prefix == :Full
                 rate_prefix = [:PreCC, :Jac]
             else
-                error("[SFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[MOSFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             end
         else # a list containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
                 rate_prefix = :Exp
             elseif ! mapreduce(*, p->in(p,[:Pre,:PreCC,:Jac]), rate_prefix)
-                error("[SFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[MOSFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             elseif :Pre in rate_prefix && :PreCC in rate_prefix
-                error("[SFAAESampler] Rate prefixes [Pre] & [PreCC] conflict.")
+                error("[MOSFAAESampler] Rate prefixes [Pre] & [PreCC] conflict.")
                 return
             end
         end
-        # check Keldysh paramater.
-        if γ0 ≥ 1.0
-            @warn "[SFAAESampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0)0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
-        end
         # check sampling parameters.
-        @assert (sample_t_num>0) "[SFAAESampler] Invalid time sample number $sample_t_num."
-        @assert (sample_cutoff_limit≥0) "[SFAAESampler] Invalid cut-off limit $sample_cutoff_limit."
+        @assert (sample_t_num>0) "[MOSFAAESampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[MOSFAAESampler] Invalid cut-off limit $sample_cutoff_limit."
         if ! sample_monte_carlo # check SS sampling parameters.
-            @assert (ss_kd_num>0 && ss_kz_num>0) "[SFAAESampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
+            @assert (ss_kd_num>0 && ss_kz_num>0) "[MOSFAAESampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
         else                    # check MC sampling parameters.
-            @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFAAESampler] Invalid sampling time interval $sample_t_intv."
-            @assert (mc_kt_num>0) "[SFAAESampler] Invalid sampling kt_num $mc_kt_num."
-            @assert (mc_kt_max>0) "[SFAAESampler] Invalid sampling kt_max $mc_kt_max."
+            @assert (sample_t_intv[1] < sample_t_intv[2]) "[MOSFAAESampler] Invalid sampling time interval $sample_t_intv."
+            @assert (mc_kt_num>0) "[MOSFAAESampler] Invalid sampling kt_num $mc_kt_num."
+            @assert (mc_kt_max>0) "[MOSFAAESampler] Invalid sampling kt_max $mc_kt_max."
+        end
+        # check molecular orbital
+        if ! (mol_orbit_idx in MolAsympCoeffAvailableIndices(target))
+            MolCalcAsympCoeff!(target, mol_orbit_idx)
+        end
+        if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≤ 0
+            error("[MOADKSampler] The energy of the ionizing orbit is non-negative.")
+        end
+        # check Keldysh paramater.
+        F0 = LaserF0(laser)
+        Ip = IonPotential(target, mol_orbit_idx)
+        γ0 = AngFreq(laser) * sqrt(2Ip) / F0
+        if γ0 ≥ 1.0
+            @warn "[MOSFAAESampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0)0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # finish initialization.
         return if ! sample_monte_carlo
@@ -102,12 +113,12 @@ struct SFAAESampler <: ElectronSampleProvider
 end
 
 "Gets the total number of batches."
-function batch_num(sp::SFAAESampler)
+function batch_num(sp::MOSFAAESampler)
     return length(sp.t_samples)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA-AE method."
-function gen_electron_batch(sp::SFAAESampler, batchId::Int)
+function gen_electron_batch(sp::MOSFAAESampler, batchId::Int)
     t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
@@ -120,9 +131,8 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
     φ   = atan(-Fyt,-Fxt)
     Z   = AsympNuclCharge(sp.target)
     Ip  = IonPotential(sp.target)
-    l   = AngularQuantumNumber(sp.target)
-    m   = MagneticQuantumNumber(sp.target)
-    C   = AsympCoeff(sp.target)
+    asymp_coeff = MolAsympCoeff(sp.target, sp.ion_orbit_idx)
+    lMax = MolAsympCoeff_lMax(sp.target, sp.ion_orbit_idx)
     γ0  = AngFreq(sp.laser) * sqrt(2Ip) / F0
     prefix = sp.rate_prefix
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
@@ -132,6 +142,10 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
     if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit
         return nothing
     end
+
+    # determining Euler angles (α,β,γ)
+    mol_rot = MolRotation(sp.target)
+    α,β,γ = obtain_Euler(mol_rot, (Fxt,Fyt))
 
     amplitude::Function =
         begin
@@ -143,8 +157,8 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
             FxdFy_FydFx = Fxt*dFyt-dFxt*Fyt
             @inline ti(kx,ky,kd,kz) = sqrt((κ^2+kd^2+kz^2)/F2eff(kx,ky))
             @inline k_ts(kx,ky,kz,ti) = (kx,ky,kz) .- (1im*ti .*(Fxt,Fyt,0.0)) .+ (ti^2/2 .*(dFxt,dFyt,0.0))
-            pre(kx,ky,kd,kz) = c * C * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
-            pre_cc(kx,ky,kd,kz) = c_cc * C * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
+            pre(kx,ky,kd,kz) = c * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
+            pre_cc(kx,ky,kd,kz) = c_cc * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
             jac(kd,kz) = abs(Ft + sqrt(kd^2+kz^2)/Ft^2*FxdFy_FydFx)
             step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
             dkdt = if ! sp.monte_carlo
@@ -234,7 +248,7 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
             end
         end
         if sum(sample_count_thread) == 0
-            # @warn "[SFAAESampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
+            # @warn "[MOSFAAESampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
             return nothing
         end
         # collect electron samples from different threads.
