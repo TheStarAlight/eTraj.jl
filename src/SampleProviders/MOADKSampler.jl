@@ -155,8 +155,8 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Int)
         @inline ti(kd,kz) = sqrt(κ^2+kd^2+kz^2)/Ft
         @inline k_ts(kx,ky,kz,ti) = (kx,ky,kz) .- 1im*ti*(Fxt,Fyt,0.0)
         # C_lm = asymp_coeff[l+1,m+l+1]
-        pre(kx,ky,kd,kz) = c * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*Ft^2)^((n+1)/4)
-        pre_cc(kx,ky,kd,kz) = c_cc * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*Ft^2)^((n+1)/4)
+        pre(kx,ky,kd,kz) = c * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m_, k_ts(kx,ky,kz,ti(kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*Ft^2)^((n+1)/4)
+        pre_cc(kx,ky,kd,kz) = c_cc * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m_, k_ts(kx,ky,kz,ti(kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*Ft^2)^((n+1)/4)
         jac = Ft
         step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
         dkdt = if ! sp.monte_carlo

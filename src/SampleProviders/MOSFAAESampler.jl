@@ -99,7 +99,7 @@ struct MOSFAAESampler <: ElectronSampleProvider
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 0,0,        # for MC params. pass empty values
-                sample_cutoff_limit,traj_phase_method,rate_prefix)
+                sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_idx)
         else
             t_samples = sort!(rand(MersenneTwister(1), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
             new(laser,target,
@@ -107,7 +107,7 @@ struct MOSFAAESampler <: ElectronSampleProvider
                 t_samples,
                 0:0,0:0,    # for SS params. pass empty values
                 mc_kt_num, mc_kt_max,
-                sample_cutoff_limit,traj_phase_method,rate_prefix)
+                sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_idx)
         end
     end
 end
@@ -157,8 +157,8 @@ function gen_electron_batch(sp::MOSFAAESampler, batchId::Int)
             FxdFy_FydFx = Fxt*dFyt-dFxt*Fyt
             @inline ti(kx,ky,kd,kz) = sqrt((κ^2+kd^2+kz^2)/F2eff(kx,ky))
             @inline k_ts(kx,ky,kz,ti) = (kx,ky,kz) .- (1im*ti .*(Fxt,Fyt,0.0)) .+ (ti^2/2 .*(dFxt,dFyt,0.0))
-            pre(kx,ky,kd,kz) = c * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
-            pre_cc(kx,ky,kd,kz) = c_cc * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
+            pre(kx,ky,kd,kz) = c * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m_, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
+            pre_cc(kx,ky,kd,kz) = c_cc * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m_, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
             jac(kd,kz) = abs(Ft + sqrt(kd^2+kz^2)/Ft^2*FxdFy_FydFx)
             step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
             dkdt = if ! sp.monte_carlo
