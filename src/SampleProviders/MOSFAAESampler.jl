@@ -7,7 +7,7 @@ using Random
 using Rotations
 using WignerD
 using ForwardDiff
-"Sample provider which generates initial electron samples using the SFA-AE method."
+"Sample provider which generates initial electron samples using the MO-SFA-AE method."
 struct MOSFAAESampler <: ElectronSampleProvider
     laser   ::Laser;
     target  ::Molecule;  # MO-SFA-AE only supports [Molecule].
@@ -117,7 +117,7 @@ function batch_num(sp::MOSFAAESampler)
     return length(sp.t_samples)
 end
 
-"Generates a batch of electrons of `batchId` from `sp` using SFA-AE method."
+"Generates a batch of electrons of `batchId` from `sp` using MO-SFA-AE method."
 function gen_electron_batch(sp::MOSFAAESampler, batchId::Int)
     t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
@@ -169,22 +169,22 @@ function gen_electron_batch(sp::MOSFAAESampler, batchId::Int)
 
             # returns
             if isempty(prefix)
-                rate_exp(kx,ky,kd,kz) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz)
+                rate_exp(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz)
             else
                 if :Pre in prefix
                     if :Jac in prefix
-                        rate_pre_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kd,kz) * jac(kd,kz)
+                        rate_pre_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kd,kz) * jac(kd,kz)
                     else
-                        rate_pre(kx,ky,kd,kz) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kd,kz)
+                        rate_pre(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kd,kz)
                     end
                 elseif :PreCC in prefix
                     if :Jac in prefix
-                        rate_precc_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kd,kz) * jac(kd,kz)
+                        rate_precc_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kd,kz) * jac(kd,kz)
                     else
-                        rate_precc(kx,ky,kd,kz) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kd,kz)
+                        rate_precc(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kd,kz)
                     end
                 else # [:Jac]
-                    rate_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * jac(kd,kz)
+                    rate_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * jac(kd,kz)
                 end
             end
         end

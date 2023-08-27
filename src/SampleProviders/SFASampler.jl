@@ -1,29 +1,42 @@
 
+using Base.Threads
+using SpecialFunctions
 using StaticArrays
+using Random
 using NLsolve
 using QuadGK
 
 "Sample provider which yields initial electron samples through SFA formula."
 struct SFASampler <: ElectronSampleProvider
-    laser           ::Laser;
-    target          ::SAEAtomBase;      # SFA only supports [SAEAtomBase].
-    t_samples       ::AbstractVector;
-    ss_kd_samples   ::AbstractVector;
-    ss_kz_samples   ::AbstractVector;
-    cutoff_limit    ::Real;
-    phase_method    ::Symbol;           # currently supports :CTMC, :QTMC, :SCTS.
-    rate_prefix     ::Symbol;           # currently supports :ExpRate, :ExpPre, :ExpJac, :Full.
-    function SFASampler(;   laser               ::Laser,
+    laser   ::Laser;
+    target  ::SAEAtomBase;  # SFA only supports [SAEAtomBase].
+    monte_carlo;
+    t_samples;
+    ss_kd_samples;
+    ss_kz_samples;
+    mc_kt_num;
+    mc_kt_max;
+    cutoff_limit;
+    phase_method;   # currently supports :CTMC, :QTMC, :SCTS.
+    rate_prefix;    # supports :Exp, :Full or a combination of {:Pre|:PreCC, :Jac}.
+
+    function SFASampler(;
+                            laser               ::Laser,
                             target              ::SAEAtomBase,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Integer,
                             sample_cutoff_limit ::Real,
+                            sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
-                            rate_prefix         ::Symbol,
+                            rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
+                                #* for step-sampling (!rate_monteCarlo)
                             ss_kd_max           ::Real,
                             ss_kd_num           ::Integer,
                             ss_kz_max           ::Real,
                             ss_kz_num           ::Integer,
+                                #* for Monte-Carlo-sampling (rate_monteCarlo)
+                            mc_kt_num           ::Integer,
+                            mc_kt_max           ::Real,
                             kwargs...   # kwargs are surplus params.
                             )
         # check phase method support.
@@ -32,20 +45,53 @@ struct SFASampler <: ElectronSampleProvider
             return
         end
         # check rate prefix support.
-        if ! (rate_prefix in [:ExpRate, :ExpPre, :ExpJac, :Full])
-            error("[SFASampler] Undefined tunneling rate prefix [$rate_prefix].")
-            return
+        if isa(rate_prefix, Symbol) # Exp or Full
+            if rate_prefix == :Exp
+                rate_prefix = []
+            elseif rate_prefix == :Full
+                rate_prefix = [:PreCC, :Jac]
+            else
+                error("[SFASampler] Undefined tunneling rate prefix [$rate_prefix].")
+                return
+            end
+        else # a list containing Pre|PreCC, Jac.
+            if length(rate_prefix) == 0
+                rate_prefix = :Exp
+            elseif ! mapreduce(*, p->in(p,[:Pre,:PreCC,:Jac]), rate_prefix)
+                error("[SFASampler] Undefined tunneling rate prefix [$rate_prefix].")
+                return
+            elseif :Pre in rate_prefix && :PreCC in rate_prefix
+                error("[SFASampler] Rate prefixes [Pre] & [PreCC] conflict.")
+                return
+            end
         end
         # check sampling parameters.
         @assert (sample_t_num>0) "[SFASampler] Invalid time sample number $sample_t_num."
         @assert (sample_cutoff_limit≥0) "[SFASampler] Invalid cut-off limit $sample_cutoff_limit."
-        @assert (ss_kd_num>0 && ss_kz_num>0) "[SFASampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
+        if ! sample_monte_carlo # check SS sampling parameters.
+            @assert (ss_kd_num>0 && ss_kz_num>0) "[SFASampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
+        else                    # check MC sampling parameters.
+            @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFASampler] Invalid sampling time interval $sample_t_intv."
+            @assert (mc_kt_num>0) "[SFASampler] Invalid sampling kt_num $mc_kt_num."
+            @assert (mc_kt_max>0) "[SFASampler] Invalid sampling kt_max $mc_kt_max."
+        end
         # finish initialization.
-        return new(laser, target,
+        return if ! sample_monte_carlo
+            new(laser,target,
+                sample_monte_carlo,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                sample_cutoff_limit, traj_phase_method, rate_prefix
-                )
+                0,0,        # for MC params. pass empty values
+                sample_cutoff_limit,traj_phase_method,rate_prefix)
+        else
+            t_samples = sort!(rand(MersenneTwister(1), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
+            new(laser,target,
+                sample_monte_carlo,
+                t_samples,
+                0:0,0:0,    # for SS params. pass empty values
+                mc_kt_num, mc_kt_max,
+                sample_cutoff_limit,traj_phase_method,rate_prefix)
+        end
     end
 end
 
@@ -56,109 +102,173 @@ end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA method."
 function gen_electron_batch(sp::SFASampler, batchId::Int)
-    tr   = sp.t_samples[batchId]  # real part of time
+    tr = sp.t_samples[batchId]
     Ax::Function = LaserAx(sp.laser)
     Ay::Function = LaserAy(sp.laser)
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
-    Fxtr = Fx(tr)
-    Fytr = Fy(tr)
-    Ftr  = hypot(Fxtr,Fytr)
-    φ   = atan(-Fytr,-Fxtr)
+    Fxtr= Fx(tr)
+    Fytr= Fy(tr)
+    Ftr = hypot(Fxtr,Fytr)
+    F0  = LaserF0(sp.laser)
     ω   = AngFreq(sp.laser)
+    φ   = atan(-Fytr,-Fxtr)
     Z   = AsympNuclCharge(sp.target)
     Ip  = IonPotential(sp.target)
-    α   = 1.0+Z/sqrt(2Ip)
+    l   = AngularQuantumNumber(sp.target)
+    m   = MagneticQuantumNumber(sp.target)
+    C   = AsympCoeff(sp.target)
+    γ0  = AngFreq(sp.laser) * sqrt(2Ip) / F0
+    prefix = sp.rate_prefix
+    @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     cutoff_limit = sp.cutoff_limit
-    if Ftr == 0 || ADKRateExp(sp.target)(Ftr,0.0,0.0) < cutoff_limit
+    if Ftr == 0 || ADKAmpExp(Ftr,Ip,0.0,0.0)^2 < cutoff_limit
         return nothing
     end
-    rate_prefix = sp.rate_prefix
+
+    @inline px_(kd,Axts,Ayts) =  kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
+    @inline py_(kd,Axts,Ayts) = -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
+    function saddle_point_equation(tr,ti,kd,kz)
+        Axts = Ax(tr+1im*ti)
+        Ayts = Ay(tr+1im*ti)
+        px = px_(kd,Axts,Ayts); py = py_(kd,Axts,Ayts)
+        return SVector(real(((px+Axts)^2+(py+Ayts)^2+kz^2)/2 + Ip))
+    end
+    function solve_spe(tr,kd,kz)
+        spe((ti,)) = saddle_point_equation(tr,ti,kd,kz)
+        ti_sol = nlsolve(spe, [asinh(ω/Ftr*sqrt(kd^2+kz^2+2Ip))/ω])
+        ti = 0.0
+        if converged(ti_sol) && (ti_sol.zero[1]>0)
+            ti = ti_sol.zero[1]
+            (ti == 0.0) && return 0.0
+        else
+            return 0.0
+        end
+        return ti
+    end
+
+    amplitude::Function =
+        begin
+            κ = sqrt(2Ip)
+            n = Z/κ # n* = Z/κ
+            c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^((n-5)/2) is omitted, trivial
+            e0 = 2.71828182845904523
+            c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ftr^(-n) * (1+2γ0/e0)^(-n)
+            k_ts(px,py,kz,ts) = (px+Ax(ts), py+Ay(ts), kz)
+            pre(px,py,kz,ts) = begin
+                kts = k_ts(px,py,kz,ts)
+                c * C * sph_harm_lm_khat(l,m, kts, (Fxtr,Fytr)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+            end
+            pre_cc(px,py,kz,ts) = begin
+                kts = k_ts(px,py,kz,ts)
+                c_cc * C * sph_harm_lm_khat(l,m, kts, (Fxtr,Fytr)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+            end
+            S_tun(px,py,kz,ti) = -quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+kz^2)/2+Ip, tr+1im*ti, tr)[1] # Integrates ∂S/∂t from ts to tr.
+            function jac(kd,kz)
+                dtr = 0.01
+                dkd = 0.01
+                ti_tp = solve_spe(tr+dtr,kd,kz)
+                ti_tm = solve_spe(tr-dtr,kd,kz)
+                ti_kp = solve_spe(tr,kd+dkd,kz)
+                ti_km = solve_spe(tr,kd-dkd,kz)
+                dpxdtr = px_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - px_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm)) # actually is 4*dpx/dtr
+                dpydtr = py_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - py_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm))
+                dpxdkd = px_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - px_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
+                dpydkd = py_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - py_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
+                return abs(dpxdtr*dpydkd-dpxdkd*dpydtr)/(4dtr*dkd)
+            end
+            step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
+            dkdt = if ! sp.monte_carlo
+                step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+            else
+                step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
+            end
+            # returns
+            if isempty(prefix)
+                rate_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
+            else
+                if :Pre in prefix
+                    if :Jac in prefix
+                        rate_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * jac(kd,kz)
+                    else
+                        rate_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
+                    end
+                elseif :PreCC in prefix
+                    if :Jac in prefix
+                        rate_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * jac(kd,kz)
+                    else
+                        rate_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
+                    end
+                else # [:Jac]
+                    rate_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * jac(kd,kz)
+                end
+            end
+        end
+
     phase_method = sp.phase_method
     dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
-    kd_samples = sp.ss_kd_samples
-    kz_samples = sp.ss_kz_samples
-    kdNum, kzNum = length(kd_samples), length(kz_samples)
 
     sample_count_thread = zeros(Int,nthreads())
-    init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
-
-    "Saddle-point equation."
-    @inline function saddle_point_equation(AxF,AyF,tr,ti,kd,kz)
-        Axt = AxF(tr+1im*ti)
-        Ayt = AyF(tr+1im*ti)
-        px =  kd*imag(Ayt)/sqrt(imag(Axt)^2+imag(Ayt)^2) - real(Axt)
-        py = -kd*imag(Axt)/sqrt(imag(Axt)^2+imag(Ayt)^2) - real(Ayt)
-        return SVector(real(((px+Axt)^2+(py+Ayt)^2+kz^2)/2 + Ip))
+    init_thread = if ! sp.monte_carlo
+        zeros(Float64, dim, nthreads(), length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
+    else
+        zeros(Float64, dim, nthreads(), sp.mc_kt_num)
     end
 
-    @inline function px_(AxF,AyF,tr,ti,kd)
-        ts = tr+1im*ti   # saddle point time
-        Axts, Ayts = AxF(ts), AyF(ts)
-        return kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
-    end
-    @inline function py_(AxF,AyF,tr,ti,kd)
-        ts = tr+1im*ti   # saddle point time
-        Axts, Ayts = AxF(ts), AyF(ts)
-        return -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
-    end
-
-    @threads for ikd in 1:kdNum
-        for ikz in 1:kzNum
-            kd, kz = kd_samples[ikd], kz_samples[ikz]
-            spe((ti,)) = saddle_point_equation(Ax,Ay,tr,ti,kd,kz)
-            ti_sol = nlsolve(spe, [asinh(ω/Ftr*sqrt(kd^2+kz^2+2Ip))/ω])
-            ti = 0.0
-            if converged(ti_sol) && (ti_sol.zero[1]>0)
-                ti = ti_sol.zero[1]
-                (ti == 0.0) && continue
-            else
-                continue
+    if ! sp.monte_carlo
+        kd_samples = sp.ss_kd_samples
+        kz_samples = sp.ss_kz_samples
+        kdNum, kzNum = length(kd_samples), length(kz_samples)
+        @threads for ikd in 1:kdNum
+            for ikz in 1:kzNum
+                kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
+                ti = solve_spe(tr,kd0,kz0)
+                ts = tr+1im*ti
+                px = px_(kd0,Ax(ts),Ay(ts))
+                py = py_(kd0,Ax(ts),Ay(ts))
+                x0 = quadgk(ti->imag(Ax(tr+1im*ti)), 0.0, ti)[1]
+                y0 = quadgk(ti->imag(Ay(tr+1im*ti)), 0.0, ti)[1]
+                z0 = 0.0
+                kx0 = px+Ax(tr)
+                ky0 = py+Ay(tr)
+                amp = amplitude(px,py,kd0,kz0,ti)
+                rate = abs2(amp)
+                if rate < cutoff_limit
+                    continue    # discard the sample
+                end
+                sample_count_thread[threadid()] += 1
+                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
+                if phase_method != :CTMC
+                    init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp) # Re(S_tun) is also included in the angle(amp)
+                end
             end
-
-            px = px_(Ax,Ay,tr,ti,kd)
-            py = py_(Ax,Ay,tr,ti,kd)
-            # px =  kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
-            # py = -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
-            S  = quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+kz^2)/2 + Ip, tr+1im*ti, tr)[1] # Integrates ∂S/∂t from ts to tr.
+        end
+    else
+        @threads for i in 1:sp.mc_kt_num
+            # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
+            rng = Random.MersenneTwister(0)
+            kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
+            ti = solve_spe(tr,kd0,kz0)
+            ts = tr+1im*ti
+            px = px_(kd0,Ax(ts),Ay(ts))
+            py = py_(kd0,Ax(ts),Ay(ts))
             x0 = quadgk(ti->imag(Ax(tr+1im*ti)), 0.0, ti)[1]
             y0 = quadgk(ti->imag(Ay(tr+1im*ti)), 0.0, ti)[1]
             z0 = 0.0
             kx0 = px+Ax(tr)
             ky0 = py+Ay(tr)
-            kz0 = kz
-            rate = exp(2*imag(S))
+            amp = amplitude(px,py,kd0,kz0,ti)
+            rate = abs2(amp)
             if rate < cutoff_limit
-                continue
+                continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1
-            if rate_prefix == :ExpPre || rate_prefix == :Full
-                rate /= abs((px+Ax(tr+1im*ti))*Fx(tr+1im*ti)+(py+Ay(tr+1im*ti))*Fy(tr+1im*ti))^α
-            end
-            if rate_prefix == :ExpJac || rate_prefix == :Full
-                dt = 0.01
-                dk = 0.01
-                spe_t_p_dt((ti,)) = saddle_point_equation(Ax,Ay,tr+dt,ti,kd,kz)
-                spe_t_m_dt((ti,)) = saddle_point_equation(Ax,Ay,tr-dt,ti,kd,kz)
-                spe_k_p_dk((ti,)) = saddle_point_equation(Ax,Ay,tr,ti,kd+dk,kz)
-                spe_k_m_dk((ti,)) = saddle_point_equation(Ax,Ay,tr,ti,kd-dk,kz)
-                ti_tp = nlsolve(spe_t_p_dt,[ti]).zero[1]
-                ti_tm = nlsolve(spe_t_m_dt,[ti]).zero[1]
-                ti_kp = nlsolve(spe_k_p_dk,[ti]).zero[1]
-                ti_km = nlsolve(spe_k_m_dk,[ti]).zero[1]
-                dpxdtr = px_(Ax,Ay,tr+dt,ti_tp,kd) - px_(Ax,Ay,tr-dt,ti_tm,kd)
-                dpydtr = py_(Ax,Ay,tr+dt,ti_tp,kd) - py_(Ax,Ay,tr-dt,ti_tm,kd)
-                dpxdkd = px_(Ax,Ay,tr,ti_kp,kd+dk) - px_(Ax,Ay,tr,ti_km,kd-dk)
-                dpydkd = py_(Ax,Ay,tr,ti_kp,kd+dk) - py_(Ax,Ay,tr,ti_km,kd-dk)
-                rate *= abs(dpxdtr*dpydkd-dpxdkd*dpydtr)/(4dt*dk)
-            end
             init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
             if phase_method != :CTMC
-                init_thread[9,threadid(),sample_count_thread[threadid()]] = 0.0
+                init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp)
             end
         end
     end
-
     if sum(sample_count_thread) == 0
         # @warn "[SFASampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
         return nothing

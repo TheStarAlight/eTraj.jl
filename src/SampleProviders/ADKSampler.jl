@@ -174,22 +174,22 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
 
             # returns
             if isempty(prefix)
-                rate_exp(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz)
+                rate_exp(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz)
             else
                 if :Pre in prefix
                     if :Jac in prefix
-                        rate_pre_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kx,ky,kd,kz) * jac
+                        rate_pre_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz) * pre(kx,ky,kd,kz) * jac
                     else
-                        rate_pre(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre(kx,ky,kd,kz)
+                        rate_pre(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz) * pre(kx,ky,kd,kz)
                     end
                 elseif :PreCC in prefix
                     if :Jac in prefix
-                        rate_precc_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kx,ky,kd,kz) * jac
+                        rate_precc_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kx,ky,kd,kz) * jac
                     else
-                        rate_precc(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kx,ky,kd,kz)
+                        rate_precc(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz) * pre_cc(kx,ky,kd,kz)
                     end
                 else # [:Jac]
-                    rate_jac(kx,ky,kd,kz) = dkdt * ADKAmpExp(Ft,Ip,kd,kz) * jac
+                    rate_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz) * jac
                 end
             end
         end
