@@ -29,12 +29,12 @@ struct ADKSampler <: ElectronSampleProvider
                         traj_phase_method   ::Symbol,
                         rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
                         adk_tun_exit        ::Symbol,
-                            #* for step-sampling (!rate_monteCarlo)
+                            #* for step-sampling (!sample_monte_carlo)
                         ss_kd_max           ::Real,
                         ss_kd_num           ::Int,
                         ss_kz_max           ::Real,
                         ss_kz_num           ::Int,
-                            #* for Monte-Carlo-sampling (rate_monteCarlo)
+                            #* for Monte-Carlo-sampling (sample_monte_carlo)
                         mc_kt_num           ::Int,
                         mc_kt_max           ::Real,
                         kwargs...   # kwargs are surplus params.
@@ -122,7 +122,7 @@ function batch_num(sp::ADKSampler)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using ADK method."
-function gen_electron_batch(sp::ADKSampler, batchId::Int)
+function gen_electron_batch(sp::ADKSampler, batchId::Integer)
     t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
@@ -140,7 +140,7 @@ function gen_electron_batch(sp::ADKSampler, batchId::Int)
     prefix = sp.rate_prefix
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     cutoff_limit = sp.cutoff_limit
-    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit
+    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit/1e3
         return nothing
     end
     # determining tunneling exit position. here Ip_eff=Ip+k0^2/2

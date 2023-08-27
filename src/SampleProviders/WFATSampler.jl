@@ -1,63 +1,92 @@
 
-using HDF5
+using Printf
+using Base.Threads
+using Random
 using Rotations
 using WignerD
+using HDF5
 
-"Sample provider which yields initial electron samples through WFAT formula."
+"Sample provider which generates initial electron samples through WFAT formula."
 struct WFATSampler <: ElectronSampleProvider
-    laser           ::Laser;
-    target          ::Molecule;     # WFAT only supports [Molecule]
-    t_samples       ::AbstractVector;
-    ss_kd_samples   ::AbstractVector;
-    ss_kz_samples   ::AbstractVector;
-    cutoff_limit    ::Real;
-    tun_exit        ::Symbol;       # :Para for tunneling, :IpF for over-barrier, automatically specified.
-    ion_orbit_idx   ::Integer;
+    laser   ::Laser;
+    target  ::Molecule; # WFAT only supports [Molecule]
+    monte_carlo;
+    t_samples;
+    ss_kd_samples;
+    ss_kz_samples;
+    mc_kt_num;
+    mc_kt_max;
+    cutoff_limit;
+    phase_method;   # currently supports :CTMC.
+    ion_orbit_idx;
 
-    function WFATSampler(;  laser               ::Laser,
-                            target              ::Molecule,
+    function WFATSampler(;
+                            laser               ::Laser,
+                            target              ::SAEAtomBase,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
-                            sample_t_num        ::Int,
-                            ss_kd_max           ::Real,
-                            ss_kd_num           ::Int,
-                            ss_kz_max           ::Real,
-                            ss_kz_num           ::Int,
+                            sample_t_num        ::Integer,
                             sample_cutoff_limit ::Real,
-                            mol_orbit_idx       ::Int,
+                            sample_monte_carlo  ::Bool,
+                            traj_phase_method   ::Symbol,
+                            mol_orbit_idx       ::Integer,
+                                #* for step-sampling (!sample_monte_carlo)
+                            ss_kd_max           ::Real,
+                            ss_kd_num           ::Integer,
+                            ss_kz_max           ::Real,
+                            ss_kz_num           ::Integer,
+                                #* for Monte-Carlo-sampling (sample_monte_carlo)
+                            mc_kt_num           ::Integer,
+                            mc_kt_max           ::Real,
                             kwargs...   # kwargs are surplus params.
                             )
+        # check phase method support.
+        if ! (traj_phase_method in [:CTMC])
+            error("[WFATSampler] Unsupported phase method [$traj_phase_method].")
+            return
+        end
         # check sampling parameters.
         @assert (sample_t_num>0) "[WFATSampler] Invalid time sample number $sample_t_num."
         @assert (sample_cutoff_limit≥0) "[WFATSampler] Invalid cut-off limit $sample_cutoff_limit."
-        @assert (ss_kd_num>0 && ss_kz_num>0) "[WFATSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
-        # load WFAT IntData.
+        if ! sample_monte_carlo # check SS sampling parameters.
+            @assert (ss_kd_num>0 && ss_kz_num>0) "[WFATSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
+        else                    # check MC sampling parameters.
+            @assert (sample_t_intv[1] < sample_t_intv[2]) "[WFATSampler] Invalid sampling time interval $sample_t_intv."
+            @assert (mc_kt_num>0) "[WFATSampler] Invalid sampling kt_num $mc_kt_num."
+            @assert (mc_kt_max>0) "[WFATSampler] Invalid sampling kt_max $mc_kt_max."
+        end
+        # check molecular orbital data
         if ! (mol_orbit_idx in MolWFATAvailableIndices(target))
             MolCalcWFATData!(target, mol_orbit_idx)
         end
-        # check Keldysh parameter & over-barrier condition.
-        Ip = IonPotential(target, mol_orbit_idx)
+        if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≤ 0
+            error("[WFATSampler] The energy of the ionizing orbit is non-negative.")
+        end
+        # check Keldysh parameter.
         F0 = LaserF0(laser)
+        Ip = IonPotential(target)
         γ0 = AngFreq(laser) * sqrt(2Ip) / F0
         if γ0 ≥ 0.5
-            @warn "[WFATSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+            @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
         elseif γ0 ≥ 1.0
-            @warn "[WFATSampler] Keldysh parameter γ=$γ0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
-        end
-        F_crit = Ip^2/4/(1-sqrt(Ip/2))
-        tun_exit = :Para
-        if F0 ≥ F_crit
-            @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching the over-barrier critical value, weak-field condition unsatisfied. Tunneling exit method switched from [Para] to [IpF]."
-            tun_exit = :IpF
-        elseif F0 ≥ F_crit*2/3
-            @warn "[WFATSampler] Peak electric field strength F0=$F0, reaching 2/3 of over-barrier critical value, weak-field condition not sufficiently satisfied."
+            @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # finish initialization.
-        return new( laser, target,
-                    range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
-                    range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                    sample_cutoff_limit, tun_exit,
-                    mol_orbit_idx
-                    )
+        return if ! sample_monte_carlo
+            new(laser,target,
+                sample_monte_carlo,
+                range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
+                range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
+                0,0,        # for MC params. pass empty values
+                sample_cutoff_limit,traj_phase_method,mol_orbit_idx)
+        else
+            t_samples = sort!(rand(MersenneTwister(1), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
+            new(laser,target,
+                sample_monte_carlo,
+                t_samples,
+                0:0,0:0,    # for SS params. pass empty values
+                mc_kt_num, mc_kt_max,
+                sample_cutoff_limit,traj_phase_method,mol_orbit_idx)
+        end
     end
 end
 
@@ -67,82 +96,89 @@ function batch_num(sp::WFATSampler)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using WFAT method."
-function gen_electron_batch(sp::WFATSampler, batchId::Int)
+function gen_electron_batch(sp::WFATSampler, batchId::Integer)
     t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
     Fxt = Fx(t)
     Fyt = Fy(t)
     Ft = hypot(Fxt,Fyt)
-    φ_field = atan( Fyt, Fxt)   # direction of field vector F.
-    φ_exit  = atan(-Fyt,-Fxt)   # direction of tunneling exit, which is opposite to F.
-    Ip = IonPotential(sp.target, sp.ion_orbit_idx)
-    κ  = sqrt(2Ip)
+    F0 = LaserF0(sp.laser)
+    φ  = atan(-Fyt,-Fxt)   # direction of tunneling exit, which is opposite to F.
     Z  = AsympNuclCharge(sp.target)
+    Ip = IonPotential(sp.target, sp.ion_orbit_idx)
+    @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     cutoff_limit = sp.cutoff_limit
-    if Ft == 0 || ADKRateExp(sp.target)(Ip,Ft,0.0,0.0) < cutoff_limit
+    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit/1e3
         return nothing
     end
 
-    # determining tunneling exit position (using ADK's parabolic tunneling exit method if tunExit=:Para)
-    r_exit =
-        if sp.tun_exit == :Para
-            Ip_eff -> (Ip_eff + sqrt(Ip_eff^2 - 4*(1-sqrt(Ip_eff/2))*Ft)) / 2Ft
-        else
-            Ip_eff -> Ip_eff / Ft
+    # determining Euler angles (α,β,γ)
+    mol_rot = MolRotation(sp.target)
+    α,β,γ = obtain_Euler(mol_rot, (Fxt,Fyt))
+
+    rate_::Function =
+    begin
+        κ = sqrt(2Ip)
+        n = Z/κ # n* = Z/κ
+        # prepare G (structure factor)
+        nξMax, mMax = MolWFATMaxChannels(sp.target, sp.ion_orbit_idx)
+        G_data = zeros(ComplexF64, nξMax+1, 2mMax+1)    # to obtain G_nξ,m, call G_data[nξ+1, m+mMax+1]
+        for nξ in 0:nξMax, m in -mMax:mMax
+            G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.ion_orbit_idx,nξ,m,β,γ)
         end
-
-    # determining Euler angles (β,γ) (α contributes nothing to Γ, thus is neglected)
-    mα,mβ,mγ = MolRotation(sp.target)
-    RotMol = RotZYZ(mγ, mβ, mα)  # the molecule's rotation
-    RotLaser = RotMatrix3([[ 0  -sin(φ_field)  cos(φ_field)];
-                           [ 0   cos(φ_field)  sin(φ_field)];
-                           [-1              0             0]])          # the laser's rotation (directions of x&y can be arbitrary)
-    α,β,γ = Rotations.params(RotZYZ(inv(RotLaser)*RotMol))      # the ZYZ Euler angles of the rotations from laser frame (F points to Z axis) to molecular frame.
-
-    # determining tunneling rate Γ.
-    # The total rate Γ consists of partial rates of different channels ν=(nξ,m): Γ = ∑ Γ_ν
-    # The partial rate consists of structure factor part |G_ν(β,γ)|² and field factor W_ν(F): Γ_ν = |G_ν(β,γ)|²*W_ν(F)
-    nξMax, mMax = MolWFATMaxChannels(sp.target, sp.ion_orbit_idx)
-    G_data = zeros(ComplexF64, nξMax+1, 2mMax+1)    # to obtain G_nξ,m, call G_data[nξ+1, m+mMax+1]
-    for nξ in 0:nξMax, m in -mMax:mMax
-        G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.ion_orbit_idx,nξ,m,β,γ)
+        # define W_F (modified field factor)
+        W(nξ,abs_m,kd,kz) = (κ^(abs_m+2)/2/Ft^(abs_m+1)/factorial(abs_m)) * (4κ^2/Ft)^(2n-2nξ-abs_m-1) * (kd^2+kz^2)^abs_m * exp(-2*(κ^2+kd^2+kz^2)^1.5/3Ft)
+        # returns
+        rate(kd,kz) = sum(ν->abs2(G_data[ν[1]+1,ν[2]+mMax+1])*W(ν[1],abs(ν[2]),kd,kz))
     end
-    rate::Function =
-        function (F,kd,kz)
-            Γsum = 0.
-            for nξ in 0:nξMax, m in -mMax:mMax
-                G2 = abs2(G_data[nξ+1, m+mMax+1])  # G², structural part
-                WF = (κ/2) * (4κ^2/F)^(2Z/κ-2nξ-abs(m)-1) * exp(-2(κ^2+kd^2+kz^2)^1.5/3F)   # W_F, field part
-                Γsum += G2*WF
-            end
-            return Γsum
-        end
 
-    # generating samples
-    dim = 8
-    kd_samples = sp.ss_kd_samples
-    kz_samples = sp.ss_kz_samples
-    kdNum, kzNum = length(kd_samples), length(kz_samples)
-
+    dim = 8 # x,y,z,kx,ky,kz,t0,rate
     sample_count_thread = zeros(Int,nthreads())
-    init_thread = zeros(Float64, dim, nthreads(), kdNum*kzNum) # initial condition (support for multi-threading)
+    init_thread = if ! sp.monte_carlo
+        zeros(Float64, dim, nthreads(), length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
+    else
+        zeros(Float64, dim, nthreads(), sp.mc_kt_num)
+    end
 
-    @threads for ikd in 1:kdNum
-        for ikz in 1:kzNum
-            kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
-            kx0 = kd0*-sin(φ_exit)
-            ky0 = kd0* cos(φ_exit)
-            r0 = r_exit(Ip+(kd0^2+kz0^2)/2)
-            x0 = r0*cos(φ_exit)
-            y0 = r0*sin(φ_exit)
+    if ! sp.monte_carlo
+        kd_samples = sp.ss_kd_samples
+        kz_samples = sp.ss_kz_samples
+        kdNum, kzNum = length(kd_samples), length(kz_samples)
+        @threads for ikd in 1:kdNum
+            for ikz in 1:kzNum
+                kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
+                kx0 = kd0*-sin(φ)
+                ky0 = kd0* cos(φ)
+                r0 = (Ip+(kd0^2+kz0^2)/2)/Ft
+                x0 = r0*cos(φ)
+                y0 = r0*sin(φ)
+                z0 = 0.0
+                rate = rate_(kd0,kz0)
+                if rate < cutoff_limit
+                    continue    # discard the sample
+                end
+                sample_count_thread[threadid()] += 1
+                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate]
+            end
+        end
+    else
+        @threads for i in 1:sp.mc_kt_num
+            # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
+            rng = Random.MersenneTwister(0)
+            kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
+            kx0 = kd0*-sin(φ)
+            ky0 = kd0* cos(φ)
+            r0 = (Ip+(kd0^2+kz0^2)/2)/Ft
+            x0 = r0*cos(φ)
+            y0 = r0*sin(φ)
             z0 = 0.0
-            rate_ = rate(Ft,kd0,kz0)
-            if rate_ < cutoff_limit
+            rate = rate_(kd0,kz0)
+            if rate < cutoff_limit
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1
-            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate_]
+            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate]
         end
     end
     if sum(sample_count_thread) == 0

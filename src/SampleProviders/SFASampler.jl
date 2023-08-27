@@ -6,7 +6,7 @@ using Random
 using NLsolve
 using QuadGK
 
-"Sample provider which yields initial electron samples through SFA formula."
+"Sample provider which generates initial electron samples through SFA formula."
 struct SFASampler <: ElectronSampleProvider
     laser   ::Laser;
     target  ::SAEAtomBase;  # SFA only supports [SAEAtomBase].
@@ -29,12 +29,12 @@ struct SFASampler <: ElectronSampleProvider
                             sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
-                                #* for step-sampling (!rate_monteCarlo)
+                                #* for step-sampling (!sample_monte_carlo)
                             ss_kd_max           ::Real,
                             ss_kd_num           ::Integer,
                             ss_kz_max           ::Real,
                             ss_kz_num           ::Integer,
-                                #* for Monte-Carlo-sampling (rate_monteCarlo)
+                                #* for Monte-Carlo-sampling (sample_monte_carlo)
                             mc_kt_num           ::Integer,
                             mc_kt_max           ::Real,
                             kwargs...   # kwargs are surplus params.
@@ -101,7 +101,7 @@ function batch_num(sp::SFASampler)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA method."
-function gen_electron_batch(sp::SFASampler, batchId::Int)
+function gen_electron_batch(sp::SFASampler, batchId::Integer)
     tr = sp.t_samples[batchId]
     Ax::Function = LaserAx(sp.laser)
     Ay::Function = LaserAy(sp.laser)
@@ -122,7 +122,7 @@ function gen_electron_batch(sp::SFASampler, batchId::Int)
     prefix = sp.rate_prefix
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     cutoff_limit = sp.cutoff_limit
-    if Ftr == 0 || ADKAmpExp(Ftr,Ip,0.0,0.0)^2 < cutoff_limit
+    if Ftr == 0 || ADKAmpExp(Ftr,Ip,0.0,0.0)^2 < cutoff_limit/1e3
         return nothing
     end
 

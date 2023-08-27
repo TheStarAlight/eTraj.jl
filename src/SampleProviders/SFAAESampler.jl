@@ -28,12 +28,12 @@ struct SFAAESampler <: ElectronSampleProvider
                             sample_monte_carlo  ::Bool,
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
-                                #* for step-sampling (!rate_monteCarlo)
+                                #* for step-sampling (!sample_monte_carlo)
                             ss_kd_max           ::Real,
                             ss_kd_num           ::Int,
                             ss_kz_max           ::Real,
                             ss_kz_num           ::Int,
-                                #* for Monte-Carlo-sampling (rate_monteCarlo)
+                                #* for Monte-Carlo-sampling (sample_monte_carlo)
                             mc_kt_num           ::Int,
                             mc_kt_max           ::Real,
                             kwargs...   # kwargs are surplus params.
@@ -107,7 +107,7 @@ function batch_num(sp::SFAAESampler)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using SFA-AE method."
-function gen_electron_batch(sp::SFAAESampler, batchId::Int)
+function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
     t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
@@ -129,7 +129,7 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Int)
     @inline F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-p⟂⋅F'
     @inline r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
     cutoff_limit = sp.cutoff_limit
-    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit
+    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit/1e3
         return nothing
     end
 

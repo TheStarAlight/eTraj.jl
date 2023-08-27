@@ -32,12 +32,12 @@ struct MOSFAAESampler <: ElectronSampleProvider
                             traj_phase_method   ::Symbol,
                             rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
                             mol_orbit_idx       ::Integer,
-                                #* for step-sampling (!rate_monteCarlo)
+                                #* for step-sampling (!sample_monte_carlo)
                             ss_kd_max           ::Real,
                             ss_kd_num           ::Integer,
                             ss_kz_max           ::Real,
                             ss_kz_num           ::Integer,
-                                #* for Monte-Carlo-sampling (rate_monteCarlo)
+                                #* for Monte-Carlo-sampling (sample_monte_carlo)
                             mc_kt_num           ::Integer,
                             mc_kt_max           ::Real,
                             kwargs...   # kwargs are surplus params.
@@ -83,7 +83,7 @@ struct MOSFAAESampler <: ElectronSampleProvider
             MolCalcAsympCoeff!(target, mol_orbit_idx)
         end
         if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≤ 0
-            error("[MOADKSampler] The energy of the ionizing orbit is non-negative.")
+            error("[MOADKSampler] The energy of the ionizing orbital is non-negative.")
         end
         # check Keldysh paramater.
         F0 = LaserF0(laser)
@@ -118,7 +118,7 @@ function batch_num(sp::MOSFAAESampler)
 end
 
 "Generates a batch of electrons of `batchId` from `sp` using MO-SFA-AE method."
-function gen_electron_batch(sp::MOSFAAESampler, batchId::Int)
+function gen_electron_batch(sp::MOSFAAESampler, batchId::Integer)
     t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
@@ -139,7 +139,7 @@ function gen_electron_batch(sp::MOSFAAESampler, batchId::Int)
     @inline F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-p⟂⋅F'
     @inline r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
     cutoff_limit = sp.cutoff_limit
-    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit
+    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit/1e3
         return nothing
     end
 

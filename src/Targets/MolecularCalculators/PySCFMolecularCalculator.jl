@@ -457,7 +457,7 @@ function calc_WFAT_data(;
 end
 
 """
-Calculates the asymptotic coefficients (used in MO-ADK and MO-SFA) of the given molecule.
+Calculates the asymptotic coefficients (used in MO-SFA, MO-SFA-AE and MO-ADK) of the given molecule.
 
 # Parameters
 - `mc`              : The molecular calculator.
