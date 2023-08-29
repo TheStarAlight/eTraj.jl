@@ -56,8 +56,8 @@ struct SFASampler <: ElectronSampleProvider
             end
         else # a list containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
-                rate_prefix = :Exp
-            elseif ! mapreduce(*, p->in(p,[:Pre,:PreCC,:Jac]), rate_prefix)
+                rate_prefix = []
+            elseif ! mapreduce(p->in(p,[:Pre,:PreCC,:Jac]), *, rate_prefix)
                 error("[SFASampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             elseif :Pre in rate_prefix && :PreCC in rate_prefix
@@ -140,7 +140,6 @@ function gen_electron_batch(sp::SFASampler, batchId::Integer)
         ti = 0.0
         if converged(ti_sol) && (ti_sol.zero[1]>0)
             ti = ti_sol.zero[1]
-            (ti == 0.0) && return 0.0
         else
             return 0.0
         end
@@ -185,22 +184,22 @@ function gen_electron_batch(sp::SFASampler, batchId::Integer)
             end
             # returns
             if isempty(prefix)
-                rate_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
+                amp_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
             else
                 if :Pre in prefix
                     if :Jac in prefix
-                        rate_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * jac(kd,kz)
+                        amp_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
                     else
-                        rate_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
+                        amp_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
                     end
                 elseif :PreCC in prefix
                     if :Jac in prefix
-                        rate_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * jac(kd,kz)
+                        amp_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
                     else
-                        rate_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
+                        amp_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
                     end
                 else # [:Jac]
-                    rate_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * jac(kd,kz)
+                    amp_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * sqrt(jac(kd,kz))
                 end
             end
         end
@@ -245,9 +244,9 @@ function gen_electron_batch(sp::SFASampler, batchId::Integer)
             end
         end
     else
+        rng = Random.MersenneTwister(0) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
             # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
-            rng = Random.MersenneTwister(0)
             kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
             ti = solve_spe(tr,kd0,kz0)
             (ti == 0) && continue

@@ -22,7 +22,7 @@ struct WFATSampler <: ElectronSampleProvider
 
     function WFATSampler(;
                             laser               ::Laser,
-                            target              ::SAEAtomBase,
+                            target              ::Molecule,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Integer,
                             sample_cutoff_limit ::Real,
@@ -58,7 +58,7 @@ struct WFATSampler <: ElectronSampleProvider
         if ! (mol_orbit_idx in MolWFATAvailableIndices(target))
             MolCalcWFATData!(target, mol_orbit_idx)
         end
-        if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≤ 0
+        if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≥ 0
             error("[WFATSampler] The energy of the ionizing orbit is non-negative.")
         end
         # check Keldysh parameter.
@@ -115,7 +115,7 @@ function gen_electron_batch(sp::WFATSampler, batchId::Integer)
 
     # determining Euler angles (α,β,γ)
     mol_rot = MolRotation(sp.target)
-    α,β,γ = obtain_Euler(mol_rot, (Fxt,Fyt))
+    α,β,γ = obtain_Euler(mol_rot, [Fxt,Fyt])
 
     rate_::Function =
     begin
@@ -129,8 +129,15 @@ function gen_electron_batch(sp::WFATSampler, batchId::Integer)
         end
         # define W_F (modified field factor)
         W(nξ,abs_m,kd,kz) = (κ^(abs_m+2)/2/Ft^(abs_m+1)/factorial(abs_m)) * (4κ^2/Ft)^(2n-2nξ-abs_m-1) * (kd^2+kz^2)^abs_m * exp(-2*(κ^2+kd^2+kz^2)^1.5/3Ft)
+        # calc dkdt
+        step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
+        dkdt = if ! sp.monte_carlo
+            step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+        else
+            step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
+        end
         # returns
-        rate(kd,kz) = sum(ν->abs2(G_data[ν[1]+1,ν[2]+mMax+1])*W(ν[1],abs(ν[2]),kd,kz))
+        rate(kd,kz) = sum(((nξ,m),)->abs2(G_data[nξ+1,m+mMax+1])*W(nξ,abs(m),kd,kz), [(nξ,m) for nξ in 0:nξMax, m in -mMax:mMax]) * dkdt
     end
 
     dim = 8 # x,y,z,kx,ky,kz,t0,rate
@@ -163,9 +170,9 @@ function gen_electron_batch(sp::WFATSampler, batchId::Integer)
             end
         end
     else
+        rng = Random.MersenneTwister(0) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
             # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
-            rng = Random.MersenneTwister(0)
             kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
             kx0 = kd0*-sin(φ)
             ky0 = kd0* cos(φ)

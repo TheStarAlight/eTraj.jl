@@ -59,8 +59,8 @@ struct MOSFASampler <: ElectronSampleProvider
             end
         else # a list containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
-                rate_prefix = :Exp
-            elseif ! mapreduce(*, p->in(p,[:Pre,:PreCC,:Jac]), rate_prefix)
+                rate_prefix = []
+            elseif ! mapreduce(p->in(p,[:Pre,:PreCC,:Jac]), *, rate_prefix)
                 error("[MOSFASampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             elseif :Pre in rate_prefix && :PreCC in rate_prefix
@@ -82,7 +82,7 @@ struct MOSFASampler <: ElectronSampleProvider
         if ! (mol_orbit_idx in MolAsympCoeffAvailableIndices(target))
             MolCalcAsympCoeff!(target, mol_orbit_idx)
         end
-        if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≤ 0
+        if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≥ 0
             error("[MOSFASampler] The energy of the ionizing orbital is non-negative.")
         end
         # finish initialization.
@@ -137,7 +137,12 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
 
     # determining Euler angles (α,β,γ)
     mol_rot = MolRotation(sp.target)
-    α,β,γ = obtain_Euler(mol_rot, (Fxtr,Fytr))
+    α,β,γ = obtain_Euler(mol_rot, [Fxtr,Fytr])
+    # compute wigner-D beforehand
+    wigner_D_mat = zeros(ComplexF64, lMax+1, 2lMax+1, 2lMax+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[l+1, m+l+1, m_+l+1].
+    for l in 0:lMax for m in -l:l for m_ in -l:l
+        wigner_D_mat[l+1, m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ)
+    end; end; end
 
     @inline px_(kd,Axts,Ayts) =  kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
     @inline py_(kd,Axts,Ayts) = -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
@@ -170,11 +175,11 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
             k_ts(px,py,kz,ts) = (px+Ax(ts), py+Ay(ts), kz)
             pre(px,py,kz,ts) = begin
                 kts = k_ts(px,py,kz,ts)
-                c * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m_, kts, (Fxtr,Fytr)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c * mapreduce(lmm_ -> begin l=lmm_[1];m=lmm_[2];m_=lmm_[3]; asymp_coeff[l+1,m+l+1] * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat(l,m_, kts, (Fxtr,Fytr)) end, +, [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
             end
             pre_cc(px,py,kz,ts) = begin
                 kts = k_ts(px,py,kz,ts)
-                c_cc * mapreduce((l,m,m_) -> asymp_coeff[l+1,m+l+1] * WignerD.wignerDjmn(l,m_,m, α,β,γ) * sph_harm_lm_khat(l,m_, kts, (Fxtr,Fytr)), +, [(l,m,m_) for l in 0:lMax, m in -l:l, m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c_cc * mapreduce(lmm_ -> begin l=lmm_[1];m=lmm_[2];m_=lmm_[3]; asymp_coeff[l+1,m+l+1] * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat(l,m_, kts, (Fxtr,Fytr)) end, +, [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
             end
             S_tun(px,py,kz,ti) = -quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+kz^2)/2+Ip, tr+1im*ti, tr)[1] # Integrates ∂S/∂t from ts to tr.
             function jac(kd,kz)
@@ -198,22 +203,22 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
             end
             # returns
             if isempty(prefix)
-                rate_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
+                amp_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
             else
                 if :Pre in prefix
                     if :Jac in prefix
-                        rate_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * jac(kd,kz)
+                        amp_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
                     else
-                        rate_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
+                        amp_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
                     end
                 elseif :PreCC in prefix
                     if :Jac in prefix
-                        rate_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * jac(kd,kz)
+                        amp_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
                     else
-                        rate_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
+                        amp_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
                     end
                 else # [:Jac]
-                    rate_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * jac(kd,kz)
+                    amp_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * sqrt(jac(kd,kz))
                 end
             end
         end
@@ -258,9 +263,9 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
             end
         end
     else
+        rng = Random.MersenneTwister(0) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
             # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
-            rng = Random.MersenneTwister(0)
             kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
             ti = solve_spe(tr,kd0,kz0)
             (ti == 0) && continue

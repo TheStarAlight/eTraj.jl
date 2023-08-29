@@ -58,8 +58,8 @@ struct SFAAESampler <: ElectronSampleProvider
             end
         else # a list containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
-                rate_prefix = :Exp
-            elseif ! mapreduce(*, p->in(p,[:Pre,:PreCC,:Jac]), rate_prefix)
+                rate_prefix = []
+            elseif ! mapreduce(p->in(p,[:Pre,:PreCC,:Jac]), *, rate_prefix)
                 error("[SFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             elseif :Pre in rate_prefix && :PreCC in rate_prefix
@@ -126,7 +126,7 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
     γ0  = AngFreq(sp.laser) * sqrt(2Ip) / F0
     prefix = sp.rate_prefix
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
-    @inline F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-p⟂⋅F'
+    @inline F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-k⟂⋅F'
     @inline r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
     cutoff_limit = sp.cutoff_limit
     if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit/1e3
@@ -142,9 +142,15 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
             c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ft^(-n) * (1+2γ0/e0)^(-n)
             FxdFy_FydFx = Fxt*dFyt-dFxt*Fyt
             @inline ti(kx,ky,kd,kz) = sqrt((κ^2+kd^2+kz^2)/F2eff(kx,ky))
-            @inline k_ts(kx,ky,kz,ti) = (kx,ky,kz) .- (1im*ti .*(Fxt,Fyt,0.0)) .+ (ti^2/2 .*(dFxt,dFyt,0.0))
-            pre(kx,ky,kd,kz) = c * C * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
-            pre_cc(kx,ky,kd,kz) = c_cc * C * sph_harm_lm_khat(l,m, k_ts(kx,ky,kz,ti(kx,ky,kd,kz)), (Fxt,Fyt)) / ((kd^2+kz^2)*F2eff(kx,ky)^2)^((n+1)/4)
+            @inline k_ts(kx,ky,kz,ts) = (kx,ky,kz) .- (1im*imag(ts) .*(Fxt,Fyt,0.0)) .+ (imag(ts)^2/2 .*(dFxt,dFyt,0.0))
+            pre(kx,ky,kz,ts) = begin
+                kts = k_ts(kx,ky,kz,ts)
+                c * C * sph_harm_lm_khat(l,m, kts, (Fxt,Fyt)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+            end
+            pre_cc(kx,ky,kz,ts) = begin
+                kts = k_ts(kx,ky,kz,ts)
+                c_cc * C * sph_harm_lm_khat(l,m, kts, (Fxt,Fyt)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+            end
             jac(kd,kz) = abs(Ft + sqrt(kd^2+kz^2)/Ft^2*FxdFy_FydFx)
             step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
             dkdt = if ! sp.monte_carlo
@@ -155,22 +161,22 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
 
             # returns
             if isempty(prefix)
-                rate_exp(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz)
+                amp_exp(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz)
             else
                 if :Pre in prefix
                     if :Jac in prefix
-                        rate_pre_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kd,kz) * jac(kd,kz)
+                        amp_pre_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kz,t+1im*ti) * sqrt(jac(kd,kz))
                     else
-                        rate_pre(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kd,kz)
+                        amp_pre(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kz,t+1im*ti)
                     end
                 elseif :PreCC in prefix
                     if :Jac in prefix
-                        rate_precc_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kd,kz) * jac(kd,kz)
+                        amp_precc_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kz,t+1im*ti) * sqrt(jac(kd,kz))
                     else
-                        rate_precc(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kd,kz)
+                        amp_precc(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kz,t+1im*ti)
                     end
                 else # [:Jac]
-                    rate_jac(kx,ky,kd,kz) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * jac(kd,kz)
+                    amp_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * sqrt(jac(kd,kz))
                 end
             end
         end
@@ -198,7 +204,10 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
                     x0 = r0*cos(φ)
                     y0 = r0*sin(φ)
                     z0 = 0.0
-                    amp = amplitude(kx0,ky0,kd0,kz0)
+                    if F2eff(kx0,ky0) ≤ 0
+                        continue
+                    end
+                    amp = amplitude(kx0,ky0,kd0,kz0,ti(kx0,ky0,kd0,kz0))
                     rate = abs2(amp)
                     if rate < cutoff_limit
                         continue    # discard the sample
@@ -211,9 +220,9 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
                 end
             end
         else
+            rng = Random.MersenneTwister(0) # use a fixed seed to ensure reproducibility
             @threads for i in 1:sp.mc_kt_num
                 # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
-                rng = Random.MersenneTwister(0)
                 kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
                 kx0 = kd0*-sin(φ)
                 ky0 = kd0* cos(φ)
@@ -221,7 +230,10 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
                 x0 = r0*cos(φ)
                 y0 = r0*sin(φ)
                 z0 = 0.0
-                amp = amplitude(kx0,ky0,kd0,kz0)
+                if F2eff(kx0,ky0) ≤ 0
+                    continue
+                end
+                amp = amplitude(kx0,ky0,kd0,kz0,ti(kx0,ky0,kd0,kz0))
                 rate = abs2(amp)
                 if rate < cutoff_limit
                     continue    # discard the sample

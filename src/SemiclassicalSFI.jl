@@ -47,8 +47,8 @@ Performs a semiclassical simulation with given parameters.
 - `ss_kz_num`   : Number of kz (momentum's component along propagation direction (z ax.)) samples (an even number is required).
 
 ## Required params. for Monte-Carlo-sampling methods:
-- `mc_kp_num`   : Number of kp (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
-- `mc_kp_max`   : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_kt_num`   : Number of kt (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
+- `mc_kt_max`   : Maximum value of momentum's transversal component (perpendicular to field direction).
 
 ## Optional params. for all:
 - `save_path`                                       : Output HDF5 file path.
@@ -63,7 +63,7 @@ Performs a semiclassical simulation with given parameters.
 - `final_ryd_n_max`                                 : The maximum principle quantum number n for rydberg final states to be collected.
 
 ## Optional params. for atomic SFA, SFA-AE and ADK methods:
-- `rate_prefix = <:ExpRate|:ExpPre|:ExpJac|:Full>`  : Prefix of the exponential term in the ionization rate (default `:ExpRate`).
+- `rate_prefix = <:Full|[:Pre|:PreCC, :Jac]|:Exp>`  : Prefix of the exponential term in the ionization rate (default `:Full`).
 
 ## Optional params. for target `Molecule`:
 - `mol_orbit_idx = 0`   : Index of the ionizing orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1) (default `0`).
@@ -88,8 +88,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     ss_kz_max           ::Real      = 0.,
                     ss_kz_num           ::Integer   = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
-                    mc_kp_num           ::Integer   = 0 ,
-                    mc_kp_max           ::Real      = 0.,
+                    mc_kt_num           ::Integer   = 0 ,
+                    mc_kt_max           ::Real      = 0.,
                         #* opt. params. for all methods
                     save_path           ::String    = default_filename(),
                     save_3D_spec        ::Bool      = false,
@@ -101,8 +101,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     sample_monte_carlo  ::Bool      = false,
                     final_ryd_collect   ::Bool      = false,
                     final_ryd_n_max     ::Integer   = 0,
-                        #* opt. params. for atomic SFA, SFA-AE and ADK methods
-                    rate_prefix         ::Symbol    = :ExpRate,
+                        #* opt. params. for SFA, SFA-AE and ADK methods
+                    rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}} = :Full,
                         #* opt. params. for target `Molecule`
                     mol_orbit_idx       ::Integer   = 0,
                         #* opt. params. for atomic ADK method
@@ -124,7 +124,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (init_cond_method, laser, target, sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
-                    mc_kp_num, mc_kp_max,
+                    mc_kt_num, mc_kt_max,
                     traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_cutoff_limit, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
                     adk_tun_exit)
@@ -211,8 +211,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             dict_out[:ss_kz_num]        = ss_kz_num
         else
             # req. params. for Monte-Carlo (mc) methods
-            dict_out[:mc_kp_num]        = mc_kp_num
-            dict_out[:mc_kp_max]        = mc_kp_max
+            dict_out[:mc_kt_num]        = mc_kt_num
+            dict_out[:mc_kt_max]        = mc_kt_max
         end
         # opt. params. for all methods
         dict_out[:save_path]            = save_path
