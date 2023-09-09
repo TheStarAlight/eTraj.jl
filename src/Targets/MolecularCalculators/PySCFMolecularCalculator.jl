@@ -35,9 +35,9 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
 
     # Parameters
     - `mol::Molecule`   : The molecule to be calculated.
-    - `basis::String`   : Basis set used for calculation (default `pc-1`).
+    - `basis::String`   : Basis set used for calculation (default `cc-pVDZ`).
     """
-    function PySCFMolecularCalculator(; mol, basis::String="pc-1", kwargs...)
+    function PySCFMolecularCalculator(; mol, basis::String="cc-pVDZ", kwargs...)
         mc::PySCFMolecularCalculator = new(mol,basis)
         @info "[PySCFMolecularCalculator] Running molecular calculation..."
         time = [0.0]
@@ -156,8 +156,8 @@ function calc_WFAT_data(;
     grid_rMin = 0.001
     grid_dr = (grid_rMax-grid_rMin)/(grid_rNum-1)
     r_grid = range(start=grid_rMin, stop=grid_rMax, length=grid_rNum)
-    θ_grid = range(start=0., stop=π, length=grid_θNum)
-    ϕ_grid = range(start=0., stop=2π, length=grid_ϕNum)
+    θ_grid = range(start=0., step=π/grid_θNum, length=grid_θNum)    # using `θ_grid = range(start=0., stop=π, length=grid_θNum)` is wrong!!
+    ϕ_grid = range(start=0., step=2π/grid_ϕNum, length=grid_ϕNum)
     N = grid_rNum*grid_θNum*grid_ϕNum
 
     "Returns the spherical grid indices of the given index of the point."
@@ -500,8 +500,8 @@ function calc_asymp_coeff(;
 
     #* Define the spherical grids.
     r_grid = range(start=grid_rReg[1], stop=grid_rReg[2], length=grid_rNum)
-    θ_grid = range(start=0., stop=π, length=grid_θNum)
-    ϕ_grid = range(start=0., stop=2π, length=grid_ϕNum)
+    θ_grid = range(start=0., step=π/grid_θNum, length=grid_θNum) # using `θ_grid = range(start=0., stop=π, length=grid_θNum)` is wrong!!
+    ϕ_grid = range(start=0., step=2π/grid_ϕNum, length=grid_ϕNum)
     N = grid_rNum*grid_θNum*grid_ϕNum
 
     "Returns the spherical grid indices of the given index of the point."
@@ -535,7 +535,7 @@ function calc_asymp_coeff(;
     #* defines output
     # C_lm stores the asymptotic coefficients, l=0,⋯,lMax; m=-l,⋯,l.
     # to obtain C_lm, refer to index [l+1,m+l+1].
-    C_lm = zeros(l_max+1, 2l_max+1)
+    C_lm = zeros(ComplexF64, l_max+1, 2l_max+1)
 
     #* Calculate the wavefunction ψ0
     χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
@@ -555,17 +555,31 @@ function calc_asymp_coeff(;
             end
             # fit C_lm
             @. model(r,p) = p[1] * 2 * κ^(3/2) * (κ*r)^(Z/κ-1) * exp(-κ*r)
-            p0 = [1.0]
-            if sum(abs.(real.(F_lm))) > 1e-10
+            p0 = [0.0]
+            if sum(abs.(real.(F_lm))) > 1e-6
+                # fit real part
                 fit_re = curve_fit(model, r_grid, real.(F_lm), p0)
-                coeff = coef(fit_re)[1]     # the fitted C_lm
+                coeff = coef(fit_re)[1]     # the fitted re(C_lm)
                 conf_int = confidence_interval(fit_re)[1]   # confidence interval (95%)
-                if coeff == 1.0   # returning the original guess means the fit is unsuccessful.
+                if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
                     @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
                 elseif abs((conf_int[2]-conf_int[1])/coeff) > 0.5   # the error is too large
                     @warn "[PySCFMolecularCalculator] The fit result of molecular wavefunction (l=$l, m=$m) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
                 else
                     C_lm[l+1,m+l+1] += coeff
+                end
+            end
+            if sum(abs.(imag.(F_lm))) > 1e-6
+                # fit imag
+                fit_im = curve_fit(model, r_grid, imag.(F_lm), p0)
+                coeff = coef(fit_im)[1]     # the fitted im(C_lm)
+                conf_int = confidence_interval(fit_im)[1]   # confidence interval (95%)
+                if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
+                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
+                elseif abs((conf_int[2]-conf_int[1])/coeff) > 0.5   # the error is too large
+                    @warn "[PySCFMolecularCalculator] The fit result of molecular wavefunction (l=$l, m=$m) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
+                else
+                    C_lm[l+1,m+l+1] += coeff * 1im
                 end
             end
         end
