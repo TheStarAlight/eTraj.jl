@@ -69,7 +69,7 @@ struct SFAAESampler <: ElectronSampleProvider
         end
         # check Keldysh paramater.
         if γ0 ≥ 1.0
-            @warn "[SFAAESampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0)0, adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            @warn "[SFAAESampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # check sampling parameters.
         @assert (sample_t_num>0) "[SFAAESampler] Invalid time sample number $sample_t_num."
@@ -127,7 +127,7 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
     prefix = sp.rate_prefix
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     @inline F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-k⟂⋅F'
-    @inline r_exit(kx,ky) = Ft/2*(kx^2+ky^2+2Ip)/F2eff(kx,ky)
+    @inline r_exit(kx,ky,kz) = Ft/2*(kx^2+ky^2+kz^2+2Ip)/F2eff(kx,ky)
     cutoff_limit = sp.cutoff_limit
     if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit/1e3
         return nothing
@@ -143,13 +143,16 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
             FxdFy_FydFx = Fxt*dFyt-dFxt*Fyt
             @inline ti(kx,ky,kd,kz) = sqrt((κ^2+kd^2+kz^2)/F2eff(kx,ky))
             @inline k_ts(kx,ky,kz,ts) = (kx,ky,kz) .- (1im*imag(ts) .*(Fxt,Fyt,0.0)) .+ (imag(ts)^2/2 .*(dFxt,dFyt,0.0))
+            new_x_axis = @SVector [0.0,0.0,1.0]
+            new_z_axis = @SVector [Fxt/Ft,Fyt/Ft,0.0]
+            new_y_axis = new_z_axis × new_x_axis
             pre(kx,ky,kz,ts) = begin
                 kts = k_ts(kx,ky,kz,ts)
-                c * C * sph_harm_lm_khat(l,m, kts, (Fxt,Fyt)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c * C * sph_harm_lm_khat(l,m, kts..., new_x_axis, new_y_axis, new_z_axis) / ((kx^2+ky^2+kz^2+2Ip)*F2eff(kx,ky))^((n+1)/4)
             end
             pre_cc(kx,ky,kz,ts) = begin
                 kts = k_ts(kx,ky,kz,ts)
-                c_cc * C * sph_harm_lm_khat(l,m, kts, (Fxt,Fyt)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c_cc * C * sph_harm_lm_khat(l,m, kts..., new_x_axis, new_y_axis, new_z_axis) / ((kx^2+ky^2+kz^2+2Ip)*F2eff(kx,ky))^((n+1)/4)
             end
             jac(kd,kz) = abs(Ft + sqrt(kd^2+kz^2)/Ft^2*FxdFy_FydFx)
             step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
@@ -200,16 +203,16 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
                     kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
                     kx0 = kd0*-sin(φ)
                     ky0 = kd0* cos(φ)
-                    r0 = r_exit(kx0,ky0)
+                    r0 = r_exit(kx0,ky0,kz0)
                     x0 = r0*cos(φ)
                     y0 = r0*sin(φ)
                     z0 = 0.0
-                    if F2eff(kx0,ky0) ≤ 0
+                    if F2eff(kx0,ky0) ≤ Ft^2/25 # cut off is set to F/100 to avoid NaN probabilities.
                         continue
                     end
                     amp = amplitude(kx0,ky0,kd0,kz0,ti(kx0,ky0,kd0,kz0))
                     rate = abs2(amp)
-                    if rate < cutoff_limit
+                    if isnan(rate) || rate < cutoff_limit
                         continue    # discard the sample
                     end
                     sample_count_thread[threadid()] += 1
@@ -226,16 +229,16 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
                 kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
                 kx0 = kd0*-sin(φ)
                 ky0 = kd0* cos(φ)
-                r0 = r_exit(kx0,ky0)
+                r0 = r_exit(kx0,ky0,kz0)
                 x0 = r0*cos(φ)
                 y0 = r0*sin(φ)
                 z0 = 0.0
-                if F2eff(kx0,ky0) ≤ 0
+                if F2eff(kx0,ky0) ≤ Ft^2/25
                     continue
                 end
                 amp = amplitude(kx0,ky0,kd0,kz0,ti(kx0,ky0,kd0,kz0))
                 rate = abs2(amp)
-                if rate < cutoff_limit
+                if isnan(rate) || rate < cutoff_limit
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1

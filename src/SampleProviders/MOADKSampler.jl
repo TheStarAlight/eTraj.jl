@@ -140,43 +140,48 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Integer)
         return nothing
     end
 
-    # determining Euler angles (α,β,γ)
+    # determines Euler angles (α,β,γ)
     mol_rot = MolRotation(sp.target)
-    α,β,γ = obtain_Euler(mol_rot, [Fxt,Fyt])
-    # compute wigner-D beforehand
+    α,β,γ = obtain_FF_MF_Euler(mol_rot, [Fxt,Fyt])
+    # computes wigner-D beforehand
     wigner_D_mat = zeros(ComplexF64, lMax+1, 2lMax+1, 2lMax+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[l+1, m+l+1, m_+l+1].
     for l in 0:lMax for m in -l:l for m_ in -l:l
         wigner_D_mat[l+1, m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ)
     end; end; end
+    new_x_axis, new_y_axis, new_z_axis = obtain_xyz_FF_LF(Fxt,Fyt)
 
-    # determining ionization amplitude (contains phase)
-    amplitude::Function =
-    begin
-        κ = sqrt(2Ip)
-        n = Z/κ # n* = Z/κ
-        c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^(3(1-n)/2) is omitted, trivial
-        e0 = 2.71828182845904523
-        c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ft^(-n) * (1+2γ0/e0)^(-n)
-        @inline ti(kd,kz) = sqrt(κ^2+kd^2+kz^2)/Ft
-        @inline k_ts(kx,ky,kz,ts) = (kx,ky,kz) .- (1im*imag(ts) .* (Fxt,Fyt,0.0))
+    # determines ionization amplitude (contains phase)
+    κ = sqrt(2Ip)
+    n = Z/κ # n* = Z/κ
+    c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^(3(1-n)/2) is omitted, trivial
+    e0 = 2.71828182845904523
+    c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ft^(-n) * (1+2γ0/e0)^(-n)
+    @inline ti(kd,kz) = sqrt(κ^2+kd^2+kz^2)/Ft
+    # @inline k_ts(kx,ky,kz,ts) = (kx,ky,kz) .- (1im*imag(ts) .* (Fxt,Fyt,0.0))
+    @inline k_ts(kx,ky,kz,ts) = SVector{3,ComplexF64}(kx-1im*imag(ts)*Fxt, ky-1im*imag(ts)*Fyt, kz)
+    lmm_list = [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l] # this cache improves the efficiency a lot
+    @inline function pre_numerator((l,m,m_),kts)
         # C_lm = asymp_coeff[l+1,m+l+1]
-        pre(kx,ky,kz,ts) = begin
-            kts = k_ts(kx,ky,kz,ts)
-            c * mapreduce(lmm_ -> begin l=lmm_[1];m=lmm_[2];m_=lmm_[3]; asymp_coeff[l+1,m+l+1] * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat(l,m_, kts, (Fxt,Fyt)) end, +, [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
-        end
-        pre_cc(kx,ky,kz,ts) = begin
-            kts = k_ts(kx,ky,kz,ts)
-            c_cc * mapreduce(lmm_ -> begin l=lmm_[1];m=lmm_[2];m_=lmm_[3]; asymp_coeff[l+1,m+l+1] * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat(l,m_, kts, (Fxt,Fyt)) end, +, [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
-        end
-        jac = Ft
-        step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
-        dkdt = if ! sp.monte_carlo
-            step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
-        else
-            step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
-        end
-
-        # returns
+        C_lm = asymp_coeff[l+1,m+l+1]
+        (C_lm == 0.0) && return 0.0
+        C_lm * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat_approx(l,m_, kts..., new_x_axis, new_y_axis, new_z_axis)
+    end
+    pre(kx,ky,kz,ts) = begin
+        kts = k_ts(kx,ky,kz,ts)
+        c * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / ((kx^2+ky^2+kz^2+2Ip)*Ft^2)^((n+1)/4)
+    end
+    pre_cc(kx,ky,kz,ts) = begin
+        kts = k_ts(kx,ky,kz,ts)
+        c_cc * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / ((kx^2+ky^2+kz^2+2Ip)*Ft^2)^((n+1)/4)
+    end
+    jac = Ft
+    step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
+    dkdt = if ! sp.monte_carlo
+        step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+    else
+        step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
+    end
+    amplitude::Function =
         if isempty(prefix)
             amp_exp(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz)
         else
@@ -196,7 +201,6 @@ function gen_electron_batch(sp::MOADKSampler, batchId::Integer)
                 amp_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(Ft,Ip,kd,kz) * sqrt(jac)
             end
         end
-    end
 
     phase_method = sp.phase_method
     dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]

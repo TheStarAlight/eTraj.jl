@@ -110,7 +110,7 @@ function batch_num(sp::MOSFASampler)
     return length(sp.t_samples)
 end
 
-"Generates a batch of electrons of `batchId` from `sp` using SFA method."
+"Generates a batch of electrons of `batchId` from `sp` using MO-SFA method."
 function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
     tr = sp.t_samples[batchId]
     Ax::Function = LaserAx(sp.laser)
@@ -135,14 +135,15 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
         return nothing
     end
 
-    # determining Euler angles (α,β,γ)
+    # determines Euler angles (α,β,γ)
     mol_rot = MolRotation(sp.target)
-    α,β,γ = obtain_Euler(mol_rot, [Fxtr,Fytr])
-    # compute wigner-D beforehand
+    α,β,γ = obtain_FF_MF_Euler(mol_rot, [Fxtr,Fytr])
+    # computes wigner-D beforehand
     wigner_D_mat = zeros(ComplexF64, lMax+1, 2lMax+1, 2lMax+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[l+1, m+l+1, m_+l+1].
     for l in 0:lMax for m in -l:l for m_ in -l:l
         wigner_D_mat[l+1, m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ)
     end; end; end
+    new_x_axis, new_y_axis, new_z_axis = obtain_xyz_FF_LF(Fxtr,Fytr)
 
     @inline px_(kd,Axts,Ayts) =  kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
     @inline py_(kd,Axts,Ayts) = -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
@@ -165,61 +166,65 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
         return ti
     end
 
+    κ = sqrt(2Ip)
+    n = Z/κ # n* = Z/κ
+    c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^((n-5)/2) is omitted, trivial
+    e0 = 2.71828182845904523
+    c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ftr^(-n) * (1+2γ0/e0)^(-n)
+    k_ts(px,py,kz,ts) = (px+Ax(ts), py+Ay(ts), kz)
+    lmm_list = [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l] # this cache improves the efficiency a lot
+    @inline function pre_numerator((l,m,m_),kts)
+        # C_lm = asymp_coeff[l+1,m+l+1]
+        C_lm = asymp_coeff[l+1,m+l+1]
+        (C_lm == 0.0) && return 0.0
+        C_lm * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat_approx(l,m_, kts..., new_x_axis, new_y_axis, new_z_axis)
+    end
+    pre(kx,ky,kz,ts) = begin
+        kts = k_ts(kx,ky,kz,ts)
+        c * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+    end
+    pre_cc(kx,ky,kz,ts) = begin
+        kts = k_ts(kx,ky,kz,ts)
+        c_cc * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+    end
+    S_tun(px,py,kz,ti) = -quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+kz^2)/2+Ip, tr+1im*ti, tr)[1] # Integrates ∂S/∂t from ts to tr.
+    function jac(kd,kz)
+        dtr = 0.01
+        dkd = 0.01
+        ti_tp = solve_spe(tr+dtr,kd,kz)
+        ti_tm = solve_spe(tr-dtr,kd,kz)
+        ti_kp = solve_spe(tr,kd+dkd,kz)
+        ti_km = solve_spe(tr,kd-dkd,kz)
+        dpxdtr = px_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - px_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm)) # actually is 4*dpx/dtr
+        dpydtr = py_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - py_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm))
+        dpxdkd = px_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - px_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
+        dpydkd = py_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - py_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
+        return abs(dpxdtr*dpydkd-dpxdkd*dpydtr)/(4dtr*dkd)
+    end
+    step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
+    dkdt = if ! sp.monte_carlo
+        step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+    else
+        step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
+    end
     amplitude::Function =
-        begin
-            κ = sqrt(2Ip)
-            n = Z/κ # n* = Z/κ
-            c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^((n-5)/2) is omitted, trivial
-            e0 = 2.71828182845904523
-            c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ftr^(-n) * (1+2γ0/e0)^(-n)
-            k_ts(px,py,kz,ts) = (px+Ax(ts), py+Ay(ts), kz)
-            pre(px,py,kz,ts) = begin
-                kts = k_ts(px,py,kz,ts)
-                c * mapreduce(lmm_ -> begin l=lmm_[1];m=lmm_[2];m_=lmm_[3]; asymp_coeff[l+1,m+l+1] * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat(l,m_, kts, (Fxtr,Fytr)) end, +, [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
-            end
-            pre_cc(px,py,kz,ts) = begin
-                kts = k_ts(px,py,kz,ts)
-                c_cc * mapreduce(lmm_ -> begin l=lmm_[1];m=lmm_[2];m_=lmm_[3]; asymp_coeff[l+1,m+l+1] * wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat(l,m_, kts, (Fxtr,Fytr)) end, +, [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l]) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
-            end
-            S_tun(px,py,kz,ti) = -quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+kz^2)/2+Ip, tr+1im*ti, tr)[1] # Integrates ∂S/∂t from ts to tr.
-            function jac(kd,kz)
-                dtr = 0.01
-                dkd = 0.01
-                ti_tp = solve_spe(tr+dtr,kd,kz)
-                ti_tm = solve_spe(tr-dtr,kd,kz)
-                ti_kp = solve_spe(tr,kd+dkd,kz)
-                ti_km = solve_spe(tr,kd-dkd,kz)
-                dpxdtr = px_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - px_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm)) # actually is 4*dpx/dtr
-                dpydtr = py_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - py_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm))
-                dpxdkd = px_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - px_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
-                dpydkd = py_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - py_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
-                return abs(dpxdtr*dpydkd-dpxdkd*dpydtr)/(4dtr*dkd)
-            end
-            step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
-            dkdt = if ! sp.monte_carlo
-                step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
-            else
-                step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
-            end
-            # returns
-            if isempty(prefix)
-                amp_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
-            else
-                if :Pre in prefix
-                    if :Jac in prefix
-                        amp_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
-                    else
-                        amp_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
-                    end
-                elseif :PreCC in prefix
-                    if :Jac in prefix
-                        amp_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
-                    else
-                        amp_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
-                    end
-                else # [:Jac]
-                    amp_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * sqrt(jac(kd,kz))
+        if isempty(prefix)
+            amp_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
+        else
+            if :Pre in prefix
+                if :Jac in prefix
+                    amp_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
+                else
+                    amp_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
                 end
+            elseif :PreCC in prefix
+                if :Jac in prefix
+                    amp_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
+                else
+                    amp_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
+                end
+            else # [:Jac]
+                amp_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * sqrt(jac(kd,kz))
             end
         end
 

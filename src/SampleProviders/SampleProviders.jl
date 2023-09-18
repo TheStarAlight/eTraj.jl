@@ -14,6 +14,8 @@ function init_sampler(;kwargs...)
         SFAAESampler(;kwargs...)
     elseif kwargs[:init_cond_method] == :ADK
         ADKSampler(;kwargs...)
+    elseif kwargs[:init_cond_method] == :MOSFA
+        MOSFASampler(;kwargs...)
     elseif kwargs[:init_cond_method] == :MOSFAAE
         MOSFAAESampler(;kwargs...)
     elseif kwargs[:init_cond_method] == :MOADK

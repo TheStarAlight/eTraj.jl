@@ -115,7 +115,7 @@ function gen_electron_batch(sp::WFATSampler, batchId::Integer)
 
     # determining Euler angles (α,β,γ)
     mol_rot = MolRotation(sp.target)
-    α,β,γ = obtain_Euler(mol_rot, [Fxt,Fyt])
+    α,β,γ = obtain_FF_MF_Euler(mol_rot, [Fxt,Fyt])
 
     rate_::Function =
     begin

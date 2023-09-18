@@ -339,31 +339,249 @@ using Base.Threads
         end
     end
 
-    # @info "Testing MOADK-CTMC ..."
-    # @testset "MOADK-CTMC" begin
-    #     t = Molecule("Molecule_Hydrogen.h5")
-    #     l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
-    #     @test begin
-    #         performSFI(
-    #             init_cond_method    = :MOADK,
-    #             laser               = l,
-    #             target              = t,
-    #             sample_t_intv       = (-80,80),
-    #             sample_t_num        = 400,
-    #             traj_t_final        = 120,
-    #             final_p_max         = (2.0,2.0,0.6),
-    #             final_p_num         = (200,200,60),
-    #             ss_kd_max           = 1.5,
-    #             ss_kd_num           = 300,
-    #             ss_kz_max           = 0.4,
-    #             ss_kz_num           = 80,
-    #             save_path           = "./performSFI_test_output/test_MOADK_Hydrogen_3e14_800nm_2cyc_CP.h5",
-    #             traj_rtol           = 1e-6,
-    #             rate_prefix         = :Full
-    #         )
-    #         true
-    #     end
-    # end
+    @info "Testing MOADK-CTMC ..."
+    @testset "MOADK-CTMC" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOADK,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOADK-CTMC_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOADK-QTMC ..."
+    @testset "MOADK-QTMC" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOADK,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOADK-QTMC_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOADK-SCTS ..."
+    @testset "MOADK-SCTS" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOADK,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOADK-SCTS_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFAAE-CTMC ..."
+    @testset "MOSFAAE-CTMC" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOSFAAE,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOSFAAE-CTMC_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFAAE-QTMC ..."
+    @testset "MOSFAAE-QTMC" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOSFAAE,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOSFAAE-QTMC_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFAAE-SCTS ..."
+    @testset "MOSFAAE-SCTS" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOSFAAE,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOSFAAE-SCTS_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFA-CTMC ..."
+    @testset "MOSFA-CTMC" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOSFA,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOSFA-CTMC_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFA-QTMC ..."
+    @testset "MOSFA-QTMC" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOSFA,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOSFA-QTMC_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFA-SCTS ..."
+    @testset "MOSFA-SCTS" begin
+        t = Molecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            performSFI(
+                init_cond_method    = :MOSFA,
+                laser               = l,
+                target              = t,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
+                save_path           = "./performSFI_test_output/test_MOSFA-SCTS_Hydrogen_3e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
 
     @info "Testing WFAT-CTMC ..."
     @testset "WFAT-CTMC" begin
@@ -377,12 +595,12 @@ using Base.Threads
                 sample_t_intv       = (-80,80),
                 sample_t_num        = 400,
                 traj_t_final        = 120,
-                final_p_max         = (2.0,2.0,0.6),
-                final_p_num         = (200,200,60),
-                ss_kd_max           = 1.5,
-                ss_kd_num           = 300,
-                ss_kz_max           = 0.4,
-                ss_kz_num           = 80,
+                final_p_max         = (2.0,2.0,0.2),
+                final_p_num         = (200,200,20),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 400,
+                ss_kz_max           = 0.1,
+                ss_kz_num           = 20,
                 save_path           = "./performSFI_test_output/test_WFAT-CTMC_Hydrogen_3e14_800nm_2cyc_CP.h5",
                 traj_rtol           = 1e-6
             )

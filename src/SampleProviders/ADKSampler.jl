@@ -162,13 +162,16 @@ function gen_electron_batch(sp::ADKSampler, batchId::Integer)
             c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ft^(-n) * (1+2γ0/e0)^(-n)
             @inline ti(kd,kz) = sqrt(κ^2+kd^2+kz^2)/Ft
             @inline k_ts(kx,ky,kz,ts) = (kx,ky,kz) .- (1im*imag(ts) .* (Fxt,Fyt,0.0))
+            new_x_axis = @SVector [0.0,0.0,1.0]
+            new_z_axis = @SVector [Fxt/Ft,Fyt/Ft,0.0]
+            new_y_axis = new_z_axis × new_x_axis
             pre(kx,ky,kz,ts) = begin
                 kts = k_ts(kx,ky,kz,ts)
-                c * C * sph_harm_lm_khat(l,m, kts, (Fxt,Fyt)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c * C * sph_harm_lm_khat(l,m, kts..., new_x_axis, new_y_axis, new_z_axis) / ((kx^2+ky^2+kz^2+2Ip)*Ft^2)^((n+1)/4)
             end
             pre_cc(kx,ky,kz,ts) = begin
                 kts = k_ts(kx,ky,kz,ts)
-                c_cc * C * sph_harm_lm_khat(l,m, kts, (Fxt,Fyt)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c_cc * C * sph_harm_lm_khat(l,m, kts..., new_x_axis, new_y_axis, new_z_axis) / ((kx^2+ky^2+kz^2+2Ip)*Ft^2)^((n+1)/4)
             end
             jac = Ft
             step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range

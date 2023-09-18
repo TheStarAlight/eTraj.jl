@@ -154,13 +154,16 @@ function gen_electron_batch(sp::SFASampler, batchId::Integer)
             e0 = 2.71828182845904523
             c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ftr^(-n) * (1+2γ0/e0)^(-n)
             k_ts(px,py,kz,ts) = (px+Ax(ts), py+Ay(ts), kz)
+            new_x_axis = @SVector [0.0,0.0,1.0]
+            new_z_axis = @SVector [Fxtr/Ftr,Fytr/Ftr,0.0]
+            new_y_axis = new_z_axis × new_x_axis
             pre(px,py,kz,ts) = begin
                 kts = k_ts(px,py,kz,ts)
-                c * C * sph_harm_lm_khat(l,m, kts, (Fxtr,Fytr)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c * C * sph_harm_lm_khat(l,m, kts..., new_x_axis, new_y_axis, new_z_axis) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
             end
             pre_cc(px,py,kz,ts) = begin
                 kts = k_ts(px,py,kz,ts)
-                c_cc * C * sph_harm_lm_khat(l,m, kts, (Fxtr,Fytr)) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+                c_cc * C * sph_harm_lm_khat(l,m, kts..., new_x_axis, new_y_axis, new_z_axis) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
             end
             S_tun(px,py,kz,ti) = -quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+kz^2)/2+Ip, tr+1im*ti, tr)[1] # Integrates ∂S/∂t from ts to tr.
             function jac(kd,kz)
