@@ -1,7 +1,7 @@
 
 """
 **SemiclassicalSFI.jl**
-Implementation of classical/semiclassical methods in strong-field ionization of atoms and molecules.
+Implementation of classical/semiclassical trajectory methods in strong-field ionization of atoms and molecules.
 """
 module SemiclassicalSFI
 
@@ -41,19 +41,20 @@ Performs a semiclassical simulation with given parameters.
 - `final_p_num = (pxNum,pyNum,pzNum)`                   : Numbers of final momentum spectrum collected in three dimensions.
 
 ## Required params. for step-sampling methods:
-- `ss_kd_max`   : Boundary of kd (momentum's component along transverse direction (in xy plane)) samples.
-- `ss_kd_num`   : Number of kd (momentum's component along transverse direction (in xy plane)) samples.
+- `ss_kd_max`   : Boundary of kd (momentum's transversal component in the polarization (xy) plane) samples.
+- `ss_kd_num`   : Number of kd (momentum's transversal component in the polarization (xy) plane) samples.
 - `ss_kz_max`   : Boundary of kz (momentum's component along propagation direction (z ax.)) samples.
 - `ss_kz_num`   : Number of kz (momentum's component along propagation direction (z ax.)) samples (an even number is required).
 
 ## Required params. for Monte-Carlo-sampling methods:
 - `mc_kt_num`   : Number of kt (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
-- `mc_kt_max`   : Maximum value of momentum's transversal component (perpendicular to field direction).
+- `mc_kd_max`   : Boundary of kd.
+- `mc_kz_max`   : Boundary of kz.
 
 ## Optional params. for all:
 - `save_path`                                       : Output HDF5 file path.
 - `save_3D_spec = false`                            : Determines whether the 3D momentum spectrum is saved (if not, will only save 2D by flattening on the xy plane) (default `false`).
-- `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `CTMC`). Currently `:QTMC` and `:SCTS` only supports atom targets.
+- `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `CTMC`).
 - `traj_rtol = 1e-6`                                : Relative error tolerance when solving classical trajectories using adaptive methods (default `1e-6`).
 - `traj_nondipole = false`                          : Determines whether the non-dipole effect is taken account in the simulation (default `false`).
 - `traj_GPU = false`                                : [Experimental] Determines whether to enable GPU acceleration in trajectory simulation (default `false`).
@@ -68,8 +69,8 @@ Performs a semiclassical simulation with given parameters.
 ## Optional params. for target `Molecule`:
 - `mol_orbit_idx = 0`   : Index of the ionizing orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1) (default `0`).
 
-## Optional params. for ADK method:
-- `adk_tun_exit = <:IpF|:FDM|:Para>` : Tunneling exit method for ADK methods (when `init_cond_method==:ADK`) (default `:IpF`).
+## Optional params. for atomic ADK method:
+- `adk_tun_exit = <:IpF|:FDM|:Para>` : Tunneling exit method for atomic ADK methods (when `init_cond_method==:ADK`) (default `:IpF`).
 
 """
 function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. = parameters.
@@ -89,7 +90,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     ss_kz_num           ::Integer   = 0 ,
                         #* req. params. for Monte-Carlo (mc) methods
                     mc_kt_num           ::Integer   = 0 ,
-                    mc_kt_max           ::Real      = 0.,
+                    mc_kd_max           ::Real      = 0.,
+                    mc_kz_max           ::Real      = 0.,
                         #* opt. params. for all methods
                     save_path           ::String    = default_filename(),
                     save_3D_spec        ::Bool      = false,
@@ -124,7 +126,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     kwargs = Dict{Symbol,Any}()
     @pack! kwargs= (init_cond_method, laser, target, sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
-                    mc_kt_num, mc_kt_max,
+                    mc_kt_num, mc_kd_max, mc_kz_max,
                     traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_cutoff_limit, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
                     mol_orbit_idx,
                     adk_tun_exit)
@@ -207,7 +209,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         else
             # req. params. for Monte-Carlo (mc) methods
             dict_out[:mc_kt_num]        = mc_kt_num
-            dict_out[:mc_kt_max]        = mc_kt_max
+            dict_out[:mc_kd_max]        = mc_kd_max
+            dict_out[:mc_kz_max]        = mc_kz_max
         end
         # opt. params. for all methods
         dict_out[:save_path]            = save_path

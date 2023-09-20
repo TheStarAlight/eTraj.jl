@@ -14,7 +14,8 @@ struct SFAAESampler <: ElectronSampleProvider
     ss_kd_samples;
     ss_kz_samples;
     mc_kt_num;
-    mc_kt_max;
+    mc_kd_max;
+    mc_kz_max;
     cutoff_limit;
     phase_method;   # currently supports :CTMC, :QTMC, :SCTS.
     rate_prefix;    # supports :Exp, :Full or a combination of {:Pre|:PreCC, :Jac}.
@@ -35,7 +36,8 @@ struct SFAAESampler <: ElectronSampleProvider
                             ss_kz_num           ::Int,
                                 #* for Monte-Carlo-sampling (sample_monte_carlo)
                             mc_kt_num           ::Int,
-                            mc_kt_max           ::Real,
+                            mc_kd_max           ::Real,
+                            mc_kz_max           ::Real,
                             kwargs...   # kwargs are surplus params.
                             )
         F0 = LaserF0(laser)
@@ -76,10 +78,11 @@ struct SFAAESampler <: ElectronSampleProvider
         @assert (sample_cutoff_limit≥0) "[SFAAESampler] Invalid cut-off limit $sample_cutoff_limit."
         if ! sample_monte_carlo # check SS sampling parameters.
             @assert (ss_kd_num>0 && ss_kz_num>0) "[SFAAESampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
+            @assert (ss_kd_max>0 && ss_kz_max>0) "[SFAAESampler] Invalid kd/kz sample boundaries $ss_kd_max/$ss_kz_max."
         else                    # check MC sampling parameters.
             @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFAAESampler] Invalid sampling time interval $sample_t_intv."
             @assert (mc_kt_num>0) "[SFAAESampler] Invalid sampling kt_num $mc_kt_num."
-            @assert (mc_kt_max>0) "[SFAAESampler] Invalid sampling kt_max $mc_kt_max."
+            @assert (mc_kd_max>0 && mc_kz_max>0) "[SFAAESampler] Invalid kd/kz sample boundaries $mc_kd_max/$mc_kz_max."
         end
         # finish initialization.
         return if ! sample_monte_carlo
@@ -87,15 +90,15 @@ struct SFAAESampler <: ElectronSampleProvider
                 sample_monte_carlo,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
-                0,0,        # for MC params. pass empty values
+                0,0,0, # for MC params. pass empty values
                 sample_cutoff_limit,traj_phase_method,rate_prefix)
         else
             t_samples = sort!(rand(MersenneTwister(1), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
             new(laser,target,
                 sample_monte_carlo,
                 t_samples,
-                0:0,0:0,    # for SS params. pass empty values
-                mc_kt_num, mc_kt_max,
+                0:0,0:0, # for SS params. pass empty values
+                mc_kt_num, mc_kd_max, mc_kz_max,
                 sample_cutoff_limit,traj_phase_method,rate_prefix)
         end
     end
@@ -159,7 +162,7 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
             dkdt = if ! sp.monte_carlo
                 step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
             else
-                step(sp.t_samples) * π*sp.mc_kt_max^2/sp.mc_kt_num
+                step(sp.t_samples) * 4*sp.mc_kd_max*sp.mc_kz_max/sp.mc_kt_num
             end
 
             # returns
@@ -225,8 +228,7 @@ function gen_electron_batch(sp::SFAAESampler, batchId::Integer)
         else
             rng = Random.MersenneTwister(0) # use a fixed seed to ensure reproducibility
             @threads for i in 1:sp.mc_kt_num
-                # generates random (kd0,kz0) inside circle kd0^2+kz0^2=ktMax^2.
-                kd0, kz0 = gen_rand_pt_circ(rng, sp.mc_kt_max)
+                kd0, kz0 = gen_rand_pt(rng, sp.mc_kd_max, sp.mc_kz_max)
                 kx0 = kd0*-sin(φ)
                 ky0 = kd0* cos(φ)
                 r0 = r_exit(kx0,ky0,kz0)

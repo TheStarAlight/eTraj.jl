@@ -1,11 +1,8 @@
 # some shared methods
 
-"Generates a 2D point inside a circle of radius `r0` using the random generator `rng`."
-function gen_rand_pt_circ(rng, r0)
-    x,y = (rand(rng)-0.5)*2r0, (rand(rng)-0.5)*2r0
-    while x^2+y^2>r0^2
-        x,y = (rand(rng)-0.5)*2r0, (rand(rng)-0.5)*2r0
-    end
+"Generates a 2D point inside a given area x∈[-x0,x0], y∈[-y0,y0] using the random generator `rng`."
+function gen_rand_pt(rng, x0,y0)
+    x,y = (rand(rng)-0.5)*2*x0, (rand(rng)-0.5)*2*y0
     return x,y
 end
 
