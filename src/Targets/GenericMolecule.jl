@@ -5,8 +5,8 @@ using Rotations
 using Dates
 using HDF5
 
-"Represents a molecule."
-mutable struct Molecule <: Target
+"Represents a generic molecule."
+mutable struct GenericMolecule <: MoleculeBase
 
     "Path to the data file that stores information and data about the molecule."
     data_path::String
@@ -60,7 +60,7 @@ mutable struct Molecule <: Target
 
     #* fresh init without data.
     """
-    Initializes a new instance of `Molecule` with given parameters.
+    Initializes a new instance of `GenericMolecule` with given parameters.
     # Parameters
     - `atoms`                   : Atoms in the molecule, stored as a vector of String.
     - `atom_coords`             : Atoms' coordinates in the molecule, stored as a N×3 matrix.
@@ -70,8 +70,8 @@ mutable struct Molecule <: Target
     - `calc_energy`             : Indicates whether to calculate the energy data of the molecule upon initialization (default false).
     - `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (optional, default 0).
     """
-    function Molecule(atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
-        @assert eltype(atoms)<:String   "[Molecule] Element type of `atoms` must be String."
+    function GenericMolecule(atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
+        @assert eltype(atoms)<:String   "[GenericMolecule] Element type of `atoms` must be String."
         @assert ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[Molecule] `atom_coords` should be of size N×3."
         mol = new(  data_path,  # data_path
                     nothing,    # mol_calc
@@ -81,19 +81,19 @@ mutable struct Molecule <: Target
                     false, Set(), Dict(),           # asymp_coeff
                     rot_α,rot_β,rot_γ)
         if ! (data_path=="")
-            MolSaveDataAs(mol, data_path)
+            MolSaveDataAs!(mol, data_path)
         end
         if calc_energy
             MolCalcEnergyData!(mol)
         end
         return mol
     end
-    function Molecule(;atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
-        return Molecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot_α,rot_β,rot_γ)
+    function GenericMolecule(;atoms,atom_coords,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
+        return GenericMolecule(atoms,atom_coords,charge,name,data_path,calc_energy,rot_α,rot_β,rot_γ)
     end
 
     #* init from data.
-    function Molecule(data_path::String, rot_α=0.,rot_β=0.,rot_γ=0.)
+    function GenericMolecule(data_path::String, rot_α=0.,rot_β=0.,rot_γ=0.)
         file = h5open(data_path,"r")
         # reads MolInfo
         info_group = open_group(file, "Info")
@@ -150,38 +150,38 @@ end
 #* Molecule's specific properties & methods
 
 "Gets the atoms in the molecule with their coordinates."
-MolAtoms(mol::Molecule) = mol.atoms
+MolAtoms(mol::GenericMolecule) = mol.atoms
 "Gets the atoms' coordinates in the molecule."
-MolAtomCoords(mol::Molecule) = mol.atom_coords
+MolAtomCoords(mol::GenericMolecule) = mol.atom_coords
 "Gets the total charge of the molecule (ion)."
-MolCharge(mol::Molecule) = mol.charge
+MolCharge(mol::GenericMolecule) = mol.charge
 "Gets the availability of the energy data of the molecule."
-function MolEnergyDataAvailable(mol::Molecule)
+function MolEnergyDataAvailable(mol::GenericMolecule)
     return mol.energy_data_available
 end
 "Gets the energy levels of the molecule's MOs."
-function MolEnergyLevels(mol::Molecule)
+function MolEnergyLevels(mol::GenericMolecule)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
     return mol.energy_levels
 end
 "Gets the orbital index of the molecule's HOMO."
-function MolHOMOIndex(mol::Molecule)
+function MolHOMOIndex(mol::GenericMolecule)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
     return mol.HOMO_index
 end
 "Gets the energy of the molecule's HOMO."
-function MolHOMOEnergy(mol::Molecule)
+function MolHOMOEnergy(mol::GenericMolecule)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
     return mol.energy_levels[mol.HOMO_index]
 end
 "Gets the available orbital indices (relative to HOMO) of the molecule's WFAT data."
-function MolWFATAvailableIndices(mol::Molecule)
+function MolWFATAvailableIndices(mol::GenericMolecule)
     return if mol.wfat_data_available
         mol.wfat_orbital_indices
     else
@@ -192,7 +192,7 @@ end
 Gets the WFAT data in format `(μ,IntData)`.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 """
-function MolWFATData(mol::Molecule, orbitIdx_relHOMO::Integer=0)
+function MolWFATData(mol::GenericMolecule, orbitIdx_relHOMO::Integer=0)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
@@ -210,24 +210,24 @@ Note: the rotational Euler angles of the molecule would not be applied.
 - `β`   : Euler angle β, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 - `γ`   : Euler angle γ, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 """
-function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β::Real, γ::Real)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β::Real, γ::Real)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
     if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
         MolCalcWFATData!(mol, orbitIdx_relHOMO)
     end
-    @assert nξ≥0 "[Molecule] nξ should be non-negative."
+    @assert nξ≥0 "[GenericMolecule] nξ should be non-negative."
     intdata = mol.wfat_intdata[orbitIdx_relHOMO]
     nξMax = size(intdata,1) - 1
     mMax = round(Int,(size(intdata,2)-1)/2)
     lMax = size(intdata,3) - 1
     if nξ>nξMax
-        @error "[Molecule] The given nξ=$nξ is larger than the maximum value $nξMax, zero value would be returned."
+        @error "[GenericMolecule] The given nξ=$nξ is larger than the maximum value $nξMax, zero value would be returned."
         return 0.0
     end
     if abs(m)>mMax
-        @error "[Molecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
+        @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
     @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbitIdx_relHOMO])[3]   # the result is independent of α
@@ -247,25 +247,25 @@ Note: the rotational Euler angles of the molecule would not be applied.
 - `β`   : Euler angle β, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 - `γ`   : Euler angle γ, can be passed as a `Real` value or an `AbstractVector` of `Real`.
 """
-function MolWFATStructureFactor_G(mol::Molecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β::AbstractVector{T} where T<:Real, γ::AbstractVector{T} where T<:Real)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β::AbstractVector{T} where T<:Real, γ::AbstractVector{T} where T<:Real)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
     if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
         MolCalcWFATData!(mol, orbitIdx_relHOMO)
     end
-    @assert size(β,1)==size(γ,1) "[Molecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
-    @assert nξ≥0 "[Molecule] nξ should be non-negative."
+    @assert size(β,1)==size(γ,1) "[GenericMolecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
+    @assert nξ≥0 "[GenericMolecule] nξ should be non-negative."
     intdata = mol.wfat_intdata[orbitIdx_relHOMO]
     nξMax = size(intdata,1) - 1
     mMax = round(Int,(size(intdata,2)-1)/2)
     lMax = size(intdata,3) - 1
     if nξ>nξMax
-        @error "[Molecule] The given nξ=$nξ is larger than the maximum value $nξMax, zero value would be returned."
+        @error "[GenericMolecule] The given nξ=$nξ is larger than the maximum value $nξMax, zero value would be returned."
         return 0.0
     end
     if abs(m)>mMax
-        @error "[Molecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
+        @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
     @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbitIdx_relHOMO])[3]   # the result is independent of α
@@ -280,7 +280,7 @@ end
 """
 Gets the maximum value of nξ and |m| calculated in the WFAT intdata.
 """
-function MolWFATMaxChannels(mol::Molecule, orbitIdx_relHOMO::Integer)
+function MolWFATMaxChannels(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
     μ, intdata = MolWFATData(mol, orbitIdx_relHOMO)
     nξMax = size(intdata,1) - 1
     mMax = round(Int,(size(intdata,2)-1)/2)
@@ -288,7 +288,7 @@ function MolWFATMaxChannels(mol::Molecule, orbitIdx_relHOMO::Integer)
 end
 
 "Gets the available orbital indices (relative to HOMO) of the molecule's asymptotic coefficients."
-function MolAsympCoeffAvailableIndices(mol::Molecule)
+function MolAsympCoeffAvailableIndices(mol::GenericMolecule)
     return if mol.asymp_coeff_available
         mol.asymp_coeff_orbital_indices
     else
@@ -299,7 +299,7 @@ end
 Gets the asymptotic coefficients of the molecule.
 - `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 """
-function MolAsympCoeff(mol::Molecule, orbitIdx_relHOMO::Integer=0)
+function MolAsympCoeff(mol::GenericMolecule, orbitIdx_relHOMO::Integer=0)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
@@ -312,24 +312,24 @@ end
 """
 Gets the maximum value of l calculated in the asymptotic coefficients.
 """
-function MolAsympCoeff_lMax(mol::Molecule, orbitIdx_relHOMO::Integer)
+function MolAsympCoeff_lMax(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
     return size(MolAsympCoeff(mol, orbitIdx_relHOMO), 1) - 1
 end
 
 "Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
-MolRotation(mol::Molecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
+MolRotation(mol::GenericMolecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
 "Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ)."
-function SetMolRotation!(mol::Molecule, α,β,γ)
+function SetMolRotation!(mol::GenericMolecule, α,β,γ)
     mol.rot_α = α; mol.rot_β = β; mol.rot_γ = γ;
 end
-function SetMolRotation!(mol::Molecule, (α,β,γ))
+function SetMolRotation!(mol::GenericMolecule, (α,β,γ))
     SetMolRotation!(mol, α,β,γ)
 end
 """
 Exports the given molecule's atom information to string as `MolecularCalculator`'s input.
 Note: Rotations defined by the Euler angles wouldn't be applied.
 """
-function MolExportAtomInfo(mol::Molecule)
+function MolExportAtomInfo(mol::GenericMolecule)
     atomToString(i_atm) = join([String(mol.atoms[i_atm]),mol.atom_coords[i_atm,1:3]], " ")
     return join(map(atomToString, eachindex(mol.atoms)),"; ")
 end
@@ -340,10 +340,10 @@ Calculates the energy data of the molecule and saves the data.
 - `MCType`      : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
 - `kwargs...`   : Keyword arguments to pass to the `MolecularCalculator`, e.g. `basis`.
 """
-function MolCalcEnergyData!(mol::Molecule, MCType::Type = PySCFMolecularCalculator; kwargs...)
+function MolCalcEnergyData!(mol::GenericMolecule, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
-            error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
+            error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
         mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
@@ -353,7 +353,7 @@ function MolCalcEnergyData!(mol::Molecule, MCType::Type = PySCFMolecularCalculat
     _MolSaveEnergyData(mol)
 end
 
-function _MolSaveEnergyData(mol::Molecule, file::HDF5.File)
+function _MolSaveEnergyData(mol::GenericMolecule, file::HDF5.File)
     # this method will not close the file handle!
     if ! mol.energy_data_available
         return
@@ -367,18 +367,18 @@ function _MolSaveEnergyData(mol::Molecule, file::HDF5.File)
     write_dataset(g,"energy_levels",mol.energy_levels)
     write_dataset(g,"HOMO_index",mol.HOMO_index)
 end
-function _MolSaveEnergyData(mol::Molecule)
+function _MolSaveEnergyData(mol::GenericMolecule)
     # open, write and close.
     if mol.data_path==""    # would not save if data_path is empty.
         return
     end
     if ! isfile(mol.data_path)
-        error("[Molecule] Destination file \"$(mol.data_path)\" does not exist.")
+        error("[GenericMolecule] Destination file \"$(mol.data_path)\" does not exist.")
     end
     file = h5open(mol.data_path,"r+")
     _MolSaveEnergyData(mol,file)
     close(file)
-    @info "[Molecule] Energy data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    @info "[GenericMolecule] Energy data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
 """
@@ -387,10 +387,10 @@ Calculates the WFAT data of the molecule and saves the data.
 - `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator` and the `calcStructFactorData` method, e.g. `basis`, `grid_rNum`, `grid_rMax`, `sf_lMax`, ⋯
 """
-function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
+function MolCalcWFATData!(mol::GenericMolecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
-            error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
+            error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
         mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
@@ -407,7 +407,7 @@ function MolCalcWFATData!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::
     mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calc_WFAT_data(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
     _MolSaveWFATData(mol,orbitIdx_relHOMO)
 end
-function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
+function _MolSaveWFATData(mol::GenericMolecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
     # this method will not close the file handle!
     if ! mol.wfat_data_available
         return
@@ -427,18 +427,18 @@ function _MolSaveWFATData(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Inte
     write_dataset(g,"intdata_$(orbitIdx_relHOMO)", mol.wfat_intdata[orbitIdx_relHOMO])  # WFAT data is stored separately in different datasets!
     write_dataset(g,"μ_$(orbitIdx_relHOMO)", mol.wfat_μ[orbitIdx_relHOMO])
 end
-function _MolSaveWFATData(mol::Molecule, orbitIdx_relHOMO::Integer)
+function _MolSaveWFATData(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
     # open, write and close.
     if mol.data_path==""    # would not save if data_path is empty.
         return
     end
     if ! isfile(mol.data_path)
-        error("[Molecule] Destination file \"$(mol.data_path)\" does not exist.")
+        error("[GenericMolecule] Destination file \"$(mol.data_path)\" does not exist.")
     end
     file = h5open(mol.data_path,"r+")
     _MolSaveWFATData(mol,file,orbitIdx_relHOMO)
     close(file)
-    @info "[Molecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    @info "[GenericMolecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 """
 Calculates the asymptotic coefficients of the molecule and saves the data.
@@ -446,10 +446,10 @@ Calculates the asymptotic coefficients of the molecule and saves the data.
 - `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
 - `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator`, e.g. `grid_rNum`, `l_max`.
 """
-function MolCalcAsympCoeff!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
+function MolCalcAsympCoeff!(mol::GenericMolecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
-            error("[Molecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
+            error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
         mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
@@ -465,7 +465,7 @@ function MolCalcAsympCoeff!(mol::Molecule, orbitIdx_relHOMO::Integer = 0, MCType
     mol.asymp_coeff_available = true
     _MolSaveAsympCoeff(mol, orbitIdx_relHOMO)
 end
-function _MolSaveAsympCoeff(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
+function _MolSaveAsympCoeff(mol::GenericMolecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
     # this method will not close the file handle!
     if ! mol.asymp_coeff_available
         return
@@ -483,22 +483,22 @@ function _MolSaveAsympCoeff(mol::Molecule, file::HDF5.File, orbitIdx_relHOMO::In
     write_dataset(g,"orbital_indices", indices)
     write_dataset(g,"coeff_$(orbitIdx_relHOMO)", mol.asymp_coeff[orbitIdx_relHOMO])
 end
-function _MolSaveAsympCoeff(mol::Molecule, orbitIdx_relHOMO::Integer)
+function _MolSaveAsympCoeff(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
     # open, write and close.
     if mol.data_path==""    # would not save if data_path is empty.
         return
     end
     if ! isfile(mol.data_path)
-        error("[Molecule] Destination file \"$(mol.data_path)\" does not exist.")
+        error("[GenericMolecule] Destination file \"$(mol.data_path)\" does not exist.")
     end
     file = h5open(mol.data_path,"r+")
     _MolSaveAsympCoeff(mol,file,orbitIdx_relHOMO)
     close(file)
-    @info "[Molecule] Asymptotic coefficients of orbital index $(orbitIdx_relHOMO) saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    @info "[GenericMolecule] Asymptotic coefficients of orbital index $(orbitIdx_relHOMO) saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
-"Saves the data of the `Molecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`)."
-function MolSaveDataAs(mol::Molecule, data_path::String)
+"Saves the data of the `GenericMolecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`)."
+function MolSaveDataAs!(mol::GenericMolecule, data_path::String)
     function defaultFileName()
         Y,M,D = yearmonthday(now())
         h,m,s = hour(now()), minute(now()), second(now())
@@ -507,9 +507,9 @@ function MolSaveDataAs(mol::Molecule, data_path::String)
     if isfile(data_path) || data_path==""        # if destination exists or not specified, saving as default file name.
         defaultPath = defaultFileName()
         if isfile(data_path)
-            @warn "[Molecule] Destination file \"$data_path\" already exists. Saving at \"$defaultPath\"."
+            @warn "[GenericMolecule] Destination file \"$data_path\" already exists. Saving at \"$defaultPath\"."
         elseif data_path==""
-            @warn "[Molecule] Destination file not specified. Saving at \"$defaultPath\"."
+            @warn "[GenericMolecule] Destination file not specified. Saving at \"$defaultPath\"."
         end
         data_path = defaultPath
     end
@@ -539,13 +539,13 @@ function MolSaveDataAs(mol::Molecule, data_path::String)
     end
 
     close(file)
-    @info "[Molecule] Data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    @info "[GenericMolecule] Data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
 end
 
 #* Properties & methods that implement the supertype Target.
 
 "Gets the ionization potential of the molecule's HOMO."
-function IonPotential(mol::Molecule)
+function IonPotential(mol::GenericMolecule)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
@@ -555,26 +555,26 @@ end
 Gets the ionization potential of the specified MO of molecule.
 - `orbitIdx_relHOMO`: Index of selected orbital relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1).
 """
-function IonPotential(mol::Molecule, orbitIdx_relHOMO::Integer)
+function IonPotential(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
     if ! mol.energy_data_available
         MolCalcEnergyData!(mol)
     end
     idx = mol.HOMO_index+orbitIdx_relHOMO
     if ! (0<idx<size(mol.energy_levels,1))
-        error("[Molecule] Orbital index out of bound.")
+        error("[GenericMolecule] Orbital index out of bound.")
     end
     return -mol.energy_levels[idx]
 end
 "Gets the asymptotic nuclear charge of the molecule (ion) (after an electron got ionized)."
-AsympNuclCharge(mol::Molecule) = mol.charge + 1
+AsympNuclCharge(mol::GenericMolecule) = mol.charge + 1
 "Gets the name of the molecule."
-TargetName(mol::Molecule) = mol.name
+TargetName(mol::GenericMolecule) = mol.name
 "Gets the ASYMPTOTIC Coulomb potential function of the molecule."
-TargetPotential(mol::Molecule) = (x,y,z) -> -(mol.charge+1)*(x^2+y^2+z^2+1.0)^(-0.5)
+TargetPotential(mol::GenericMolecule) = (x,y,z) -> -(mol.charge+1)*(x^2+y^2+z^2+1.0)^(-0.5)
 "Gets the ASYMPTOTIC Coulomb force exerted on the electron from the molecular ion (which is the neg-grad of potential)."
-TargetForce(mol::Molecule) = (x,y,z) -> -(mol.charge+1)*(x^2+y^2+z^2+1.0)^(-1.5) .* (x,y,z)
+TargetForce(mol::GenericMolecule) = (x,y,z) -> -(mol.charge+1)*(x^2+y^2+z^2+1.0)^(-1.5) .* (x,y,z)
 "Gets the trajectory function according to given parameter."
-function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function, phase_method::Symbol, non_dipole::Bool; kwargs...)
+function TrajectoryFunction(mol::GenericMolecule, laserFx::Function, laserFy::Function, phase_method::Symbol, non_dipole::Bool; kwargs...)
     Z  = mol.charge+1
     Ip = IonPotential(mol)
     # including external function call is infeasible in GPU, thus the external targetF & targetP are replaced by pure Coulomb ones.
@@ -641,8 +641,8 @@ function TrajectoryFunction(mol::Molecule, laserFx::Function, laserFy::Function,
 end
 
 using Printf
-function Base.show(io::IO, mol::Molecule)
-    @printf(io, "[Molecule] %s", mol.name)
+function Base.show(io::IO, mol::GenericMolecule)
+    @printf(io, "[GenericMolecule] %s", mol.name)
     if mol.energy_data_available
         @printf(io, ", HOMO_energy=%.4f", MolHOMOEnergy(mol))
     end
@@ -651,7 +651,7 @@ end
 
 using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
-function Serialize(t::Molecule)
+function Serialize(t::GenericMolecule)
     dict = OrderedDict{Symbol,Any}()
     type        = typeof(t)
     data_path   = t.data_path

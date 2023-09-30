@@ -18,10 +18,10 @@ using Pkg
 
 include("Lasers/Lasers.jl")
 include("Targets/Targets.jl")
-include("SampleProviders/SampleProviders.jl")
+include("ElectronSamplers/ElectronSamplers.jl")
 using .Lasers
 using .Targets
-using .SampleProviders
+using .ElectronSamplers
 
 export performSFI, Lasers, Targets
 
@@ -105,9 +105,9 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     final_ryd_n_max     ::Integer   = 0,
                         #* opt. params. for SFA, SFA-AE and ADK methods
                     rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}} = :Full,
-                        #* opt. params. for target `Molecule`
+                        #* opt. params. for target `MoleculeBase`
                     mol_orbit_idx       ::Integer   = 0,
-                        #* opt. params. for atomic ADK method
+                        #* opt. params. for ADK method
                     adk_tun_exit        ::Symbol    = :IpF
                     )
     #* check parameters
@@ -131,7 +131,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     mol_orbit_idx,
                     adk_tun_exit)
     #* initialize sample provider.
-    sp::ElectronSampleProvider = init_sampler(;kwargs...)
+    sp::ElectronSampler = init_sampler(;kwargs...)
     #* launch electrons and summarize.
     #   * prepare storage
     nthreads = Threads.nthreads()
@@ -227,11 +227,11 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         if init_cond_method in [:SFA, :SFAAE, :ADK, :MOSFA, :MOSFAAE, :MOADK]
             dict_out[:rate_prefix]      = rate_prefix
         end
-        # opt. params. for target `Molecule`
-        if typeof(target) <: Targets.Molecule
+        # opt. params. for target `MoleculeBase`
+        if typeof(target) <: Targets.MoleculeBase
             dict_out[:mol_orbit_idx]    = mol_orbit_idx
         end
-        # opt. params. for atomic ADK method
+        # opt. params. for ADK method
         if init_cond_method == :ADK
             dict_out[:adk_tun_exit]     = adk_tun_exit
         end

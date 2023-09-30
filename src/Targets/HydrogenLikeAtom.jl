@@ -9,18 +9,22 @@ struct HydrogenLikeAtom <: SAEAtomBase
     l;
     "Magnetic quantum number m."
     m;
+    "Orientation of the quantization axis θ."
+    quan_ax_θ;
+    "Orientation of the quantization axis ϕ."
+    quan_ax_ϕ;
     "Soft core parameter of the atom."
     soft_core;
     "Name of the atom."
     name::String;
-    "Initializes a new instance of HydrogenLikeAtom."
-    function HydrogenLikeAtom(Ip, Z::Integer, l::Integer=0, m::Integer=0, soft_core=0.2, name="[NA]")
+    "Initializes a new instance of `HydrogenLikeAtom`."
+    function HydrogenLikeAtom(Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]")
         @assert Ip>0 "[HydrogenLikeAtom] Ip should be positive."
         @assert l≥0 && m≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
         @assert soft_core≥0 "[HydrogenLikeAtom] Soft core should be non-negative."
-        new(Ip, Z, l, m, soft_core, name)
+        new(Ip, Z, l, m, quan_ax_orient_θ, quan_ax_orient_ϕ, soft_core, name)
     end
-    HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, soft_core=0.2, name="[NA]") = HydrogenLikeAtom(Ip, Z, l, m, soft_core, name)
+    HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]") = HydrogenLikeAtom(Ip, Z, l, m, quan_ax_orient_θ, quan_ax_orient_ϕ, soft_core, name)
 end
 
 "Gets the ionization potential of the atom."
@@ -33,6 +37,8 @@ AngularQuantumNumber(t::HydrogenLikeAtom) = t.l
 MagneticQuantumNumber(t::HydrogenLikeAtom) = t.m
 "Gets the soft core parameter of the atom."
 SoftCore(t::HydrogenLikeAtom) = t.soft_core
+"Gets the orientation of the quantization axis of the atom in spherical coordinates (θ,ϕ)."
+QuantizationAxisOrientaion(t::HydrogenLikeAtom) = (t.quan_ax_θ, t.quan_ax_ϕ)
 
 using SpecialFunctions
 "Gets the asymptotic coefficient C_κl of the atom using the Hartree approximation formula."

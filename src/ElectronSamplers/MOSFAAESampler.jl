@@ -1,16 +1,16 @@
 
+using Printf
 using Base.Threads
 using SpecialFunctions
 using StaticArrays
 using Random
-using NLsolve
-using QuadGK
 using Rotations
 using WignerD
-"Sample provider which generates initial electron samples through MO-SFA formula."
-struct MOSFASampler <: ElectronSampleProvider
+using ForwardDiff
+"Sample provider which generates initial electron samples using the MO-SFA-AE method."
+struct MOSFAAESampler <: ElectronSampleProvider
     laser   ::Laser;
-    target  ::Molecule;  # MOSFA only supports [Molecule].
+    target  ::GenericMolecule;  # MO-SFA-AE only supports [Molecule].
     monte_carlo;
     t_samples;
     ss_kd_samples;
@@ -23,9 +23,9 @@ struct MOSFASampler <: ElectronSampleProvider
     rate_prefix;    # supports :Exp, :Full or a combination of {:Pre|:PreCC, :Jac}.
     ion_orbit_idx;
 
-    function MOSFASampler(;
+    function MOSFAAESampler(;
                             laser               ::Laser,
-                            target              ::Molecule,
+                            target              ::GenericMolecule,
                             sample_t_intv       ::Tuple{<:Real,<:Real},
                             sample_t_num        ::Integer,
                             sample_cutoff_limit ::Real,
@@ -46,7 +46,7 @@ struct MOSFASampler <: ElectronSampleProvider
                             )
         # check phase method support.
         if ! (traj_phase_method in [:CTMC, :QTMC, :SCTS])
-            error("[MOSFASampler] Undefined phase method [$traj_phase_method].")
+            error("[MOSFAAESampler] Undefined phase method [$traj_phase_method].")
             return
         end
         # check rate prefix support.
@@ -56,37 +56,44 @@ struct MOSFASampler <: ElectronSampleProvider
             elseif rate_prefix == :Full
                 rate_prefix = [:PreCC, :Jac]
             else
-                error("[MOSFASampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[MOSFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             end
         else # a list containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
                 rate_prefix = []
             elseif ! mapreduce(p->in(p,[:Pre,:PreCC,:Jac]), *, rate_prefix)
-                error("[MOSFASampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[MOSFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             elseif :Pre in rate_prefix && :PreCC in rate_prefix
-                error("[MOSFASampler] Rate prefixes [Pre] & [PreCC] conflict.")
+                error("[MOSFAAESampler] Rate prefixes [Pre] & [PreCC] conflict.")
                 return
             end
         end
         # check sampling parameters.
-        @assert (sample_t_num>0) "[MOSFASampler] Invalid time sample number $sample_t_num."
-        @assert (sample_cutoff_limit≥0) "[MOSFASampler] Invalid cut-off limit $sample_cutoff_limit."
+        @assert (sample_t_num>0) "[MOSFAAESampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[MOSFAAESampler] Invalid cut-off limit $sample_cutoff_limit."
         if ! sample_monte_carlo # check SS sampling parameters.
-            @assert (ss_kd_num>0 && ss_kz_num>0) "[MOSFASampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
-            @assert (ss_kd_max>0 && ss_kz_max>0) "[MOSFASampler] Invalid kd/kz sample boundaries $ss_kd_max/$ss_kz_max."
+            @assert (ss_kd_num>0 && ss_kz_num>0) "[MOSFAAESampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
+            @assert (ss_kd_max>0 && ss_kz_max>0) "[MOSFAAESampler] Invalid kd/kz sample boundaries $ss_kd_max/$ss_kz_max."
         else                    # check MC sampling parameters.
-            @assert (sample_t_intv[1] < sample_t_intv[2]) "[MOSFASampler] Invalid sampling time interval $sample_t_intv."
-            @assert (mc_kt_num>0) "[MOSFASampler] Invalid kt sample number $mc_kt_num."
-            @assert (mc_kd_max>0 && mc_kz_max>0) "[MOSFASampler] Invalid kd/kz sample boundaries $mc_kd_max/$mc_kz_max."
+            @assert (sample_t_intv[1] < sample_t_intv[2]) "[MOSFAAESampler] Invalid sampling time interval $sample_t_intv."
+            @assert (mc_kt_num>0) "[MOSFAAESampler] Invalid sampling kt_num $mc_kt_num."
+            @assert (mc_kd_max>0 && mc_kz_max>0) "[MOSFAAESampler] Invalid kd/kz sample boundaries $mc_kd_max/$mc_kz_max."
         end
         # check molecular orbital
         if ! (mol_orbit_idx in MolAsympCoeffAvailableIndices(target))
             MolCalcAsympCoeff!(target, mol_orbit_idx)
         end
         if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≥ 0
-            error("[MOSFASampler] The energy of the ionizing orbital is non-negative.")
+            error("[MOADKSampler] The energy of the ionizing orbital is non-negative.")
+        end
+        # check Keldysh paramater.
+        F0 = LaserF0(laser)
+        Ip = IonPotential(target, mol_orbit_idx)
+        γ0 = AngFreq(laser) * sqrt(2Ip) / F0
+        if γ0 ≥ 1.0
+            @warn "[MOSFAAESampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] unsatisfied."
         end
         # finish initialization.
         return if ! sample_monte_carlo
@@ -109,23 +116,22 @@ struct MOSFASampler <: ElectronSampleProvider
 end
 
 "Gets the total number of batches."
-function batch_num(sp::MOSFASampler)
+function batch_num(sp::MOSFAAESampler)
     return length(sp.t_samples)
 end
 
-"Generates a batch of electrons of `batchId` from `sp` using MO-SFA method."
-function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
-    tr = sp.t_samples[batchId]
-    Ax::Function = LaserAx(sp.laser)
-    Ay::Function = LaserAy(sp.laser)
+"Generates a batch of electrons of `batchId` from `sp` using MO-SFA-AE method."
+function gen_electron_batch(sp::MOSFAAESampler, batchId::Integer)
+    t = sp.t_samples[batchId]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
-    Fxtr= Fx(tr)
-    Fytr= Fy(tr)
-    Ftr = hypot(Fxtr,Fytr)
+    dFxt = ForwardDiff.derivative(Fx,t)
+    dFyt = ForwardDiff.derivative(Fy,t)
+    Fxt = Fx(t)
+    Fyt = Fy(t)
+    Ft  = hypot(Fxt,Fyt)
     F0  = LaserF0(sp.laser)
-    ω   = AngFreq(sp.laser)
-    φ   = atan(-Fytr,-Fxtr)
+    φ   = atan(-Fyt,-Fxt)
     Z   = AsympNuclCharge(sp.target)
     Ip  = IonPotential(sp.target)
     asymp_coeff = MolAsympCoeff(sp.target, sp.ion_orbit_idx)
@@ -133,48 +139,41 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
     γ0  = AngFreq(sp.laser) * sqrt(2Ip) / F0
     prefix = sp.rate_prefix
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
+    @inline F2eff(kx,ky) = Ft^2 - (kx*dFxt+ky*dFyt)  # F2eff=F²-k⟂⋅F'
+    @inline r_exit(kx,ky,kz) = Ft/2*(kx^2+ky^2+kz^2+2Ip)/F2eff(kx,ky)
     cutoff_limit = sp.cutoff_limit
-    if Ftr == 0 || ADKAmpExp(Ftr,Ip,0.0,0.0)^2 < cutoff_limit/1e3
+    if Ft == 0 || ADKAmpExp(Ft,Ip,0.0,0.0)^2 < cutoff_limit/1e3
         return nothing
     end
 
     # determines Euler angles (α,β,γ)
     mol_rot = MolRotation(sp.target)
-    α,β,γ = obtain_FF_MF_Euler(mol_rot, [Fxtr,Fytr])
+    α,β,γ = obtain_FF_MF_Euler(mol_rot, [Fxt,Fyt])
     # computes wigner-D beforehand
     wigner_D_mat = zeros(ComplexF64, lMax+1, 2lMax+1, 2lMax+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[l+1, m+l+1, m_+l+1].
     for l in 0:lMax for m in -l:l for m_ in -l:l
         wigner_D_mat[l+1, m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ)
     end; end; end
-    new_x_axis, new_y_axis, new_z_axis = obtain_xyz_FF_LF(Fxtr,Fytr)
-
-    @inline px_(kd,Axts,Ayts) =  kd*imag(Ayts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Axts)
-    @inline py_(kd,Axts,Ayts) = -kd*imag(Axts)/sqrt(imag(Axts)^2+imag(Ayts)^2) - real(Ayts)
-    function saddle_point_equation(tr,ti,kd,kz)
-        Axts = Ax(tr+1im*ti)
-        Ayts = Ay(tr+1im*ti)
-        px = px_(kd,Axts,Ayts); py = py_(kd,Axts,Ayts)
-        return SVector(real(((px+Axts)^2+(py+Ayts)^2+kz^2)/2 + Ip))
-    end
-    function solve_spe(tr,kd,kz)
-        spe((ti,)) = saddle_point_equation(tr,ti,kd,kz)
-        ti_sol = nlsolve(spe, [asinh(ω/Ftr*sqrt(kd^2+kz^2+2Ip))/ω])
-        ti = 0.0
-        if converged(ti_sol) && (ti_sol.zero[1]>0)
-            ti = ti_sol.zero[1]
-            (ti == 0.0) && return 0.0
-        else
-            return 0.0
-        end
-        return ti
-    end
+    new_x_axis, new_y_axis, new_z_axis = obtain_xyz_FF_LF(Fxt,Fyt)
 
     κ = sqrt(2Ip)
     n = Z/κ # n* = Z/κ
-    c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^((n-5)/2) is omitted, trivial
+    c = 2^(n/2+1) * κ^(2n+1/2) * gamma(n/2+1) # i^(3(1-n)/2) is omitted, trivial
     e0 = 2.71828182845904523
-    c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ftr^(-n) * (1+2γ0/e0)^(-n)
-    k_ts(px,py,kz,ts) = (px+Ax(ts), py+Ay(ts), kz)
+    c_cc = 2^(3n/2+1) * κ^(5n+1/2) * Ft^(-n) * (1+2γ0/e0)^(-n)
+    FxdFy_FydFx = Fxt*dFyt-dFxt*Fyt
+    # @inline ti(kx,ky,kd,kz) = sqrt((κ^2+kd^2+kz^2)/F2eff(kx,ky))
+    @inline function ti(ktx,kty,kd,kz)
+        a = (dFxt^2+dFyt^2)/4-((dFxt*Fxt+dFyt*Fyt)/Ft)^2/4
+        b = -F2eff(ktx,kty)
+        c = kd^2+kz^2+κ^2
+        Δ = b^2-4*a*c
+        if Δ<0 #! debug
+            @printf "!Δ<0 kd=%.4f, kz=%.4f a=%.8f, b=%.6f, c=%.6f \n" kd kz a b c
+        end
+        return Δ≥0 ? sqrt((-b+sqrt(Δ))/2a) : 0.0
+    end
+    @inline k_ts(kx,ky,kz,ts) = SVector{3,ComplexF64}(kx-1im*imag(ts)*Fxt+imag(ts)^2/2*dFxt, ky-1im*imag(ts)*Fyt+imag(ts)^2/2*dFyt, kz)
     lmm_list = [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l] # this cache improves the efficiency a lot
     @inline function pre_numerator((l,m,m_),kts)
         # C_lm = asymp_coeff[l+1,m+l+1]
@@ -184,26 +183,16 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
     end
     pre(kx,ky,kz,ts) = begin
         kts = k_ts(kx,ky,kz,ts)
-        c * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+        c * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / ((kx^2+ky^2+kz^2+2Ip)*F2eff(kx,ky))^((n+1)/4)
     end
     pre_cc(kx,ky,kz,ts) = begin
         kts = k_ts(kx,ky,kz,ts)
-        c_cc * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / (sum(kts .* (Fx(ts),Fy(ts),0.0)))^((n+1)/2)
+        if abs(sum(kts.^2)+κ^2) ≥ κ^2/5 # discard the sample if the error is too large (the error comes with the approximate solution of ti)
+            return 0.0
+        end
+        c_cc * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / ((kx^2+ky^2+kz^2+2Ip)*F2eff(kx,ky))^((n+1)/4)
     end
-    S_tun(px,py,kz,ti) = -quadgk(t->((px+Ax(t))^2+(py+Ay(t))^2+kz^2)/2+Ip, tr+1im*ti, tr)[1] # Integrates ∂S/∂t from ts to tr.
-    function jac(kd,kz)
-        dtr = 0.01
-        dkd = 0.01
-        ti_tp = solve_spe(tr+dtr,kd,kz)
-        ti_tm = solve_spe(tr-dtr,kd,kz)
-        ti_kp = solve_spe(tr,kd+dkd,kz)
-        ti_km = solve_spe(tr,kd-dkd,kz)
-        dpxdtr = px_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - px_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm)) # actually is 4*dpx/dtr
-        dpydtr = py_(kd,Ax(tr+dtr+1im*ti_tp),Ay(tr+dtr+1im*ti_tp)) - py_(kd,Ax(tr-dtr+1im*ti_tm),Ay(tr-dtr+1im*ti_tm))
-        dpxdkd = px_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - px_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
-        dpydkd = py_(kd+dkd,Ax(tr+1im*ti_kp),Ay(tr+1im*ti_kp)) - py_(kd-dkd,Ax(tr+1im*ti_km),Ay(tr+1im*ti_km))
-        return abs(dpxdtr*dpydkd-dpxdkd*dpydtr)/(4dtr*dkd)
-    end
+    jac(kd,kz) = abs(Ft + sqrt(kd^2+kz^2)/Ft^2*FxdFy_FydFx)
     step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
     dkdt = if ! sp.monte_carlo
         step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
@@ -212,22 +201,22 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
     end
     amplitude::Function =
         if isempty(prefix)
-            amp_exp(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti))
+            amp_exp(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz)
         else
             if :Pre in prefix
                 if :Jac in prefix
-                    amp_pre_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
+                    amp_pre_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kz,t+1im*ti) * sqrt(jac(kd,kz))
                 else
-                    amp_pre(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre(px,py,kz,tr+1im*ti)
+                    amp_pre(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre(kx,ky,kz,t+1im*ti)
                 end
             elseif :PreCC in prefix
                 if :Jac in prefix
-                    amp_precc_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti) * sqrt(jac(kd,kz))
+                    amp_precc_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kz,t+1im*ti) * sqrt(jac(kd,kz))
                 else
-                    amp_precc(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * pre_cc(px,py,kz,tr+1im*ti)
+                    amp_precc(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kz,t+1im*ti)
                 end
             else # [:Jac]
-                amp_jac(px,py,kd,kz,ti) = sqrt(dkdt) * exp(1im*S_tun(px,py,kz,ti)) * sqrt(jac(kd,kz))
+                amp_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * sqrt(jac(kd,kz))
             end
         end
 
@@ -245,28 +234,38 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
         kd_samples = sp.ss_kd_samples
         kz_samples = sp.ss_kz_samples
         kdNum, kzNum = length(kd_samples), length(kz_samples)
-        @threads for ikd in 1:kdNum
+        for ikd in 1:kdNum
             for ikz in 1:kzNum
                 kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
-                ti = solve_spe(tr,kd0,kz0)
-                (ti == 0) && continue
-                ts = tr+1im*ti
-                px = px_(kd0,Ax(ts),Ay(ts))
-                py = py_(kd0,Ax(ts),Ay(ts))
-                x0 = quadgk(ti->imag(Ax(tr+1im*ti)), 0.0, ti)[1]
-                y0 = quadgk(ti->imag(Ay(tr+1im*ti)), 0.0, ti)[1]
+                ktx = kd0*-sin(φ)
+                kty = kd0* cos(φ)
+                r0 = r_exit(ktx,kty,kz0)
+                x0 = r0*cos(φ)
+                y0 = r0*sin(φ)
                 z0 = 0.0
-                kx0 = px+Ax(tr)
-                ky0 = py+Ay(tr)
-                amp = amplitude(px,py,kd0,kz0,ti)
+                if F2eff(ktx,kty) ≤ max(Ft^2/9, (κ^3/100)^2) || F2eff(ktx,kty) ≥ Ft^2*4 # F_eff cut off is set to max{F/3,κ³/100} to avoid NaN probabilities.
+                    continue
+                end
+                ti_ = ti(ktx,kty,kd0,kz0)
+                if ti_ == 0.0
+                    continue
+                end
+                k_par = -ti_^2/2 * (Fxt*dFxt+Fyt*dFyt)/Ft # k_par = k∥ = k(tr) ⋅ F̂(tr)
+                kx0 = ktx + k_par*Fxt/Ft
+                ky0 = kty + k_par*Fyt/Ft
+                if abs(imag(sum(k_ts(kx0,ky0,kz0,t+1im*ti_) .^ 2))) > 0.001 || abs(sum(k_ts(kx0,ky0,kz0,t+1im*ti_) .^ 2)+κ^2) ≥ 0.001 #! debug usage
+                    kxts, kyts, kzts = k_ts(kx0,ky0,kz0,t+1im*ti_)
+                    @printf "!!! abnormal kts: ikd=%d, ikz=%d, kx0=%.4f, ky0=%.4f, kz0=%.4f, F2=%.4f, F2eff=%.4f, kxts=%.4f+%.4fim; kyts=%.4f+%.4fim; kzts=%.4f+%.4fim, k²(ts)=%.4f+%.4fim, ti=%.4f\n" ikd ikz kx0 ky0 kz0 Ft^2 F2eff(kx0,ky0) real(kxts) imag(kxts) real(kyts) imag(kyts) real(kzts) imag(kzts) real(kxts^2+kyts^2+kzts^2) imag(kxts^2+kyts^2+kzts^2) ti(kx0,ky0,kd0,kz0)
+                end
+                amp = amplitude(kx0,ky0,kd0,kz0,ti_)
                 rate = abs2(amp)
-                if rate < cutoff_limit
+                if isnan(rate) || rate < cutoff_limit
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1
-                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
+                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate]
                 if phase_method != :CTMC
-                    init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp) # Re(S_tun) is also included in the angle(amp)
+                    init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp) + ((kd0^2+kz0^2+2Ip)/F2eff(ktx,kty))^2*(Fxt*dFxt+Fyt*dFyt)/8
                 end
             end
         end
@@ -274,30 +273,29 @@ function gen_electron_batch(sp::MOSFASampler, batchId::Integer)
         rng = Random.MersenneTwister(0) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
             kd0, kz0 = gen_rand_pt(rng, sp.mc_kd_max, sp.mc_kz_max)
-            ti = solve_spe(tr,kd0,kz0)
-            (ti == 0) && continue
-            ts = tr+1im*ti
-            px = px_(kd0,Ax(ts),Ay(ts))
-            py = py_(kd0,Ax(ts),Ay(ts))
-            x0 = quadgk(ti->imag(Ax(tr+1im*ti)), 0.0, ti)[1]
-            y0 = quadgk(ti->imag(Ay(tr+1im*ti)), 0.0, ti)[1]
+            kx0 = kd0*-sin(φ)
+            ky0 = kd0* cos(φ)
+            r0 = r_exit(kx0,ky0,kz0)
+            x0 = r0*cos(φ)
+            y0 = r0*sin(φ)
             z0 = 0.0
-            kx0 = px+Ax(tr)
-            ky0 = py+Ay(tr)
-            amp = amplitude(px,py,kd0,kz0,ti)
+            if F2eff(kx0,ky0) ≤ Ft^2/25
+                continue
+            end
+            amp = amplitude(kx0,ky0,kd0,kz0,ti(kx0,ky0,kd0,kz0))
             rate = abs2(amp)
-            if rate < cutoff_limit
+            if isnan(rate) || rate < cutoff_limit
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1
-            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
+            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,t,rate]
             if phase_method != :CTMC
-                init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp) + ((kd0^2+kz0^2+2Ip)/F2eff(kx0,ky0))^2*(Fxt*dFxt+Fyt*dFyt)/8
             end
         end
     end
     if sum(sample_count_thread) == 0
-        # @warn "[MOSFASampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
+        # @warn "[MOSFAAESampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
         return nothing
     end
     # collect electron samples from different threads.

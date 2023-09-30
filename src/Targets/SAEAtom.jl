@@ -10,6 +10,10 @@ struct SAEAtom <: SAEAtomBase
     l;
     "Magnetic quantum number m."
     m;
+    "Orientation of the quantization axis θ."
+    quan_ax_θ;
+    "Orientation of the quantization axis ϕ."
+    quan_ax_ϕ;
     "Atomic parameters used to fit the atomic potential. See [J. Phys. B 38 2593 (2005)]"
     a1;
     b1;
@@ -19,14 +23,14 @@ struct SAEAtom <: SAEAtomBase
     b3;
     "Name of the atom."
     name::String;
-    "Initializes a new instance of SAEAtom."
-    function SAEAtom( Ip, Z::Integer, l::Integer=0, m::Integer=0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
+    "Initializes a new instance of `SAEAtom`."
+    function SAEAtom( Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
         @assert Ip>0 "[SAEAtom] Ip should be positive."
         @assert l≥0 && m≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
         @assert b1≥0 && b2≥0 && b3≥0 "[SAEAtom] b1,b2,b3 should be non-negative."
-        new(Ip,Z,l,m,a1,b1,a2,b2,a3,b3,name)
+        new(Ip,Z,l,m,quan_ax_orient_θ,quan_ax_orient_ϕ,a1,b1,a2,b2,a3,b3,name)
     end
-    SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = SAEAtom(Ip,Z,l,m,a1,b1,a2,b2,a3,b3,name)
+    SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = SAEAtom(Ip,Z,l,m,quan_ax_orient_θ,quan_ax_orient_ϕ,a1,b1,a2,b2,a3,b3,name)
 end
 
 "Gets the ionization potential of the atom."
@@ -37,6 +41,9 @@ AsympNuclCharge(t::SAEAtom) = t.nucl_charge
 AngularQuantumNumber(t::SAEAtom) = t.l
 "Gets the magnetic quantum number m of the atom."
 MagneticQuantumNumber(t::SAEAtom) = t.m
+
+"Gets the orientation of the quantization axis of the atom in spherical coordinates (θ,ϕ)."
+QuantizationAxisOrientaion(t::SAEAtom) = (t.quan_ax_θ, t.quan_ax_ϕ)
 
 using SpecialFunctions
 "Gets the asymptotic coefficient C_κl of the atom using the Hartree approximation formula."
