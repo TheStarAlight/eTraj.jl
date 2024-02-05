@@ -9,7 +9,7 @@ using QuadGK
 "Sample provider which generates initial electron samples through SFA formula."
 struct SFASampler <: ElectronSampler
     laser   ::Laser;
-    target  ::SAEAtomBase;  # SFA only supports [SAEAtomBase].
+    target  ::Target;  # SFA only supports [SAEAtomBase].
     monte_carlo;
     t_samples;
     ss_kd_samples;
@@ -24,7 +24,7 @@ struct SFASampler <: ElectronSampler
 
     function SFASampler(;
         laser               ::Laser,
-        target              ::SAEAtomBase,
+        target              ::Target,
         sample_t_intv       ::Tuple{<:Real,<:Real},
         sample_t_num        ::Integer,
         sample_cutoff_limit ::Real,
@@ -178,19 +178,26 @@ function gen_electron_batch(sp::SFASampler, batch_id::Integer)
             θ,ϕ = QuantizationAxisOrientaion(sp.target)
             (ϕ,θ,0.0)
         end
-    α,β,γ = obtain_FF_MF_Euler(target_rot, [Fxtr,Fytr])
+    α,β,γ_ = obtain_FF_MF_Euler(target_rot, [Fxtr,Fytr])
     # computes wigner-D beforehand
     if target_type == MoleculeTypeID
         mol_wigner_D_mat = zeros(ComplexF64, lMax+1, 2lMax+1, 2lMax+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[l+1, m+l+1, m_+l+1].
         for l in 0:lMax for m in -l:l for m_ in -l:l
-            mol_wigner_D_mat[l+1, m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ)
+            mol_wigner_D_mat[l+1, m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ_)
         end; end; end
     elseif target_type == SAEAtomTypeID
         atm_wigner_D_mat = zeros(ComplexF64, 2l+1, 2l+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[m+l+1, m_+l+1].
         for m in -l:l for m_ in -l:l
-            atm_wigner_D_mat[m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ)
+            atm_wigner_D_mat[m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ_)
         end; end
     end
+    # computes spherical harmonics beforehand
+    SH_func_mat =   # to get Y_{lm}(x,y,z), call SH_func_mat[l+1,m+l+1]
+        if target_type == MoleculeTypeID
+            gen_sph_harm_funcs(lMax)
+        elseif target_type == SAEAtomTypeID
+            gen_sph_harm_funcs(l)
+        end
     new_x_axis, new_y_axis, new_z_axis = obtain_xyz_FF_LF(Fxtr,Fytr)
 
     # determines ionization amplitude (which contains phase)
@@ -228,9 +235,12 @@ function gen_electron_batch(sp::SFASampler, batch_id::Integer)
         if target_type == MoleculeTypeID
             C_lm = asymp_coeff[l+1, m+l+1]
             (C_lm == 0) && return 0.0
-            C_lm * mol_wigner_D_mat[l+1,m_+l+1,m+l+1] * sph_harm_lm_khat_approx(l,m_, kts..., new_x_axis, new_y_axis, new_z_axis)
+            new_kx = kts ⋅ new_x_axis
+            new_ky = kts ⋅ new_y_axis
+            new_kz = kts ⋅ new_z_axis
+            C_lm * mol_wigner_D_mat[l+1,m_+l+1,m+l+1] * SH_func_mat[l+1,m_+l+1](new_kx, new_ky, new_kz)
         elseif target_type == SAEAtomTypeID
-            C * atm_wigner_D_mat[m_+l+1,m+l+1] * sph_harm_lm_khat_approx(l,m_, kts..., new_x_axis, new_y_axis, new_z_axis)
+            C * atm_wigner_D_mat[m_+l+1,m+l+1] * SH_func_mat[l+1,m_+l+1](new_kx, new_ky, new_kz)
         end
     end
     pre(kx,ky,kz,ts) = begin

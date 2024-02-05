@@ -6,39 +6,33 @@ function gen_rand_pt(rng, x0,y0)
     return x,y
 end
 
-using Printf
-using StaticArrays
-using LinearAlgebra
-using SphericalHarmonics
-"Computes the Y_lm(̂k(ts))."
-@inline function sph_harm_lm_khat(l,m, kxts,kyts,kzts, x_unit,y_unit,z_unit) # for atoms the func is invoked once per sample, use the more precise version
-    cosθ = (kxts*z_unit[1]+kyts*z_unit[2]+kzts*z_unit[3])/sqrt(kxts^2+kyts^2+kzts^2) |> abs
-    (cosθ≤1.0) && (cosθ=1.0)
-    return if m == 0
-        SphericalHarmonics.sphericalharmonic(acos(complex(abs(cosθ))),0.0; l=l,m=m)
-    else
-        # determine ϕ: F is set as the new z axis, and the new x and y axis are determined using the rotation angles
-        ϕ = atan(y_unit ⋅ real([kxts,kyts,kzts]), x_unit ⋅ real([kxts,kyts,kzts]))
-        SphericalHarmonics.sphericalharmonic(acos(complex(abs(cosθ))),ϕ; l=l,m=m)
+using Symbolics
+"Generates a set of spherical harmonics Y_lm(x,y,z) that evaluates in the Cartesian coordinate."
+@inline function gen_sph_harm_funcs(lmax)
+    x = 0.0; y = 0.0; z = 0.0   # to cheat the vscode linter which reported that x,y,z are not defined.
+    @variables x y z
+    r = sqrt(x^2+y^2+z^2)
+    fact = factorial    # shortcut of factorial
+    R(l,m) = fact(l+m)*mapreduce(k->(-1)^k/(2^(2k+m)*fact(k+m)*fact(k)*fact(l-m-2k)) * (x+1im*y)^(k+m) * (x-1im*y)^k * z^(l-m-2k), +, max(0,-m):round(Int, (l-m)/2, RoundDown)) # symbolic expression of solid harmonics
+    Y(l,m) = (-1)^m * sqrt((2l+1)/4π*fact(l-m)/fact(l+m)) / r^l * R(l,m)
+    function Yfunc(l,m)
+        expr = Y(l,m) |> Symbolics.toexpr
+        func = @eval begin
+            function (x_,y_,z_)
+                x,y,z = promote(x_,y_,z_)
+                $expr
+            end
+        end
+        return func
     end
-end
-"Computes the Y_lm(̂k(ts)) using the leading-order expansion around cosθ=1."
-@inline function sph_harm_lm_khat_approx(l,m, kxts,kyts,kzts, x_unit,y_unit,z_unit) # for molecules the func would be invoked hundreds of times per sample, which greatly affects the efficiency, use the approximated version
-    cosθ = (kxts*z_unit[1]+kyts*z_unit[2]+kzts*z_unit[3])/sqrt(kxts^2+kyts^2+kzts^2) |> abs # cosθ is real, but the result can be near +1 or -1 because sqrt is bi-valued, we can give it an abs to make it near +1.
-    if cosθ≤1.0 # for SFA, some solutions are not accurate enough, which results in |cosθ| ≲ 1.0, simply set to 1.0
-        # @printf "kxts=%.4f+%.6fim; kyts=%.4f+%.6fim; kzts=%.4f+%.6fim, k²(ts)=%.4f+%.6fim, cosθ=%.4f+%.4fim\n" real(kxts) imag(kxts) real(kyts) imag(kyts) real(kzts) imag(kzts) real(kxts^2+kyts^2+kzts^2) imag(kxts^2+kyts^2+kzts^2) real(cosθ) imag(cosθ)
-        cosθ = 1.0
-    end
-    Q_lm = (-1)^m * sqrt((2l+1)/2*gamma(l+abs(m)+1)/gamma(l-abs(m)+1)) # use gamma function instead of factorial to avoid overflow
-    return if m == 0
-        Q_lm / sqrt(2π)
-    else
-        # determine ϕ: F is set as the new z axis, and the new x and y axis are determined using the rotation angles
-        ϕ = atan(y_unit ⋅ real([kxts,kyts,kzts]), x_unit ⋅ real([kxts,kyts,kzts]))
-        Q_lm / gamma(abs(m)+1) * (abs(abs(cosθ)-1)/2)^(abs(m)/2) / sqrt(2π) * cis(m*ϕ)
-    end
+    SHfunc = Matrix(undef, lmax+1, 2lmax+1)
+    for l in 0:lmax for m in -l:l
+        SHfunc[l+1, l+m+1] = Yfunc(l,m)
+    end; end
+    return SHfunc
 end
 
+using StaticArrays
 using Rotations
 """
 Obtains the rotational Euler angles `(α,β,γ)` from FF to the MF.
