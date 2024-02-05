@@ -4,9 +4,7 @@ authors = ["Mingyu Zhu <myzhu@stu.ecnu.edu.cn> and contributors"]
 version = "1.0.0-dev"
 
 [deps]
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-DiffEqGPU = "071ae1c0-96b5-11e9-1965-c90190d839ea"
 Einsum = "b7d42ee7-0b51-5a75-98ca-779d3107e4c0"
 Folds = "41a02a25-b8f0-4f67-bc48-60067656b558"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -33,8 +31,6 @@ YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 libcint_jll = "574b78ca-bebd-517c-801d-4735c93a9686"
 
 [compat]
-CUDA = "≥ 4.0"
-DiffEqGPU = "≥ 2.4.1"
 OrdinaryDiffEq = "≥ 6.51"
 julia = "≥ 1.7"
 

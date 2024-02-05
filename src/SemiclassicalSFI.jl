@@ -56,12 +56,8 @@ Performs a semiclassical simulation with given parameters.
 - `save_3D_spec = false`                            : Determines whether the 3D momentum spectrum is saved (if not, will only save 2D by flattening on the xy plane) (default `false`).
 - `traj_phase_method = <:CTMC|:QTMC|:SCTS>`         : Method of classical trajectories' phase (default `CTMC`).
 - `traj_rtol = 1e-6`                                : Relative error tolerance when solving classical trajectories using adaptive methods (default `1e-6`).
-- `traj_nondipole = false`                          : Determines whether the non-dipole effect is taken account in the simulation (default `false`).
-- `traj_GPU = false`                                : [Experimental] Determines whether to enable GPU acceleration in trajectory simulation (default `false`).
 - `sample_cutoff_limit = 1e-16`                     : The cut-off limit of the probability of the sampled electron, electrons with probabilities lower than the limit would be discarded.
 - `sample_monte_carlo = false`                      : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`). Currently only supports ADK.
-- `final_ryd_collect = false`                       : Determines whether rydberg final states are collected (default `false`).
-- `final_ryd_n_max`                                 : The maximum principle quantum number n for rydberg final states to be collected.
 
 ## Optional params. for atomic SFA, SFA-AE and ADK methods:
 - `rate_prefix = <:Full|[:Pre|:PreCC, :Jac]|:Exp>`  : Prefix of the exponential term in the ionization rate (default `:Full`).
@@ -97,12 +93,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
                     save_3D_spec        ::Bool      = false,
                     traj_phase_method   ::Symbol    = :CTMC,
                     traj_rtol           ::Real      = 1e-6,
-                    traj_nondipole      ::Bool      = false,
-                    traj_GPU            ::Bool      = false,
                     sample_cutoff_limit ::Real      = 1e-16,
                     sample_monte_carlo  ::Bool      = false,
-                    final_ryd_collect   ::Bool      = false,
-                    final_ryd_n_max     ::Integer   = 0,
                         #* opt. params. for SFA, SFA-AE and ADK methods
                     rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}} = :Full,
                         #* opt. params. for target `MoleculeBase`
@@ -127,7 +119,7 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     @pack! kwargs= (init_cond_method, laser, target, sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
                     ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
                     mc_kt_num, mc_kd_max, mc_kz_max,
-                    traj_phase_method, traj_rtol, traj_nondipole, traj_GPU, sample_cutoff_limit, sample_monte_carlo, rate_prefix, final_ryd_collect, final_ryd_n_max,
+                    traj_phase_method, traj_rtol, sample_cutoff_limit, sample_monte_carlo, rate_prefix,
                     mol_orbit_idx,
                     adk_tun_exit)
     #* initialize sample provider.
@@ -142,27 +134,10 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         else
             zeros(ComplexF64, final_p_num),  zeros(ComplexF64, final_p_num),  zeros(ComplexF64, tuple(final_p_num...,nthreads))
         end
-    # rydberg amplitude
-    ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect =
-        if final_ryd_collect
-            if traj_phase_method == :CTMC
-                zeros(Float64, final_ryd_n_max, final_ryd_n_max, 2*final_ryd_n_max+1),
-                zeros(Float64, final_ryd_n_max, final_ryd_n_max, 2*final_ryd_n_max+1),
-                zeros(Float64, final_ryd_n_max, final_ryd_n_max, 2*final_ryd_n_max+1, nthreads)
-            else
-                zeros(ComplexF64, final_ryd_n_max, final_ryd_n_max, 2*final_ryd_n_max+1),
-                zeros(ComplexF64, final_ryd_n_max, final_ryd_n_max, 2*final_ryd_n_max+1),
-                zeros(ComplexF64, final_ryd_n_max, final_ryd_n_max, 2*final_ryd_n_max+1, nthreads)
-            end
-        else
-            nothing, nothing, nothing
-        end
     # classical prob
     classical_prob = Dict{Symbol,Float64}()
         classical_prob[:ion]                = 0.
         classical_prob[:ion_uncollected]    = 0.
-        classical_prob[:ryd]                = 0.
-        classical_prob[:ryd_uncollected]    = 0.
     #   * launch electrons and collect
     batchNum = batch_num(sp)
     prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true)
@@ -174,7 +149,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
             n_eff_traj += size(init,2)
             launch_and_collect!(init,
                                 ion_prob_final, ion_prob_sum_temp, ion_prob_collect,
-                                ryd_prob_final, ryd_prob_sum_temp, ryd_prob_collect,
                                 classical_prob; kwargs...)
         end
         next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$batchId/$batchNum, $(n_eff_traj) electrons collected]"); next!(prog2);
@@ -182,9 +156,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     finish!(prog1); finish!(prog2); println();
     if traj_phase_method != :CTMC
         ion_prob_final = abs2.(ion_prob_final)
-        if final_ryd_collect
-            ryd_prob_final = abs2.(ryd_prob_final)
-        end
     end
     #* save as HDF5.
     begin
@@ -217,12 +188,8 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
         dict_out[:save_3D_spec]         = save_3D_spec
         dict_out[:traj_phase_method]    = traj_phase_method
         dict_out[:traj_rtol]            = traj_rtol
-        dict_out[:traj_nondipole]       = traj_nondipole
-        dict_out[:traj_GPU]             = traj_GPU
         dict_out[:sample_cutoff_limit]  = sample_cutoff_limit
         dict_out[:sample_monte_carlo]   = sample_monte_carlo
-        dict_out[:final_ryd_collect]    = final_ryd_collect
-        dict_out[:final_ryd_n_max]      = final_ryd_n_max
         # opt. params. for SFA, SFA-AE and ADK methods
         if init_cond_method in [:SFA, :SFAAE, :ADK, :MOSFA, :MOSFAAE, :MOADK]
             dict_out[:rate_prefix]      = rate_prefix
@@ -247,11 +214,6 @@ function performSFI(; # some abbrs.:  req. = required, opt. = optional, params. 
     file["momentum_spec_2D", shuffle=true, deflate=6] = reshape(sum(ion_prob_final, dims=3),size(ion_prob_final)[1:2])    # the output is compressed, level from 1 to 9.
     file["ion_prob"] = classical_prob[:ion]
     file["ion_prob_uncollected"] = classical_prob[:ion_uncollected]
-    if final_ryd_collect
-        file["ryd_spec"] = ryd_prob_final
-        file["ryd_prob"] = classical_prob[:ryd]
-        file["ryd_prob_uncollected"] = classical_prob[:ryd_uncollected]
-    end
     file["num_effective_traj"] = n_eff_traj
     close(file)
     @info "Task finished, data saved at \"$(save_path)\"."
@@ -262,19 +224,12 @@ function launch_and_collect!( init,
                             ion_prob_final,
                             ion_prob_sum_temp,
                             ion_prob_collect,
-                            ryd_prob_final,
-                            ryd_prob_sum_temp,
-                            ryd_prob_collect,
                             classical_prob;
                             laser               ::Laser,
                             target              ::Target,
                             traj_t_final        ::Real,
                             traj_phase_method   ::Symbol,
                             traj_rtol           ::Real,
-                            traj_nondipole      ::Bool,
-                            traj_GPU            ::Bool,
-                            final_ryd_collect   ::Bool,
-                            final_ryd_n_max     ::Int,
                             final_p_max         ::Tuple{<:Real,<:Real,<:Real},
                             final_p_num         ::Tuple{<:Int,<:Int,<:Int},
                             kwargs...   # kwargs are surplus params.
@@ -285,15 +240,13 @@ function launch_and_collect!( init,
     targetF::Function   = TargetForce(target)
     targetP::Function   = TargetPotential(target)
     nucl_charge         = AsympNuclCharge(target)
-    traj::Function      = TrajectoryFunction(target, Fx,Fy,traj_phase_method,traj_nondipole)
+    traj::Function      = TrajectoryFunction(target, Fx,Fy,traj_phase_method)
     batch_size = size(init,2)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
     nthreads = Threads.nthreads()
     class_prob_ion              = zeros(nthreads)
     class_prob_ion_uncollected  = zeros(nthreads)
-    class_prob_ryd              = zeros(nthreads)
-    class_prob_ryd_uncollected  = zeros(nthreads)
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 6 : 7 # x,y,z,px,py,pz[,phase]
@@ -305,12 +258,7 @@ function launch_and_collect!( init,
             (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],Float64(traj_t_final)))
         end
     ensemble_prob::EnsembleProblem = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    sol =
-        if ! traj_GPU
-            solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
-        else
-            solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
-        end
+    sol = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
     # collect and summarize.
     Threads.@threads for i in 1:batch_size
         threadid = Threads.threadid()
@@ -366,39 +314,14 @@ function launch_and_collect!( init,
             else
                 class_prob_ion_uncollected[threadid] += prob
             end
-        else            # finally become rydberg.
-            class_prob_ryd[threadid] += prob
-            if final_ryd_collect
-                n = round(Int, nucl_charge / sqrt(-2E_inf))
-                l = round(Int, (sqrt(1.0+4L2)-1.0)/2)
-                m = round(Int, L_vec[3])
-                nIdx = n
-                lIdx = l+1
-                mIdx = m+final_ryd_n_max
-                if checkbounds(Bool, ryd_prob_collect, nIdx,lIdx,mIdx, threadid)
-                    if traj_phase_method == :CTMC
-                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += prob
-                    else
-                        ryd_prob_collect[nIdx,lIdx,mIdx,threadid] += sqrt(prob)*exp(1im*phase)
-                    end
-                else
-                    class_prob_ryd_uncollected[threadid] += prob
-                end
-            else
-                class_prob_ryd_uncollected[threadid] += prob
-            end
+        else # finally become rydberg.
+            # currently does not support Rydberg collecting.
         end
     end
     sum!(ion_prob_sum_temp, ion_prob_collect)
     ion_prob_final .+= ion_prob_sum_temp
-    if final_ryd_collect
-        sum!(ryd_prob_sum_temp, ryd_prob_collect)
-        ryd_prob_final .+= ryd_prob_sum_temp
-    end
     classical_prob[:ion]                += sum(class_prob_ion)
     classical_prob[:ion_uncollected]    += sum(class_prob_ion_uncollected)
-    classical_prob[:ryd]                += sum(class_prob_ryd)
-    classical_prob[:ryd_uncollected]    += sum(class_prob_ryd_uncollected)
 end
 
 function default_filename()
