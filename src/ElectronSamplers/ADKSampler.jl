@@ -150,7 +150,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
     Fxtr= LaserFx(sp.laser)(tr)
     Fytr= LaserFy(sp.laser)(tr)
     Ftr = hypot(Fxtr, Fytr)
-    ϕ   = atan(-Fytr,-Fxtr) # azimuth angle of tunneling exit
+    φ   = atan(-Fytr,-Fxtr) # azimuth angle of tunneling exit
 
     target_type = if typeof(sp.target) <: SAEAtomBase
         1
@@ -294,11 +294,11 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         @threads for ikd in 1:kdNum
             for ikz in 1:kzNum
                 kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
-                kx0 = kd0*-sin(ϕ)
-                ky0 = kd0* cos(ϕ)
+                kx0 = kd0*-sin(φ)
+                ky0 = kd0* cos(φ)
                 r0 = (Ip+(kd0^2+kz0^2)/2)/Ftr
-                x0 = r0*cos(ϕ)
-                y0 = r0*sin(ϕ)
+                x0 = r0*cos(φ)
+                y0 = r0*sin(φ)
                 z0 = 0.0
                 amp = amplitude(kx0,ky0,kd0,kz0,ti(kd0,kz0))
                 rate = abs2(amp)
@@ -317,11 +317,11 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         rng = Random.MersenneTwister(seed) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
             kd0, kz0 = gen_rand_pt(rng, sp.mc_kd_max, sp.mc_kz_max)
-            kx0 = kd0*-sin(ϕ)
-            ky0 = kd0* cos(ϕ)
+            kx0 = kd0*-sin(φ)
+            ky0 = kd0* cos(φ)
             r0 = (Ip+(kd0^2+kz0^2)/2)/Ftr
-            x0 = r0*cos(ϕ)
-            y0 = r0*sin(ϕ)
+            x0 = r0*cos(φ)
+            y0 = r0*sin(φ)
             z0 = 0.0
             amp = amplitude(kx0,ky0,kd0,kz0,ti(kd0,kz0))
             rate = abs2(amp)
