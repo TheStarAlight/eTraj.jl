@@ -6,7 +6,6 @@ Implementation of classical/semiclassical trajectory methods in strong-field ion
 module SemiclassicalSFI
 
 using OrdinaryDiffEq
-using DiffEqGPU, CUDA
 using LinearAlgebra
 using StaticArrays
 using Parameters

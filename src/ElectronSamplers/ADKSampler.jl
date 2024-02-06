@@ -6,6 +6,7 @@ using StaticArrays
 using Random
 using Rotations
 using WignerD
+using LinearAlgebra
 
 "Electron sampler which generates initial electron samples using the ADK or MO-ADK method."
 struct ADKSampler <: ElectronSampler
@@ -234,6 +235,9 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
             new_kz = kts ⋅ new_z_axis
             C_lm * mol_wigner_D_mat[l+1,m_+l+1,m+l+1] * SH_func_mat[l+1,m_+l+1](new_kx, new_ky, new_kz)
         elseif target_type == SAEAtomTypeID
+            new_kx = kts ⋅ new_x_axis
+            new_ky = kts ⋅ new_y_axis
+            new_kz = kts ⋅ new_z_axis
             C * atm_wigner_D_mat[m_+l+1,m+l+1] * SH_func_mat[l+1,m_+l+1](new_kx, new_ky, new_kz)
         end
     end

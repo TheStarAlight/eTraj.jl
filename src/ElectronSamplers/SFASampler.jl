@@ -5,6 +5,7 @@ using StaticArrays
 using Random
 using NLsolve
 using QuadGK
+using LinearAlgebra
 
 "Sample provider which generates initial electron samples through SFA formula."
 struct SFASampler <: ElectronSampler

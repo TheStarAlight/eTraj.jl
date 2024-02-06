@@ -7,6 +7,15 @@ function gen_rand_pt(rng, x0,y0)
 end
 
 using Symbolics
+"A macro that generates a function of spherical harmonics in Cartesian coordinate with given `Yexpr` which is an `Expr`."
+macro gen_Yfunc(Yexpr)
+    return quote
+        function (x_,y_,z_)
+            x,y,z = promote(x_,y_,z_)
+            return $(esc(Yexpr))
+        end
+    end
+end
 "Generates a set of spherical harmonics Y_lm(x,y,z) that evaluates in the Cartesian coordinate."
 @inline function gen_sph_harm_funcs(lmax)
     x = 0.0; y = 0.0; z = 0.0   # to cheat the vscode linter which reported that x,y,z are not defined.
@@ -17,12 +26,7 @@ using Symbolics
     Y(l,m) = (-1)^m * sqrt((2l+1)/4π*fact(l-m)/fact(l+m)) / r^l * R(l,m)
     function Yfunc(l,m)
         expr = Y(l,m) |> Symbolics.toexpr
-        func = @eval begin
-            function (x_,y_,z_)
-                x,y,z = promote(x_,y_,z_)
-                $expr
-            end
-        end
+        func = @gen_Yfunc(expr)
         return func
     end
     SHfunc = Matrix(undef, lmax+1, 2lmax+1)
