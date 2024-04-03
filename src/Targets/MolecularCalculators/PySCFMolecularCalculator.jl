@@ -13,7 +13,7 @@ using ProgressMeter
 "An interface of molecular calculation using PySCF."
 mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The molecule to be calculated."
-    # mol::Molecule; # linter reported error when specifying type Molecule.
+    # mol::MoleculeBase; # linter reported error when specifying type.
     mol;
     "The basis function used for calculation."
     basis::String;
@@ -34,8 +34,8 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     Initializes an instance of `PySCFMolecularCalculator` with given parameter.
 
     # Parameters
-    - `mol::Molecule`   : The molecule to be calculated.
-    - `basis::String`   : Basis set used for calculation (default `cc-pVDZ`).
+    - `mol::MoleculeBase`   : The molecule to be calculated.
+    - `basis::String`       : Basis set used for calculation (default `cc-pVDZ`).
     """
     function PySCFMolecularCalculator(; mol, basis::String="cc-pVDZ", kwargs...)
         mc::PySCFMolecularCalculator = new(mol,basis)

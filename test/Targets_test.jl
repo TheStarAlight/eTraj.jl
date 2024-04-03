@@ -9,7 +9,7 @@ using Test
     @info "Testing HydrogenLikeAtom ..."
     @testset verbose=true "HydrogenLikeAtom" begin
         t1 = HydrogenLikeAtom(Ip=0.5,Z=1,l=0,m=0,soft_core=0.2,name="H")
-        t2 = HydrogenLikeAtom(0.5,1,0,0,0.2,"H")
+        t2 = HydrogenLikeAtom(0.5,1,0,0,0.0,0.0,0.2,"H")
         t3 = HAtom()
         @test t1 == t2 == t3
         @test begin
@@ -29,7 +29,7 @@ using Test
     @info "Testing SAEAtom ..."
     @testset verbose=true "SAEAtom" begin
         t1 = SAEAtom(Ip=0.9035698802, Z=1, l=0, m=0, a1= 1.230723 , b1=0.6620055, a2=-1.325040 , b2=1.236224 , a3=-0.2307230 , b3=0.4804286, name="He")
-        t2 = SAEAtom(0.9035698802, 1, 0, 0, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
+        t2 = SAEAtom(0.9035698802, 1, 0, 0, 0.0,0.0, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
         t3 = HeAtom()
         @test t1 == t2 == t3
         @test begin
@@ -45,13 +45,13 @@ using Test
         @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (1.73205081^(-3) * (1.0 + 1.230723*(1+0.6620055*1.73205081)*exp(-0.6620055*1.73205081) + -0.2307230*(1+0.4804286*1.73205081)*exp(-0.4804286*1.73205081)) + -1.325040*1.236224/1.73205081 * exp(-1.236224*1.73205081)))
     end
 
-    @info "Testing Molecule ..."
-    @testset verbose=true "Molecule" begin
+    @info "Testing GenericMolecule ..."
+    @testset verbose=true "GenericMolecule" begin
         # fresh init
-        m1 = Molecule(atoms=["C","C","C","C","C","C","H","H","H","H","H","H"],
+        m1 = GenericMolecule(atoms=["C","C","C","C","C","C","H","H","H","H","H","H"],
                     atom_coords=[0 0 1.4 ; 1.212 0 0.7 ; 1.212 0 -0.7 ; 0 0 -1.4 ; -1.212 0 -0.7 ; -1.212 0 0.7 ; 0 0 2.48; 2.148 0 1.24; 2.148 0 -1.24; 0 0 -2.48; -2.148 0 -1.24; -2.148 0 1.24],
                     charge=0, name="Benzene")
-        m2 = Molecule(["C","C","C","C","C","C","H","H","H","H","H","H"],
+        m2 = GenericMolecule(["C","C","C","C","C","C","H","H","H","H","H","H"],
                     [0 0 1.4 ; 1.212 0 0.7 ; 1.212 0 -0.7 ; 0 0 -1.4 ; -1.212 0 -0.7 ; -1.212 0 0.7 ; 0 0 2.48; 2.148 0 1.24; 2.148 0 -1.24; 0 0 -2.48; -2.148 0 -1.24; -2.148 0 1.24],
                     0,"Benzene")
         @test MolAtoms(m1) == MolAtoms(m2)
@@ -59,7 +59,7 @@ using Test
         @test MolCharge(m1) == MolCharge(m2)
         @test TargetName(m1) == TargetName(m2)
         # init from existing file
-        m3 = Molecule("Molecule_Hydrogen.h5")
+        m3 = GenericMolecule("Molecule_Hydrogen.h5")
         @test begin
             show(m3)
             true
@@ -68,18 +68,18 @@ using Test
         @test MolAtomCoords(m3) == [0.0 0.0 -0.375; 0.0 0.0 0.375]
         @test MolCharge(m3)     == 0
         @test MolEnergyDataAvailable(m3) == true
-        @test MolEnergyLevels(m3)[1] ≈ -0.5909757276151718
+        @test MolEnergyLevels(m3)[1] ≈ -0.591627497396511
         @test MolHOMOIndex(m3)  == 1
         @test MolHOMOEnergy(m3) == MolEnergyLevels(m3)[MolHOMOIndex(m3)]
         @test MolWFATAvailableIndices(m3) == Set([0])
         begin
             μ,IntData = MolWFATData(m3,0)
             @test reduce(*, abs.(μ) .<= [1e-10,1e-10,1e-10])
-            @test IntData[1,1,3,1] ≈ -4.240521134419741e-5 - 2.6425097195784973e-19im
+            @test IntData[1,1,1,1] ≈ 1.6855748476079413 + 0.0im
         end
-        @test reduce(*, abs2.(MolWFATStructureFactor_G(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.6622283, 2.76111319])
+        @test reduce(*, abs2.(MolWFATStructureFactor_G(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.4246531020464377, 2.5759319076269223])
         @test MolAsympCoeffAvailableIndices(m3) == Set([0])
-        @test MolAsympCoeff(m3, 0)[1,1] ≈ 2.47486649
+        @test MolAsympCoeff(m3, 0)[1,1] ≈ 1.0902102938182585
         begin
             @test begin
                 SetMolRotation!(m3,π,π/2,π/3)

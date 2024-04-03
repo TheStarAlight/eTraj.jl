@@ -207,9 +207,9 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
     # computes spherical harmonics beforehand
     SH_func_mat =   # to get Y_{lm}(x,y,z), call SH_func_mat[l+1,m+l+1]
         if target_type == MoleculeTypeID
-            gen_sph_harm_funcs(lMax)
+            gen_sph_harm_funcs(lMax, sqrt(2Ip))
         elseif target_type == SAEAtomTypeID
-            gen_sph_harm_funcs(l)
+            gen_sph_harm_funcs(l, sqrt(2Ip))
         end
     new_x_axis, new_y_axis, new_z_axis = obtain_xyz_FF_LF(Fxtr,Fytr)
 

@@ -69,34 +69,6 @@ using Base.Threads
         end
     end
 
-    @info "Testing ADK-CTMC (GPU) ..."
-    @testset "ADK-CTMC (GPU)" begin
-        t = HAtom()
-        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
-        @test begin
-            performSFI(
-                init_cond_method    = :ADK,
-                laser               = l,
-                target              = t,
-                sample_t_intv       = (-80,80),
-                sample_t_num        = 400,
-                traj_t_final        = 120,
-                final_p_max         = (2.0,2.0,0.2),
-                final_p_num         = (200,200,20),
-                ss_kd_max           = 2.0,
-                ss_kd_num           = 400,
-                ss_kz_max           = 0.1,
-                ss_kz_num           = 20,
-                save_path           = "./performSFI_test_output/test_ADK-CTMC_GPU_4e14_800nm_2cyc_CP.h5",
-                traj_phase_method   = :CTMC,
-                traj_rtol           = 1e-6,
-                rate_prefix         = :Full,
-                traj_GPU            = true
-            )
-            true
-        end
-    end
-
     @info "Testing ADK-CTMC (Monte-Carlo) ..."
     @testset "ADK-CTMC (Monte-Carlo)" begin
         t = HAtom()
@@ -342,11 +314,11 @@ using Base.Threads
 
     @info "Testing MOADK-CTMC ..."
     @testset "MOADK-CTMC" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOADK,
+                init_cond_method    = :ADK,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -369,11 +341,11 @@ using Base.Threads
 
     @info "Testing MOADK-QTMC ..."
     @testset "MOADK-QTMC" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOADK,
+                init_cond_method    = :ADK,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -396,11 +368,11 @@ using Base.Threads
 
     @info "Testing MOADK-SCTS ..."
     @testset "MOADK-SCTS" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOADK,
+                init_cond_method    = :ADK,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -423,11 +395,11 @@ using Base.Threads
 
     @info "Testing MOSFAAE-CTMC ..."
     @testset "MOSFAAE-CTMC" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOSFAAE,
+                init_cond_method    = :SFAAE,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -450,11 +422,11 @@ using Base.Threads
 
     @info "Testing MOSFAAE-QTMC ..."
     @testset "MOSFAAE-QTMC" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOSFAAE,
+                init_cond_method    = :SFAAE,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -477,11 +449,11 @@ using Base.Threads
 
     @info "Testing MOSFAAE-SCTS ..."
     @testset "MOSFAAE-SCTS" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOSFAAE,
+                init_cond_method    = :SFAAE,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -504,11 +476,11 @@ using Base.Threads
 
     @info "Testing MOSFA-CTMC ..."
     @testset "MOSFA-CTMC" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOSFA,
+                init_cond_method    = :SFA,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -531,11 +503,11 @@ using Base.Threads
 
     @info "Testing MOSFA-QTMC ..."
     @testset "MOSFA-QTMC" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOSFA,
+                init_cond_method    = :SFA,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -558,11 +530,11 @@ using Base.Threads
 
     @info "Testing MOSFA-SCTS ..."
     @testset "MOSFA-SCTS" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
-                init_cond_method    = :MOSFA,
+                init_cond_method    = :SFA,
                 laser               = l,
                 target              = t,
                 sample_t_intv       = (-80,80),
@@ -586,7 +558,7 @@ using Base.Threads
 
     @info "Testing WFAT-CTMC ..."
     @testset "WFAT-CTMC" begin
-        t = Molecule("Molecule_Hydrogen.h5")
+        t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(

@@ -6,32 +6,14 @@ function gen_rand_pt(rng, x0,y0)
     return x,y
 end
 
-using Symbolics
-"A macro that generates a function of spherical harmonics in Cartesian coordinate with given `Yexpr` which is an `Expr`."
-macro gen_Yfunc(Yexpr)
-    return quote
-        function (x_,y_,z_)
-            x,y,z = promote(x_,y_,z_)
-            return $(esc(Yexpr))
-        end
-    end
-end
-"Generates a set of spherical harmonics Y_lm(x,y,z) that evaluates in the Cartesian coordinate."
-@inline function gen_sph_harm_funcs(lmax)
-    x = 0.0; y = 0.0; z = 0.0   # to cheat the vscode linter which reported that x,y,z are not defined.
-    @variables x y z
-    r = sqrt(x^2+y^2+z^2)
+"Generates a set of spherical harmonics Y_lm(kx,ky,kz) that evaluates in the Cartesian coordinate where k=(kx,ky,kz) satisfies the saddle-point equation k²=-κ²."
+@inline function gen_sph_harm_funcs(lmax, κ)
     fact = factorial    # shortcut of factorial
-    R(l,m) = fact(l+m)*mapreduce(k->(-1)^k/(2^(2k+m)*fact(k+m)*fact(k)*fact(l-m-2k)) * (x+1im*y)^(k+m) * (x-1im*y)^k * z^(l-m-2k), +, max(0,-m):round(Int, (l-m)/2, RoundDown)) # symbolic expression of solid harmonics
-    Y(l,m) = (-1)^m * sqrt((2l+1)/4π*fact(l-m)/fact(l+m)) / r^l * R(l,m)
-    function Yfunc(l,m)
-        expr = Y(l,m) |> Symbolics.toexpr
-        func = @gen_Yfunc(expr)
-        return func
-    end
+    # R(l,m) = fact(l+m)*mapreduce(k->(-1)^k/(2^(2k+m)*fact(k+m)*fact(k)*fact(l-m-2k)) * (x+1im*y)^(k+m) * (x-1im*y)^k * z^(l-m-2k), +, max(0,-m):round(Int, (l-m)/2, RoundDown)) # solid harmonics
+    # Y(l,m) = (-1)^m * sqrt((2l+1)/4π*fact(l-m)/fact(l+m)) / r^l * R(l,m)
     SHfunc = Matrix(undef, lmax+1, 2lmax+1)
     for l in 0:lmax for m in -l:l
-        SHfunc[l+1, l+m+1] = Yfunc(l,m)
+        SHfunc[l+1, l+m+1] = (x,y,z) -> (-1)^m * sqrt((2l+1)/4π*fact(l-m)/fact(l+m)) / (-1im*κ)^l * fact(l+m)*mapreduce(k->(-1)^k/(2^(2k+m)*fact(k+m)*fact(k)*fact(l-m-2k)) * (x+1im*y)^(k+m) * (x-1im*y)^k * z^(l-m-2k), +, max(0,-m):round(Int, (l-m)/2, RoundDown))
     end; end
     return SHfunc
 end

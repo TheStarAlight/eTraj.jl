@@ -2,7 +2,6 @@ using SemiclassicalSFI
 using Test
 using StaticArrays
 using OrdinaryDiffEq
-using DiffEqGPU, CUDA
 
 @info "# Testing trajectory simulation ..."
 
@@ -43,18 +42,8 @@ using DiffEqGPU, CUDA
     ensemble_prob::EnsembleProblem = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
     solc = nothing
     solg = nothing
-    @info "Testing CPU..."
-    @testset verbose=true "CPU" begin
-        @test begin
-            solc = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false);
-            mapreduce(function((k,i),) ≈(final[k,i],solc[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
-        end
-    end
-    @info "Testing GPU..."
-    @testset verbose=true "GPU" begin
-        @test begin
-            solg = solve(ensemble_prob, DiffEqGPU.GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend(),0.0), trajectories=size(init,2), adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false);
-            mapreduce(function((k,i),) ≈(final[k,i],solg[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
-        end
+    @test begin
+        solc = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false);
+        mapreduce(function((k,i),) ≈(final[k,i],solc[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
     end
 end

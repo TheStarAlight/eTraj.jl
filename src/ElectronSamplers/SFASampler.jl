@@ -81,7 +81,7 @@ struct SFASampler <: ElectronSampler
         else                    # check MC sampling parameters.
             @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFASampler] Invalid sampling time interval $sample_t_intv."
             @assert (mc_kt_num>0) "[SFASampler] Invalid sampling kt_num $mc_kt_num."
-            @assert (mc_kd_max>0 && mc_kz_max>0) "[ADKSampler] Invalid kd/kz sample boundaries $mc_kd_max/$mc_kz_max."
+            @assert (mc_kd_max>0 && mc_kz_max>0) "[SFASampler] Invalid kd/kz sample boundaries $mc_kd_max/$mc_kz_max."
         end
         # check molecular orbital
         if typeof(target) <: MoleculeBase
@@ -137,7 +137,6 @@ function gen_electron_batch(sp::SFASampler, batch_id::Integer)
     Fxtr= Fx(tr)
     Fytr= Fy(tr)
     Ftr = hypot(Fxtr, Fytr)
-    ϕ   = atan(-Fytr,-Fxtr) # azimuth angle of tunneling exit
     ω   = AngFreq(sp.laser)
 
     target_type = if typeof(sp.target) <: SAEAtomBase
@@ -195,9 +194,9 @@ function gen_electron_batch(sp::SFASampler, batch_id::Integer)
     # computes spherical harmonics beforehand
     SH_func_mat =   # to get Y_{lm}(x,y,z), call SH_func_mat[l+1,m+l+1]
         if target_type == MoleculeTypeID
-            gen_sph_harm_funcs(lMax)
+            gen_sph_harm_funcs(lMax, sqrt(2Ip))
         elseif target_type == SAEAtomTypeID
-            gen_sph_harm_funcs(l)
+            gen_sph_harm_funcs(l, sqrt(2Ip))
         end
     new_x_axis, new_y_axis, new_z_axis = obtain_xyz_FF_LF(Fxtr,Fytr)
 
@@ -241,6 +240,9 @@ function gen_electron_batch(sp::SFASampler, batch_id::Integer)
             new_kz = kts ⋅ new_z_axis
             C_lm * mol_wigner_D_mat[l+1,m_+l+1,m+l+1] * SH_func_mat[l+1,m_+l+1](new_kx, new_ky, new_kz)
         elseif target_type == SAEAtomTypeID
+            new_kx = kts ⋅ new_x_axis
+            new_ky = kts ⋅ new_y_axis
+            new_kz = kts ⋅ new_z_axis
             C * atm_wigner_D_mat[m_+l+1,m+l+1] * SH_func_mat[l+1,m_+l+1](new_kx, new_ky, new_kz)
         end
     end
