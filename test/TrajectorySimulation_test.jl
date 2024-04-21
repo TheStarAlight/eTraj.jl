@@ -41,9 +41,8 @@ using OrdinaryDiffEq
     init_traj = (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]), tspan=(init[7,i],traj_t_final))
     ensemble_prob::EnsembleProblem = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
     solc = nothing
-    solg = nothing
     @test begin
         solc = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false);
-        mapreduce(function((k,i),) ≈(final[k,i],solc[i][end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
+        mapreduce(function((k,i),) ≈(final[k,i],solc.u[i].u[end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
     end
 end

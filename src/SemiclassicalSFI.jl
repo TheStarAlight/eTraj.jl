@@ -262,8 +262,8 @@ function launch_and_collect!( init,
     # collect and summarize.
     Threads.@threads for i in 1:batch_size
         threadid = Threads.threadid()
-        x0,y0,z0,px0,py0,pz0 = sol.u[i][ 1 ][1:6]
-        x, y, z, px, py, pz  = sol.u[i][end][1:6]
+        x0,y0,z0,px0,py0,pz0 = sol.u[i].u[ 1 ][1:6]
+        x, y, z, px, py, pz  = sol.u[i].u[end][1:6]
         if px^2+py^2+pz^2>100  # possibly anomalous electron, intercept and cancel.
             warn_num += 1
             if warn_num < max_warn_num
@@ -273,7 +273,7 @@ function launch_and_collect!( init,
             end
             continue
         end
-        phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i][end][7])
+        phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i].u[end][7])
         prob = init[8,i]
         if traj_phase_method == :SCTS # asymptotic Coulomb phase correction term in SCTS
             sqrtb = (2Ip)^(-0.5)
