@@ -5,7 +5,7 @@ The Laser module provides information about laser fields.
 module Lasers
 
 # Lasers
-export Laser, Cos4Laser, Cos2Laser, TrapezoidalLaser, GaussianLaser
+export Laser, Cos4Laser, Cos2Laser, TrapezoidalLaser, GaussianLaser, MonochromaticLaser
 # Properties
 export PeakInt, WaveLen, Ellipticity, AngFreq, Period, CEP, Azimuth, TimeShift, UnitEnvelope   # General
 export LaserF0, LaserA0, LaserAx, LaserAy, LaserFx, LaserFy     # General
