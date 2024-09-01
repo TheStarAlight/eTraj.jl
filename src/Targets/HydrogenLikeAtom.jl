@@ -9,6 +9,8 @@ struct HydrogenLikeAtom <: SAEAtomBase
     l;
     "Magnetic quantum number m."
     m;
+    "Asymptotic coefficient C_κl."
+    asymp_coeff;
     "Orientation of the quantization axis θ."
     quan_ax_θ;
     "Orientation of the quantization axis ϕ."
@@ -18,13 +20,20 @@ struct HydrogenLikeAtom <: SAEAtomBase
     "Name of the atom."
     name::String;
     "Initializes a new instance of `HydrogenLikeAtom`."
-    function HydrogenLikeAtom(Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]")
+    function HydrogenLikeAtom(Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]")
         @assert Ip>0 "[HydrogenLikeAtom] Ip should be positive."
         @assert l≥0 && m≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
         @assert soft_core≥0 "[HydrogenLikeAtom] Soft core should be non-negative."
-        new(Ip, Z, l, m, quan_ax_orient_θ, quan_ax_orient_ϕ, soft_core, name)
+        @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[HydrogenLikeAtom] asymp_coeff should be either `:hartree` or a positive number."
+        C = 0.0
+        if asymp_coeff == :hartree
+            C = hartree_asymp_coeff(Z,Ip,l)
+        else
+            C = asymp_coeff
+        end
+        new(Ip, Z, l, m, C, quan_ax_θ, quan_ax_ϕ, soft_core, name)
     end
-    HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]") = HydrogenLikeAtom(Ip, Z, l, m, quan_ax_orient_θ, quan_ax_orient_ϕ, soft_core, name)
+    HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]") = HydrogenLikeAtom(Ip, Z, l, m, asymp_coeff, quan_ax_θ, quan_ax_ϕ, soft_core, name)
 end
 
 "Gets the ionization potential of the atom."
@@ -40,12 +49,8 @@ SoftCore(t::HydrogenLikeAtom) = t.soft_core
 "Gets the orientation of the quantization axis of the atom in spherical coordinates (θ,ϕ)."
 QuantizationAxisOrientaion(t::HydrogenLikeAtom) = (t.quan_ax_θ, t.quan_ax_ϕ)
 
-using SpecialFunctions
-"Gets the asymptotic coefficient C_κl of the atom using the Hartree approximation formula."
-function AsympCoeff(t::HydrogenLikeAtom)
-    n = t.nucl_charge/sqrt(2*t.Ip)
-    return 2^(n-1) / sqrt(n*gamma(n+t.l+1)*gamma(n-t.l))
-end
+"Gets the asymptotic coefficient C_κl of the atom."
+AsympCoeff(t::HydrogenLikeAtom) = t.asymp_coeff
 "Gets the name of the atom."
 TargetName(t::HydrogenLikeAtom) = t.name
 "Gets the potential function of the atom."
@@ -53,7 +58,6 @@ TargetPotential(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.
 "Gets the force exerted on the electron from the atom (which is the neg-grad of potential)."
 TargetForce(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.soft_core)^(-1.5) .* (x,y,z)
 
-using StaticArrays
 "Gets the trajectory function according to given parameter."
 function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Function, phase_method::Symbol; kwargs...)
     Z  = t.nucl_charge
@@ -102,13 +106,11 @@ function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Fun
     end
 end
 
-using Printf
 "Prints the information of the atom."
 function Base.show(io::IO, t::HydrogenLikeAtom)
-    @printf(io, "[HydrogenLikeAtom] Atom %s, Ip=%.4f, Z=%i, soft_core=%.4f\n", t.name, t.Ip, t.nucl_charge, t.soft_core)
+    @printf(io, "[HydrogenLikeAtom] Atom %s, Ip=%.4f, Z=%i, soft_core=%.4f", t.name, t.Ip, t.nucl_charge, t.soft_core)
 end
 
-using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(t::HydrogenLikeAtom)
     dict = OrderedDict{Symbol,Any}()
@@ -117,8 +119,9 @@ function Serialize(t::HydrogenLikeAtom)
     nucl_charge = t.nucl_charge
     l           = t.l
     m           = t.m
+    asymp_coeff = t.asymp_coeff
     soft_core   = t.soft_core
     name        = t.name
-    @pack! dict = (type, Ip, nucl_charge, l, m, soft_core, name)
+    @pack! dict = (type, Ip, nucl_charge, l, m, asymp_coeff, soft_core, name)
     return dict
 end

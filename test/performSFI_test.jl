@@ -17,7 +17,7 @@ using Base.Threads
 
     @info "Testing ADK-CTMC ..."
     @testset "ADK-CTMC" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -44,7 +44,7 @@ using Base.Threads
 
     @info "Testing ADK-CTMC (Large) ..."
     @testset "ADK-CTMC (Large)" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -71,7 +71,7 @@ using Base.Threads
 
     @info "Testing ADK-CTMC (Monte-Carlo) ..."
     @testset "ADK-CTMC (Monte-Carlo)" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -98,7 +98,7 @@ using Base.Threads
 
     @info "Testing ADK-QTMC ..."
     @testset "ADK-QTMC" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -125,7 +125,7 @@ using Base.Threads
 
     @info "Testing ADK-SCTS ..."
     @testset "ADK-SCTS" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -152,7 +152,7 @@ using Base.Threads
 
     @info "Testing SFAAE-CTMC ..."
     @testset "SFAAE-CTMC" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -179,7 +179,7 @@ using Base.Threads
 
     @info "Testing SFAAE-QTMC ..."
     @testset "SFAAE-QTMC" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -206,7 +206,7 @@ using Base.Threads
 
     @info "Testing SFAAE-SCTS ..."
     @testset "SFAAE-SCTS" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -233,7 +233,7 @@ using Base.Threads
 
     @info "Testing SFA-CTMC ..."
     @testset "SFA-CTMC" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -260,7 +260,7 @@ using Base.Threads
 
     @info "Testing SFA-QTMC ..."
     @testset "SFA-QTMC" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(
@@ -287,7 +287,7 @@ using Base.Threads
 
     @info "Testing SFA-SCTS ..."
     @testset "SFA-SCTS" begin
-        t = HAtom()
+        t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             performSFI(

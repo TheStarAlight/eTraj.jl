@@ -1,10 +1,4 @@
 
-using .MolecularCalculators
-using WignerD
-using Rotations
-using Dates
-using HDF5
-
 "Represents a generic molecule."
 mutable struct GenericMolecule <: MoleculeBase
 
@@ -234,7 +228,7 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Intege
 
     sum = zero(ComplexF64)
     for l in abs(m):lMax, m_ in -l:l
-        sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
     end
     return sum * exp(-sqrt(2IonPotential(mol,orbitIdx_relHOMO))*μz(β,γ))
 end
@@ -272,7 +266,7 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Intege
 
     sum = zeros(ComplexF64,size(β))
     for l in abs(m):lMax, m_ in -l:l
-        sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. WignerD.wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
     end
     κ = sqrt(2IonPotential(mol,orbitIdx_relHOMO))
     return @. sum * exp(-κ*μz(β,γ))
@@ -348,12 +342,12 @@ function MolCalcEnergyData!(mol::GenericMolecule, MCType::Type = PySCFMolecularC
         mol.mol_calc = MCType(;mol=mol, kwargs...)
     end
     mol.energy_data_available = true
-    mol.energy_levels = MolecularCalculators.EnergyLevels(mol.mol_calc)
-    mol.HOMO_index = MolecularCalculators.HOMOIndex(mol.mol_calc)
+    mol.energy_levels = EnergyLevels(mol.mol_calc)
+    mol.HOMO_index = HOMOIndex(mol.mol_calc)
     _MolSaveEnergyData(mol)
 end
 
-function _MolSaveEnergyData(mol::GenericMolecule, file::HDF5.File)
+function _MolSaveEnergyData(mol::GenericMolecule, file::File)
     # this method will not close the file handle!
     if ! mol.energy_data_available
         return
@@ -404,10 +398,10 @@ function MolCalcWFATData!(mol::GenericMolecule, orbitIdx_relHOMO::Integer = 0, M
         mol.wfat_μ = Dict()
     end
     push!(mol.wfat_orbital_indices, orbitIdx_relHOMO)
-    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = MolecularCalculators.calc_WFAT_data(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = calc_WFAT_data(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
     _MolSaveWFATData(mol,orbitIdx_relHOMO)
 end
-function _MolSaveWFATData(mol::GenericMolecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
+function _MolSaveWFATData(mol::GenericMolecule, file::File, orbitIdx_relHOMO::Integer)
     # this method will not close the file handle!
     if ! mol.wfat_data_available
         return
@@ -461,11 +455,11 @@ function MolCalcAsympCoeff!(mol::GenericMolecule, orbitIdx_relHOMO::Integer = 0,
         mol.asymp_coeff = Dict()
     end
     push!(mol.asymp_coeff_orbital_indices, orbitIdx_relHOMO)
-    mol.asymp_coeff[orbitIdx_relHOMO] = MolecularCalculators.calc_asymp_coeff(; mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    mol.asymp_coeff[orbitIdx_relHOMO] = calc_asymp_coeff(; mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
     mol.asymp_coeff_available = true
     _MolSaveAsympCoeff(mol, orbitIdx_relHOMO)
 end
-function _MolSaveAsympCoeff(mol::GenericMolecule, file::HDF5.File, orbitIdx_relHOMO::Integer)
+function _MolSaveAsympCoeff(mol::GenericMolecule, file::File, orbitIdx_relHOMO::Integer)
     # this method will not close the file handle!
     if ! mol.asymp_coeff_available
         return
@@ -626,7 +620,6 @@ function Base.show(io::IO, mol::GenericMolecule)
     if mol.energy_data_available
         @printf(io, ", HOMO_energy=%.4f", MolHOMOEnergy(mol))
     end
-    print(io,"\n")
 end
 
 using Parameters, OrderedCollections

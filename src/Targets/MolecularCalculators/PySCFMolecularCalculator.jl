@@ -1,14 +1,3 @@
-using ..Targets
-using SpecialFunctions
-using SphericalHarmonics
-using Folds
-using Einsum
-using LsqFit
-using PyCall
-using libcint_jll
-using HDF5
-using Dates
-using ProgressMeter
 
 "An interface of molecular calculation using PySCF."
 mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
@@ -424,7 +413,7 @@ function calc_WFAT_data(;
     for m_ in -l:l
         for iθ in eachindex(θ_grid)
         for iϕ in eachindex(ϕ_grid)
-            Y_precomp_data[l+1,m_+l+1,iθ,iϕ] = SphericalHarmonics.sphericalharmonic(θ_grid[iθ], ϕ_grid[iϕ]; l=l, m=m_) / (-1)^m_
+            Y_precomp_data[l+1,m_+l+1,iθ,iϕ] = sphericalharmonic(θ_grid[iθ], ϕ_grid[iϕ]; l=l, m=m_) / (-1)^m_
         end; end
     end; end
     "Utilizes the pre-computed data to calculate the Ω_{lm'}^{ν}, where ν=(nξ,m)."
@@ -547,7 +536,7 @@ function calc_asymp_coeff(;
     Threads.@threads for l in 0:l_max
         for m in -l:l
             F_lm = zeros(ComplexF64, grid_rNum)
-            Y_lm = SphericalHarmonics.sphericalharmonic.(θ_grid, ϕ_grid'; l=l, m=m)
+            Y_lm = sphericalharmonic.(θ_grid, ϕ_grid'; l=l, m=m)
             # obtain F_lm(r)
             for i in 1:N
                 ir,iθ,iϕ = ptIdx2sphCoordIdx(i)

@@ -10,6 +10,8 @@ struct SAEAtom <: SAEAtomBase
     l;
     "Magnetic quantum number m."
     m;
+    "Asymptotic coefficient C_κl."
+    asymp_coeff;
     "Orientation of the quantization axis θ."
     quan_ax_θ;
     "Orientation of the quantization axis ϕ."
@@ -24,13 +26,20 @@ struct SAEAtom <: SAEAtomBase
     "Name of the atom."
     name::String;
     "Initializes a new instance of `SAEAtom`."
-    function SAEAtom( Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
+    function SAEAtom( Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
         @assert Ip>0 "[SAEAtom] Ip should be positive."
         @assert l≥0 && m≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
         @assert b1≥0 && b2≥0 && b3≥0 "[SAEAtom] b1,b2,b3 should be non-negative."
-        new(Ip,Z,l,m,quan_ax_orient_θ,quan_ax_orient_ϕ,a1,b1,a2,b2,a3,b3,name)
+        @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[SAEAtom] asymp_coeff should be either `:hartree` or a positive number."
+        C = 0.0
+        if asymp_coeff == :hartree
+            C = hartree_asymp_coeff(Z,Ip,l)
+        else
+            C = asymp_coeff
+        end
+        new(Ip,Z,l,m,C,quan_ax_θ,quan_ax_ϕ,a1,b1,a2,b2,a3,b3,name)
     end
-    SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, quan_ax_orient_θ::Real=0.0, quan_ax_orient_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = SAEAtom(Ip,Z,l,m,quan_ax_orient_θ,quan_ax_orient_ϕ,a1,b1,a2,b2,a3,b3,name)
+    SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = SAEAtom(Ip,Z,l,m,asymp_coeff,quan_ax_θ,quan_ax_ϕ,a1,b1,a2,b2,a3,b3,name)
 end
 
 "Gets the ionization potential of the atom."
@@ -45,12 +54,9 @@ MagneticQuantumNumber(t::SAEAtom) = t.m
 "Gets the orientation of the quantization axis of the atom in spherical coordinates (θ,ϕ)."
 QuantizationAxisOrientaion(t::SAEAtom) = (t.quan_ax_θ, t.quan_ax_ϕ)
 
-using SpecialFunctions
-"Gets the asymptotic coefficient C_κl of the atom using the Hartree approximation formula."
-function AsympCoeff(t::SAEAtom)
-    n = t.nucl_charge/sqrt(2*t.Ip)
-    return 2^(n-1) / sqrt(n*gamma(n+t.l+1)*gamma(n-t.l))
-end
+"Gets the asymptotic coefficient C_κl of the atom."
+AsympCoeff(t::SAEAtom) = t.asymp_coeff
+
 "Gets the name of the atom."
 TargetName(t::SAEAtom) = t.name
 """
@@ -74,7 +80,6 @@ function TargetForce(t::SAEAtom)
     end
 end
 
-using StaticArrays
 "Gets the trajectory function according to given parameter."
 function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, phase_method::Symbol; kwargs...)
     Z  = t.nucl_charge
@@ -126,13 +131,11 @@ function TrajectoryFunction(t::SAEAtom, laserFx::Function, laserFy::Function, ph
     end
 end
 
-using Printf
 "Prints the information of the atom."
 function Base.show(io::IO, t::SAEAtom)
-    @printf(io, "[SAEAtom] Atom %s, Ip=%.4f, Z=%i\n", t.name, t.Ip, t.nucl_charge)
+    @printf(io, "[SAEAtom] Atom %s, Ip=%.4f, Z=%i", t.name, t.Ip, t.nucl_charge)
 end
 
-using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(t::SAEAtom)
     dict = OrderedDict{Symbol,Any}()
@@ -141,6 +144,7 @@ function Serialize(t::SAEAtom)
     nucl_charge = t.nucl_charge
     l           = t.l
     m           = t.m
+    asymp_coeff = t.asymp_coeff
     name        = t.name
     a1 = t.a1
     b1 = t.b1
@@ -148,6 +152,6 @@ function Serialize(t::SAEAtom)
     b2 = t.b2
     a3 = t.a3
     b3 = t.b3
-    @pack! dict = (type, Ip, nucl_charge, l, m, a1,b1,a2,b2,a3,b3, name)
+    @pack! dict = (type, Ip, nucl_charge, l, m, asymp_coeff, a1,b1,a2,b2,a3,b3, name)
     return dict
 end
