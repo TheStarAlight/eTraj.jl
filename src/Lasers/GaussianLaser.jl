@@ -16,7 +16,7 @@ struct GaussianLaser <: MonochromaticLaser
     "Time shift of the laser relative to the peak (in a.u.)."
     t_shift;
     """
-    Constructs a new monochromatic elliptically polarized laser field with Gaussian-shape envelope.
+    Initializes a new monochromatic elliptically polarized laser field with Gaussian-shape envelope.
 
     # Parameters
     - `peak_int`        : Peak intensity of the laser field (in W/cm²).
@@ -35,7 +35,7 @@ struct GaussianLaser <: MonochromaticLaser
         new(peak_int, wave_len, spread_cyc_num, ellip, azi, cep, t_shift)
     end
     """
-    Constructs a new monochromatic elliptically polarized laser field with Gaussian-shape envelope.
+    Initializes a new monochromatic elliptically polarized laser field with Gaussian-shape envelope.
 
     # Parameters
     - `peak_int`        : Peak intensity of the laser field (in W/cm²).
@@ -102,6 +102,8 @@ TimeShift(l::GaussianLaser) = l.t_shift
 LaserF0(l::GaussianLaser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::GaussianLaser) = LaserF0(l) / AngFreq(l)
+"Gets the Keldysh parameter γ₀ of the laser field, given the ionization energy `Ip` (in a.u.)."
+KeldyshParameter(l::GaussianLaser, Ip) = AngFreq(l) * sqrt(2Ip) / LaserF0(l)
 
 "Gets the unit envelope function (the peak value is 1) of the laser field."
 function UnitEnvelope(l::GaussianLaser)
@@ -173,7 +175,6 @@ function LaserFy(l::GaussianLaser)
     end
 end
 
-using Printf
 "Prints the information about the laser."
 function Base.show(io::IO, l::GaussianLaser)
     print(io, "[MonochromaticLaser] Envelope Gaussian, ")
@@ -210,10 +211,8 @@ function Base.show(io::IO, l::GaussianLaser)
     if l.azi != 0
         @printf(io, ", prin_ax_azimuth=%.2f°", l.azi/π*180)
     end
-    print(io,"\n")
 end
 
-using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(l::GaussianLaser)
     dict = OrderedDict{Symbol,Any}()

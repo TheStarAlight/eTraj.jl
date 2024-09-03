@@ -16,7 +16,7 @@ struct Cos4Laser <: MonochromaticLaser
     "Time shift of the laser relative to the peak (in a.u.)."
     t_shift;
     """
-    Constructs a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
+    Initializes a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
     # Parameters
     - `peak_int`    : Peak intensity of the laser field (in W/cm²).
     - `wave_len`    : Wavelength of the laser field (in nm).
@@ -34,7 +34,7 @@ struct Cos4Laser <: MonochromaticLaser
         new(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
     end
     """
-    Constructs a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
+    Initializes a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
     # Parameters
     - `peak_int`    : Peak intensity of the laser field (in W/cm²).
     - `wave_len`    : Wave length of the laser field (in nm). Must specify either `wave_len` or `ang_freq`.
@@ -91,6 +91,8 @@ TimeShift(l::Cos4Laser) = l.t_shift
 LaserF0(l::Cos4Laser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::Cos4Laser) = LaserF0(l) / AngFreq(l)
+"Gets the Keldysh parameter γ₀ of the laser field, given the ionization energy `Ip` (in a.u.)."
+KeldyshParameter(l::Cos4Laser, Ip) = AngFreq(l) * sqrt(2Ip) / LaserF0(l)
 
 "Gets the unit envelope function (the peak value is 1) of the laser field."
 function UnitEnvelope(l::Cos4Laser)
@@ -162,7 +164,6 @@ function LaserFy(l::Cos4Laser)
     end
 end
 
-using Printf
 "Prints the information about the laser."
 function Base.show(io::IO, l::Cos4Laser)
     print(io, "[MonochromaticLaser] Envelope cos⁴, ")
@@ -199,10 +200,8 @@ function Base.show(io::IO, l::Cos4Laser)
     if l.azi != 0
         @printf(io, ", prin_ax_azimuth=%.2f°", l.azi/π*180)
     end
-    print(io,"\n")
 end
 
-using Parameters, OrderedCollections
 "Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(l::Cos4Laser)
     dict = OrderedDict{Symbol,Any}()

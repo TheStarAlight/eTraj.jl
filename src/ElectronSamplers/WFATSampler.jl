@@ -6,7 +6,7 @@ using Rotations
 using WignerD
 using HDF5
 
-"Sample provider which generates initial electron samples through WFAT formula."
+"Electron sampler which generates initial electron samples using the WFAT formula."
 struct WFATSampler <: ElectronSampler
     laser   ::Laser;
     target  ::MoleculeBase; # WFAT only supports [MoleculeBase]
@@ -65,13 +65,21 @@ struct WFATSampler <: ElectronSampler
             error("[WFATSampler] The energy of the ionizing orbit is non-negative.")
         end
         # check Keldysh parameter.
-        F0 = LaserF0(laser)
-        Ip = IonPotential(target)
-        γ0 = AngFreq(laser) * sqrt(2Ip) / F0
-        if γ0 ≥ 0.5
-            @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
-        elseif γ0 ≥ 1.0
-            @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf "%.4f" γ0), adiabatic (tunneling) condition [γ<<1] unsatisfied."
+        if laser isa MonochromaticLaser
+            γ0 = KeldyshParameter(laser, IonPotential(target))
+            if γ0 ≥ 0.5
+                @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf("%.4f",γ0)), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+            elseif γ0 ≥ 1.0
+                @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf("%.4f",γ0)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            end
+        elseif laser isa BichromaticLaser
+            γ10 = KeldyshParameter(laser[1], IonPotential(target))
+            γ20 = KeldyshParameter(laser[2], IonPotential(target))
+            if max(γ10,γ20) ≥ 0.5
+                @warn "[WFATSampler] Keldysh parameter γ₁=$(@sprintf("%.4f",γ10)), γ₂=$(@sprintf("%.4f",γ20)), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
+            elseif max(γ10,γ20) ≥ 1.0
+                @warn "[WFATSampler] Keldysh parameter γ₁=$(@sprintf("%.4f",γ10)), γ₂=$(@sprintf("%.4f",γ20)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
+            end
         end
         # finish initialization.
         return if ! sample_monte_carlo

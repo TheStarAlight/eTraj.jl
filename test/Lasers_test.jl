@@ -17,6 +17,7 @@ using Test
         @test l == l3
         @test begin
             show(l1)
+            println()
             true
         end
         @test PeakInt(l1)       == 4e14
@@ -43,6 +44,7 @@ using Test
         @test l == l3
         @test begin
             show(l1)
+            println()
             true
         end
         @test PeakInt(l1)       == 4e14
@@ -71,6 +73,7 @@ using Test
         @test l == l4
         @test begin
             show(l1)
+            println()
             true
         end
         @test PeakInt(l1)       == 4e14
@@ -97,6 +100,7 @@ using Test
         @test l == l2
         @test begin
             show(l1)
+            println()
             true
         end
         @test PeakInt(l1)       == 4e14
@@ -113,6 +117,23 @@ using Test
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
+    end
+
+    @info "Testing BichromaticLaser ..."
+    @testset verbose=true "BichromaticLaser" begin
+        l1 = Cos4Laser(peak_int=4e14, wave_len=800., cyc_num=6., ellip=1.)
+        l2 = Cos4Laser(peak_int=4e14, wave_len=400., cyc_num=6., ellip=-1.)
+        l = BichromaticLaser(laser1=l1, laser2=l2, delay=50.0)
+        l_ = BichromaticLaser(l1,l2,50.0)
+        @test l === l_
+        @test Laser1(l) === l[1] === l1
+        @test Laser2(l) === l[2] === l2
+        @test Delay21(l) == 50.0
+        @test begin
+            show(l)
+            println()
+            true
+        end
     end
 
 end
