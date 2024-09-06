@@ -45,7 +45,7 @@ Performs a semiclassical simulation with given parameters.
 # Parameters
 
 ## Required params. for all:
-- `init_cond_method = :ADK|:SFA|:SFAAE|:WFAT`           : Method of electrons' initial conditions. Currently supports `:ADK`, `:SFA`, `:SFAAE` for atoms and molecules, and `:WFAT` for molecules only.
+- `init_cond_method = :ADK|:SPA|:SPANE|:WFAT`           : Method of electrons' initial conditions. Currently supports `:ADK`, `:SPA` (SFA-SPA), `:SPANE` (SFA-SPANE) for atoms and molecules, and `:WFAT` for molecules only.
 - `laser::Laser`                                        : Parameters of the laser field.
 - `target::Target`                                      : Parameters of the target.
 - `dimension = 2|3`                                     : Dimension of simulation which indicates 2D/3D simulation, 2D simulation is carried out in the xy plane.
@@ -74,7 +74,7 @@ Performs a semiclassical simulation with given parameters.
 - `sample_cutoff_limit = 1e-16`                     : The cut-off limit of the probability of the sampled electron, electrons with probabilities lower than the limit would be discarded (Default `1e-16`).
 - `sample_monte_carlo = false`                      : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`).
 
-## Optional params. for atomic SFA, SFA-AE and ADK methods:
+## Optional params. for atomic SFA-SPA, SFA-SPANE and ADK methods:
 - `rate_prefix = :Full | Set([:Pre|:PreCC,:Jac]) | :Exp`    : Prefix of the exponential term in the ionization rate (default `:Full`).
                                                               `:Exp` indicates no prefix; `:Pre` and `:PreCC` indicates inclusion of the prefactor with/without Coulomb correction; `:Jac` indicates inclusion of the Jacobian factor which is related to the sampling method; `:Full` is equivalent to `Set([:PreCC,:Jac])`.
                                                               To combine the prefactor and Jacobian factor, pass a `Set` containing `:Pre` OR `:PreCC`, as well as `:Jac`.
@@ -233,7 +233,7 @@ function TrajectorySimulationJob(; kwargs...)
         @pack! params = (mc_kd_max,mc_kt_num)
         dimension==3 && @pack! params = (mc_kz_max)
     end
-    if init_cond_method in (:SFA, :SFAAE, :ADK, :MOSFA, :MOSFAAE, :MOADK)
+    if mapreduce(str->endswith(string(init_cond_method), str), |, ("ADK","SPA","SPANE","SFA","SFAAE"))
         @pack! params = (rate_prefix)
     end
     if target isa MoleculeBase

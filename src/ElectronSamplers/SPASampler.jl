@@ -1,8 +1,8 @@
 
-"Electron sampler which generates initial electron samples using the SFA or MO-SFA method."
-struct SFASampler <: ElectronSampler
+"Electron sampler which generates initial electron samples using the SFA-SPA or MO-SFA-SPA method."
+struct SPASampler <: ElectronSampler
     laser   ::Laser;
-    target  ::Target;  # SFA only supports [SAEAtomBase].
+    target  ::Union{SAEAtomBase, MoleculeBase};
     dimension;
     monte_carlo;
     t_samples;
@@ -16,9 +16,9 @@ struct SFASampler <: ElectronSampler
     rate_prefix;
     mol_ion_orbit_idx;
 
-    function SFASampler(;
+    function SPASampler(;
         laser               ::Laser,
-        target              ::Target,
+        target              ::Union{SAEAtomBase, MoleculeBase},
         dimension           ::Integer,
         sample_t_intv       ::Tuple{<:Real,<:Real},
         sample_t_num        ::Integer,
@@ -42,7 +42,7 @@ struct SFASampler <: ElectronSampler
 
         # check phase method support.
         if ! (traj_phase_method in [:CTMC, :QTMC, :SCTS])
-            error("[SFASampler] Undefined phase method [$traj_phase_method].")
+            error("[SPASampler] Undefined phase method [$traj_phase_method].")
             return
         end
         # check rate prefix support.
@@ -54,48 +54,48 @@ struct SFASampler <: ElectronSampler
             elseif rate_prefix in [:Pre, :PreCC, :Jac]
                 rate_prefix = Set([rate_prefix])
             else
-                error("[SFASampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[SPASampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             end
         else # a collection containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
                 rate_prefix = []
             elseif ! mapreduce(p->in(p,[:Pre,:PreCC,:Jac]), *, rate_prefix)
-                error("[SFASampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[SPASampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             elseif :Pre in rate_prefix && :PreCC in rate_prefix
-                error("[SFASampler] Rate prefixes [Pre] & [PreCC] conflict.")
+                error("[SPASampler] Rate prefixes [Pre] & [PreCC] conflict.")
                 return
             end
             rate_prefix = Set(rate_prefix)
         end
         if :PreCC in rate_prefix && !(laser isa MonochromaticLaser)
-            @warn "[SFASampler] Laser is not monochromatic, Coulomb correction in rate prefix is unavailable."
+            @warn "[SPASampler] Laser is not monochromatic, Coulomb correction in rate prefix is unavailable."
             # replace :PreCC with :Pre
             delete!(rate_prefix, :PreCC)
             push!(rate_prefix, :Pre)
         end
         # check sampling parameters.
-        @assert (sample_t_num>0) "[SFASampler] Invalid time sample number $sample_t_num."
-        @assert (sample_cutoff_limit≥0) "[SFASampler] Invalid cut-off limit $sample_cutoff_limit."
+        @assert (sample_t_num>0) "[SPASampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[SPASampler] Invalid cut-off limit $sample_cutoff_limit."
         if dimension == 3
             if ! sample_monte_carlo # check SS sampling parameters.
-                @assert (ss_kd_num>0 && ss_kz_num>0) "[SFASampler] Invalid kd,kz sample number $ss_kd_num,$ss_kz_num."
-                @assert (ss_kd_max>0 && ss_kz_max>0) "[SFASampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max."
+                @assert (ss_kd_num>0 && ss_kz_num>0) "[SPASampler] Invalid kd,kz sample number $ss_kd_num,$ss_kz_num."
+                @assert (ss_kd_max>0 && ss_kz_max>0) "[SPASampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max."
             else                    # check MC sampling parameters.
-                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFASampler] Invalid sampling time interval $sample_t_intv."
-                @assert mc_kt_num>0 "[SFASampler] Invalid sampling kt_num $mc_kt_num."
-                @assert (mc_kd_max>0 && mc_kz_max>0) "[SFASampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max."
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SPASampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[SPASampler] Invalid sampling kt_num $mc_kt_num."
+                @assert (mc_kd_max>0 && mc_kz_max>0) "[SPASampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max."
             end
         else # dimension == 2
             if ! sample_monte_carlo
-                @assert ss_kd_num>0 "[SFASampler] Invalid kd sample number $ss_kd_num."
-                @assert ss_kd_max>0 "[SFASampler] Invalid kd sample boundaries $ss_kd_max."
+                @assert ss_kd_num>0 "[SPASampler] Invalid kd sample number $ss_kd_num."
+                @assert ss_kd_max>0 "[SPASampler] Invalid kd sample boundaries $ss_kd_max."
                 ss_kz_num, ss_kz_max = 1, 0.0
             else
-                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFASampler] Invalid sampling time interval $sample_t_intv."
-                @assert mc_kt_num>0 "[SFASampler] Invalid sampling kt_num $mc_kt_num."
-                @assert mc_kd_max>0 "[SFASampler] Invalid kd sample boundaries $mc_kd_max."
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SPASampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[SPASampler] Invalid sampling kt_num $mc_kt_num."
+                @assert mc_kd_max>0 "[SPASampler] Invalid kd sample boundaries $mc_kd_max."
                 ss_kz_max = 0.0
             end
         end
@@ -105,7 +105,7 @@ struct SFASampler <: ElectronSampler
                 MolCalcAsympCoeff!(target, mol_orbit_idx)
             end
             if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≥ 0
-                error("[SFASampler] The energy of the ionizing orbital of the molecule target is non-negative.")
+                error("[SPASampler] The energy of the ionizing orbital of the molecule target is non-negative.")
             end
         end
         # finish initialization.
@@ -130,12 +130,12 @@ struct SFASampler <: ElectronSampler
 end
 
 "Gets the total number of batches."
-function batch_num(sp::SFASampler)
+function batch_num(sp::SPASampler)
     return length(sp.t_samples)
 end
 
 "Gets the maximum number of electrons in a single batch. Usually the size would be smaller due to the probability cut-off."
-function batch_max_size(sp::SFASampler)
+function batch_max_size(sp::SPASampler)
     return if sp.monte_carlo
         sp.mc_kt_num
     else
@@ -143,8 +143,8 @@ function batch_max_size(sp::SFASampler)
     end
 end
 
-"Generates a batch of electrons of `batch_id` from `sp` using SFA or MO-SFA method."
-function gen_electron_batch(sp::SFASampler, batch_id::Integer)
+"Generates a batch of electrons of `batch_id` from `sp` using SFA-SPA or MO-SFA-SPA method."
+function gen_electron_batch(sp::SPASampler, batch_id::Integer)
     target = sp.target
     tr = sp.t_samples[batch_id]
     Ax::Function = LaserAx(sp.laser)
@@ -401,7 +401,7 @@ function gen_electron_batch(sp::SFASampler, batch_id::Integer)
         end
     end
     if sum(sample_count_thread) == 0
-        # @warn "[SFASampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
+        # @warn "[SPASampler] All sampled electrons are discarded in batch #$(batchId), corresponding to t=$t."
         return nothing
     end
     # collect electron samples from different threads.

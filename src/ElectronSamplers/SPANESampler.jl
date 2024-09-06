@@ -1,8 +1,8 @@
 
-"Electron sampler which generates initial electron samples using the SFAAE or MO-SFAAE method."
-struct SFAAESampler <: ElectronSampler
+"Electron sampler which generates initial electron samples using the SFA-SPANE or MO-SFA-SPANE method."
+struct SPANESampler <: ElectronSampler
     laser   ::Laser;
-    target  ::Target;
+    target  ::Union{SAEAtomBase, MoleculeBase};
     dimension;
     monte_carlo;
     t_samples;
@@ -16,9 +16,9 @@ struct SFAAESampler <: ElectronSampler
     rate_prefix;
     mol_ion_orbit_idx;
 
-    function SFAAESampler(;
+    function SPANESampler(;
         laser               ::Laser,
-        target              ::Target,
+        target              ::Union{SAEAtomBase, MoleculeBase},
         dimension           ::Integer,
         sample_t_intv       ::Tuple{<:Real,<:Real},
         sample_t_num        ::Integer,
@@ -42,7 +42,7 @@ struct SFAAESampler <: ElectronSampler
 
         # check phase method support.
         if ! (traj_phase_method in [:CTMC, :QTMC, :SCTS])
-            error("[SFAAESampler] Undefined phase method [$traj_phase_method].")
+            error("[SPANESampler] Undefined phase method [$traj_phase_method].")
             return
         end
         # check rate prefix support.
@@ -54,23 +54,23 @@ struct SFAAESampler <: ElectronSampler
             elseif rate_prefix in [:Pre, :PreCC, :Jac]
                 rate_prefix = Set([rate_prefix])
             else
-                error("[SFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[SPANESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             end
         else # a collection containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
                 rate_prefix = []
             elseif ! mapreduce(p->in(p,[:Pre,:PreCC,:Jac]), *, rate_prefix)
-                error("[SFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
+                error("[SPANESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             elseif :Pre in rate_prefix && :PreCC in rate_prefix
-                error("[SFAAESampler] Rate prefixes [Pre] & [PreCC] conflict.")
+                error("[SPANESampler] Rate prefixes [Pre] & [PreCC] conflict.")
                 return
             end
             rate_prefix = Set(rate_prefix)
         end
         if :PreCC in rate_prefix && !(laser isa MonochromaticLaser)
-            @warn "[SFAAESampler] Laser is not monochromatic, Coulomb correction in rate prefix is unavailable."
+            @warn "[SPANESampler] Laser is not monochromatic, Coulomb correction in rate prefix is unavailable."
             # replace :PreCC with :Pre
             delete!(rate_prefix, :PreCC)
             push!(rate_prefix, :Pre)
@@ -81,43 +81,43 @@ struct SFAAESampler <: ElectronSampler
                 MolCalcAsympCoeff!(target, mol_orbit_idx)
             end
             if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≥ 0
-                error("[SFAAESampler] The energy of the ionizing orbital of the molecule target is non-negative.")
+                error("[SPANESampler] The energy of the ionizing orbital of the molecule target is non-negative.")
             end
         end
         # check Keldysh paramater.
         if laser isa MonochromaticLaser
             γ0 = KeldyshParameter(laser, IonPotential(target))
             if γ0 ≥ 1.0
-                @warn "[SFAAESampler] Keldysh parameter γ=$(@sprintf("%.4f",γ0)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
+                @warn "[SPANESampler] Keldysh parameter γ=$(@sprintf("%.4f",γ0)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
             end
         elseif laser isa BichromaticLaser
             γ10 = KeldyshParameter(laser[1], IonPotential(target))
             γ20 = KeldyshParameter(laser[2], IonPotential(target))
             if max(γ10,γ20) ≥ 1.0
-                @warn "[SFAAESampler] Keldysh parameter γ₁=$(@sprintf("%.4f",γ10)), γ₂=$(@sprintf("%.4f",γ20)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
+                @warn "[SPANESampler] Keldysh parameter γ₁=$(@sprintf("%.4f",γ10)), γ₂=$(@sprintf("%.4f",γ20)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
             end
         end
         # check sampling parameters.
-        @assert (sample_t_num>0) "[SFAAESampler] Invalid time sample number $sample_t_num."
-        @assert (sample_cutoff_limit≥0) "[SFAAESampler] Invalid cut-off limit $sample_cutoff_limit."
+        @assert (sample_t_num>0) "[SPANESampler] Invalid time sample number $sample_t_num."
+        @assert (sample_cutoff_limit≥0) "[SPANESampler] Invalid cut-off limit $sample_cutoff_limit."
         if dimension == 3
             if ! sample_monte_carlo # check SS sampling parameters.
-                @assert (ss_kd_num>0 && ss_kz_num>0) "[SFAAESampler] Invalid kd,kz sample number $ss_kd_num,$ss_kz_num."
-                @assert (ss_kd_max>0 && ss_kz_max>0) "[SFAAESampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max."
+                @assert (ss_kd_num>0 && ss_kz_num>0) "[SPANESampler] Invalid kd,kz sample number $ss_kd_num,$ss_kz_num."
+                @assert (ss_kd_max>0 && ss_kz_max>0) "[SPANESampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max."
             else                    # check MC sampling parameters.
-                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFAAESampler] Invalid sampling time interval $sample_t_intv."
-                @assert mc_kt_num>0 "[SFAAESampler] Invalid sampling kt_num $mc_kt_num."
-                @assert (mc_kd_max>0 && mc_kz_max>0) "[SFAAESampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max."
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SPANESampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[SPANESampler] Invalid sampling kt_num $mc_kt_num."
+                @assert (mc_kd_max>0 && mc_kz_max>0) "[SPANESampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max."
             end
         else # dimension == 2
             if ! sample_monte_carlo
-                @assert ss_kd_num>0 "[SFAAESampler] Invalid kd sample number $ss_kd_num."
-                @assert ss_kd_max>0 "[SFAAESampler] Invalid kd sample boundaries $ss_kd_max."
+                @assert ss_kd_num>0 "[SPANESampler] Invalid kd sample number $ss_kd_num."
+                @assert ss_kd_max>0 "[SPANESampler] Invalid kd sample boundaries $ss_kd_max."
                 ss_kz_num, ss_kz_max = 1, 0.0
             else
-                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFAAESampler] Invalid sampling time interval $sample_t_intv."
-                @assert mc_kt_num>0 "[SFAAESampler] Invalid sampling kt_num $mc_kt_num."
-                @assert mc_kd_max>0 "[SFAAESampler] Invalid kd sample boundaries $mc_kd_max."
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SPANESampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[SPANESampler] Invalid sampling kt_num $mc_kt_num."
+                @assert mc_kd_max>0 "[SPANESampler] Invalid kd sample boundaries $mc_kd_max."
                 ss_kz_max = 0.0
             end
         end
@@ -143,12 +143,12 @@ struct SFAAESampler <: ElectronSampler
 end
 
 "Gets the total number of batches."
-function batch_num(sp::SFAAESampler)
+function batch_num(sp::SPANESampler)
     return length(sp.t_samples)
 end
 
 "Gets the maximum number of electrons in a single batch. Usually the size would be smaller due to the probability cut-off."
-function batch_max_size(sp::SFAAESampler)
+function batch_max_size(sp::SPANESampler)
     return if sp.monte_carlo
         sp.mc_kt_num
     else
@@ -156,8 +156,8 @@ function batch_max_size(sp::SFAAESampler)
     end
 end
 
-"Generates a batch of electrons of `batch_id` from `sp` using SFAAE or MO-SFAAE method."
-function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
+"Generates a batch of electrons of `batch_id` from `sp` using SFA-SPANE or MO-SFA-SPANE method."
+function gen_electron_batch(sp::SPANESampler, batch_id::Integer)
     target = sp.target
     tr = sp.t_samples[batch_id]
     Fx::Function = LaserFx(sp.laser)

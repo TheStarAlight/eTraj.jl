@@ -2,16 +2,10 @@ using SemiclassicalSFI
 using SemiclassicalSFI.Targets
 using SemiclassicalSFI.Lasers
 using Test
-using Base.Threads
 
-@info "# Testing main method performSFI ..."
+@info "# Testing TrajectorySimulation ..."
 
-@testset verbose=true "performSFI" begin
-
-    if Threads.nthreads() == 1
-        @warn "The process is running with single available thread, to enable multi-threading, start julia with parameter `-t N` to use N threads."
-    end
-    @info "Running with $(Threads.nthreads()) threads ..."
+@testset verbose=true "TrajectorySimulation" begin
 
     tmpdir = mktempdir()
 
@@ -229,13 +223,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing SFAAE-CTMC ..."
-    @testset "SFAAE-CTMC" begin
+    @info "Testing SFA-SPANE-CTMC ..."
+    @testset "SFA-SPANE-CTMC" begin
         t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFAAE,
+                init_cond_method    = :SPANE,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -246,7 +240,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_SFAAE-CTMC_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPANE-CTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -255,13 +249,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing SFAAE-QTMC ..."
-    @testset "SFAAE-QTMC" begin
+    @info "Testing SFA-SPANE-QTMC ..."
+    @testset "SFA-SPANE-QTMC" begin
         t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFAAE,
+                init_cond_method    = :SPANE,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -272,7 +266,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_SFAAE-QTMC_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPANE-QTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -281,13 +275,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing SFAAE-SCTS ..."
-    @testset "SFAAE-SCTS" begin
+    @info "Testing SFA-SPANE-SCTS ..."
+    @testset "SFA-SPANE-SCTS" begin
         t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFAAE,
+                init_cond_method    = :SPANE,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -298,7 +292,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_SFAAE-SCTS_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPANE-SCTS_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -307,13 +301,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing SFA-CTMC ..."
-    @testset "SFA-CTMC" begin
+    @info "Testing SFA-SPA-CTMC ..."
+    @testset "SFA-SPA-CTMC" begin
         t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFA,
+                init_cond_method    = :SPA,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -324,7 +318,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_SFA-CTMC_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPA-CTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -333,13 +327,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing SFA-QTMC ..."
-    @testset "SFA-QTMC" begin
+    @info "Testing SFA-SPA-QTMC ..."
+    @testset "SFA-SPA-QTMC" begin
         t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFA,
+                init_cond_method    = :SPA,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -350,7 +344,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_SFA-QTMC_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPA-QTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -359,13 +353,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing SFA-SCTS ..."
-    @testset "SFA-SCTS" begin
+    @info "Testing SFA-SPA-SCTS ..."
+    @testset "SFA-SPA-SCTS" begin
         t = get_atom("H")
         l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFA,
+                init_cond_method    = :SPA,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -376,7 +370,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_SFA-SCTS_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPA-SCTS_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -402,7 +396,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOADK-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_ADK-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -428,7 +422,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOADK-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_ADK-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -454,7 +448,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOADK-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_ADK-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -463,13 +457,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing MOSFAAE-CTMC ..."
-    @testset "MOSFAAE-CTMC" begin
+    @info "Testing MOSFA-SPANE-CTMC ..."
+    @testset "MOSFA-SPANE-CTMC" begin
         t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFAAE,
+                init_cond_method    = :SPANE,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -480,7 +474,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOSFAAE-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPANE-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -489,13 +483,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing MOSFAAE-QTMC ..."
-    @testset "MOSFAAE-QTMC" begin
+    @info "Testing MOSFA-SPANE-QTMC ..."
+    @testset "MOSFA-SPANE-QTMC" begin
         t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFAAE,
+                init_cond_method    = :SPANE,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -506,7 +500,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOSFAAE-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPANE-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -515,13 +509,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing MOSFAAE-SCTS ..."
-    @testset "MOSFAAE-SCTS" begin
+    @info "Testing MOSFA-SPANE-SCTS ..."
+    @testset "MOSFA-SPANE-SCTS" begin
         t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFAAE,
+                init_cond_method    = :SPANE,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -532,7 +526,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOSFAAE-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPANE-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -541,13 +535,13 @@ using Base.Threads
         end
     end
 
-    @info "Testing MOSFA-CTMC ..."
-    @testset "MOSFA-CTMC" begin
+    @info "Testing MOSFA-SPA-CTMC ..."
+    @testset "MOSFA-SPA-CTMC" begin
         t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
-                init_cond_method    = :SFA,
+                init_cond_method    = :SPA,
                 laser               = l,
                 target              = t,
                 dimension           = 2,
@@ -558,7 +552,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOSFA-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPA-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -567,8 +561,8 @@ using Base.Threads
         end
     end
 
-    @info "Testing MOSFA-QTMC ..."
-    @testset "MOSFA-QTMC" begin
+    @info "Testing MOSFA-SPA-QTMC ..."
+    @testset "MOSFA-SPA-QTMC" begin
         t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
@@ -584,7 +578,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOSFA-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPA-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -593,8 +587,8 @@ using Base.Threads
         end
     end
 
-    @info "Testing MOSFA-SCTS ..."
-    @testset "MOSFA-SCTS" begin
+    @info "Testing MOSFA-SPA-SCTS ..."
+    @testset "MOSFA-SPA-SCTS" begin
         t = GenericMolecule("Molecule_Hydrogen.h5")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
@@ -610,7 +604,7 @@ using Base.Threads
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_MOSFA-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_SPA-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full

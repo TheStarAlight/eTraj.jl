@@ -11,7 +11,7 @@ include("ElectronSamplers/ElectronSamplers.jl")
 using .Lasers
 using .Targets
 using .ElectronSamplers
-include("TrajectorySimulationJob.jl")
+include("TrajectorySimulation.jl")
 
 export perform_traj_simulation, Lasers, Targets
 

@@ -2,7 +2,7 @@
 "Electron sampler which generates initial electron samples using the ADK or MO-ADK method."
 struct ADKSampler <: ElectronSampler
     laser   ::Laser;
-    target  ::Target;
+    target  ::Union{SAEAtomBase, MoleculeBase};
     dimension;
     monte_carlo;
     t_samples;
@@ -18,7 +18,7 @@ struct ADKSampler <: ElectronSampler
 
     function ADKSampler(;
         laser               ::Laser,
-        target              ::Target,
+        target              ::Union{SAEAtomBase, MoleculeBase},
         dimension           ::Integer,
         sample_t_intv       ::Tuple{<:Real,<:Real},
         sample_t_num        ::Integer,
