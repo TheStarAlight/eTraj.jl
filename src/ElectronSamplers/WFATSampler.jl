@@ -1,15 +1,9 @@
 
-using Printf
-using Base.Threads
-using Random
-using Rotations
-using WignerD
-using HDF5
-
 "Electron sampler which generates initial electron samples using the WFAT formula."
 struct WFATSampler <: ElectronSampler
     laser   ::Laser;
     target  ::MoleculeBase; # WFAT only supports [MoleculeBase]
+    dimension;
     monte_carlo;
     t_samples;
     ss_kd_samples;
@@ -24,6 +18,7 @@ struct WFATSampler <: ElectronSampler
     function WFATSampler(;
         laser               ::Laser,
         target              ::MoleculeBase,
+        dimension           ::Integer,
         sample_t_intv       ::Tuple{<:Real,<:Real},
         sample_t_num        ::Integer,
         sample_cutoff_limit ::Real,
@@ -31,14 +26,14 @@ struct WFATSampler <: ElectronSampler
         traj_phase_method   ::Symbol,
         mol_orbit_idx       ::Integer,
             #* for step-sampling (!sample_monte_carlo)
-        ss_kd_max           ::Real      = 0,
-        ss_kd_num           ::Integer   = 0,
-        ss_kz_max           ::Real      = 0,
-        ss_kz_num           ::Integer   = 0,
+        ss_kd_max           ::Real,
+        ss_kd_num           ::Integer,
+        ss_kz_max           ::Real,
+        ss_kz_num           ::Integer,
             #* for Monte-Carlo-sampling (sample_monte_carlo)
-        mc_kt_num           ::Integer   = 0,
-        mc_kd_max           ::Real      = 0,
-        mc_kz_max           ::Real      = 0,
+        mc_kt_num           ::Integer,
+        mc_kd_max           ::Real,
+        mc_kz_max           ::Real,
         kwargs...   # kwargs are surplus params.
         )
 
@@ -50,12 +45,26 @@ struct WFATSampler <: ElectronSampler
         # check sampling parameters.
         @assert (sample_t_num>0) "[WFATSampler] Invalid time sample number $sample_t_num."
         @assert (sample_cutoff_limit≥0) "[WFATSampler] Invalid cut-off limit $sample_cutoff_limit."
-        if ! sample_monte_carlo # check SS sampling parameters.
-            @assert (ss_kd_num>0 && ss_kz_num>0) "[WFATSampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
-        else                    # check MC sampling parameters.
-            @assert (sample_t_intv[1] < sample_t_intv[2]) "[WFATSampler] Invalid sampling time interval $sample_t_intv."
-            @assert (mc_kt_num>0) "[WFATSampler] Invalid sampling kt_num $mc_kt_num."
-            @assert (mc_kd_max>0 && mc_kz_max>0) "[WFATSampler] Invalid kd/kz sample boundaries $mc_kd_max/$mc_kz_max."
+        if dimension == 3
+            if ! sample_monte_carlo # check SS sampling parameters.
+                @assert (ss_kd_num>0 && ss_kz_num>0) "[WFATSampler] Invalid kd,kz sample number $ss_kd_num,$ss_kz_num."
+                @assert (ss_kd_max>0 && ss_kz_max>0) "[WFATSampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max."
+            else                    # check MC sampling parameters.
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[WFATSampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[WFATSampler] Invalid sampling kt_num $mc_kt_num."
+                @assert (mc_kd_max>0 && mc_kz_max>0) "[WFATSampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max."
+            end
+        else # dimension == 2
+            if ! sample_monte_carlo
+                @assert ss_kd_num>0 "[WFATSampler] Invalid kd sample number $ss_kd_num."
+                @assert ss_kd_max>0 "[WFATSampler] Invalid kd sample boundaries $ss_kd_max."
+                ss_kz_num, ss_kz_max = 1, 0.0
+            else
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[WFATSampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[WFATSampler] Invalid sampling kt_num $mc_kt_num."
+                @assert mc_kd_max>0 "[WFATSampler] Invalid kd sample boundaries $mc_kd_max."
+                ss_kz_max = 0.0
+            end
         end
         # check molecular orbital data
         if ! (mol_orbit_idx in MolWFATAvailableIndices(target))
@@ -67,7 +76,7 @@ struct WFATSampler <: ElectronSampler
         # check Keldysh parameter.
         if laser isa MonochromaticLaser
             γ0 = KeldyshParameter(laser, IonPotential(target))
-            if γ0 ≥ 0.5
+            if γ0 ≥ 0.6
                 @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf("%.4f",γ0)), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
             elseif γ0 ≥ 1.0
                 @warn "[WFATSampler] Keldysh parameter γ=$(@sprintf("%.4f",γ0)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
@@ -75,7 +84,7 @@ struct WFATSampler <: ElectronSampler
         elseif laser isa BichromaticLaser
             γ10 = KeldyshParameter(laser[1], IonPotential(target))
             γ20 = KeldyshParameter(laser[2], IonPotential(target))
-            if max(γ10,γ20) ≥ 0.5
+            if max(γ10,γ20) ≥ 0.6
                 @warn "[WFATSampler] Keldysh parameter γ₁=$(@sprintf("%.4f",γ10)), γ₂=$(@sprintf("%.4f",γ20)), adiabatic (tunneling) condition [γ<<1] not sufficiently satisfied."
             elseif max(γ10,γ20) ≥ 1.0
                 @warn "[WFATSampler] Keldysh parameter γ₁=$(@sprintf("%.4f",γ10)), γ₂=$(@sprintf("%.4f",γ20)), adiabatic (tunneling) condition [γ<<1] unsatisfied."
@@ -83,7 +92,7 @@ struct WFATSampler <: ElectronSampler
         end
         # finish initialization.
         return if ! sample_monte_carlo
-            new(laser,target,
+            new(laser,target,dimension,
                 sample_monte_carlo,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
@@ -92,7 +101,7 @@ struct WFATSampler <: ElectronSampler
         else
             seed = 1836 # seed is mp/me
             t_samples = sort!(rand(MersenneTwister(seed), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
-            new(laser,target,
+            new(laser,target,dimension,
                 sample_monte_carlo,
                 t_samples,
                 0:0,0:0,    # for SS params. pass empty values
@@ -127,9 +136,6 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
     Ip = IonPotential(sp.target, sp.mol_ion_orbit_idx)
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     cutoff_limit = sp.cutoff_limit
-    if Ftr == 0 || ADKAmpExp(Ftr,Ip,0.0,0.0)^2 < cutoff_limit/1e5
-        return nothing
-    end
 
     # determines Euler angles from FF to MF (α,β,γ)
     mol_rot = MolRotation(sp.target)
@@ -149,13 +155,13 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
     # calc dkdt
     step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
     dkdt = if ! sp.monte_carlo
-        step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+        step(sp.t_samples) * step(sp.ss_kd_samples) * (sp.dimension == 3 ? step(sp.ss_kz_samples) : 1)
     else
-        step(sp.t_samples) * 4*sp.mc_kd_max*sp.mc_kz_max/sp.mc_kt_num
+        step(sp.t_samples) * 4*sp.mc_kd_max*(sp.dimension == 3 ? sp.mc_kz_max : 1)/sp.mc_kt_num
     end
     rate(kd,kz) = sum(((nξ,m),)->abs2(G_data[nξ+1,m+mMax+1])*W(nξ,abs(m),kd,kz), [(nξ,m) for nξ in 0:nξMax, m in -mMax:mMax]) * dkdt
 
-    dim = 8 # x,y,z,kx,ky,kz,t0,rate
+    dim = (sp.dimension==3) ? 8 : 6 # x,y,z,kx,ky,kz,t0,rate / x,y,kx,ky,t0,rate
     sample_count_thread = zeros(Int,nthreads())
     init_thread = if ! sp.monte_carlo
         zeros(Float64, dim, nthreads(), length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
@@ -181,14 +187,18 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1
-                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
+                if sp.dimension == 3
+                    init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
+                else
+                    init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate_]
+                end
             end
         end
     else
-        seed = 299792458
+        seed = 299792458 + batch_id
         rng = Random.MersenneTwister(seed) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
-            kd0, kz0 = gen_rand_pt(rng, sp.mc_kd_max, sp.mc_kz_max)
+            kd0, kz0 = gen_rand_pt_2dsq(rng, sp.mc_kd_max, sp.mc_kz_max)
             kx0 = kd0*-sin(ϕ)
             ky0 = kd0* cos(ϕ)
             r0 = (Ip+(kd0^2+kz0^2)/2)/Ftr
@@ -200,7 +210,11 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1
-            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
+            if sp.dimension == 3
+                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
+            else
+                init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate_]
+            end
         end
     end
     if sum(sample_count_thread) == 0

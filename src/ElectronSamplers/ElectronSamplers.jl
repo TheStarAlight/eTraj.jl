@@ -4,6 +4,8 @@ module ElectronSamplers
 using ..Lasers
 using ..Targets
 
+include("imports.jl")
+
 export init_sampler, ElectronSampler, batch_num, gen_electron_batch
 
 function init_sampler(;kwargs...)

@@ -1,48 +1,647 @@
 using SemiclassicalSFI
+using SemiclassicalSFI.Targets
+using SemiclassicalSFI.Lasers
 using Test
-using StaticArrays
-using OrdinaryDiffEq
+using Base.Threads
 
-@info "# Testing trajectory simulation ..."
+@info "# Testing main method performSFI ..."
 
-@testset verbose=true "Trajectory simulation" begin
-    # l = Lasers.Cos2Laser(2e14,800,2,1.0)
-    traj = function (u,p,t)
-        F0 = 0.05338027007325633 # Lasers.LaserF0(l)
-        ω = 0.05695419065625 # Lasers.AngFreq(l)
-        N = 2   # l.cyc_num
-        φ = 0.0 # l.cep
-        ε = 1.0 # l.ellip
-        tFx, tFy, tFz = -1*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-1.5) .* (u[1],u[2],u[3])
-        du1 = u[4]
-        du2 = u[5]
-        du3 = u[6]
-        du4 = tFx- F0 * cos(ω*t/(2N)) * (abs(ω*real(t))<N*π) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))
-        du5 = tFy- F0 * cos(ω*t/(2N)) * (abs(ω*real(t))<N*π) * ( cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
-        du6 = tFz
-        @SVector [du1,du2,du3,du4,du5,du6]
+@testset verbose=true "performSFI" begin
+
+    if Threads.nthreads() == 1
+        @warn "The process is running with single available thread, to enable multi-threading, start julia with parameter `-t N` to use N threads."
     end
-    traj_t_final = 120.
-    traj_rtol = 1e-6
-    init = [10.0  9.0  8.0  7.0;    # x
-             5.0  1.0  0.0  0.0;    # y
-             0.0  0.0  6.0  1.0;    # z
-             0.0  1.0  0.0  1.0;    # px
-             1.0  1.0 -1.0  2.0;    # py
-             0.0  0.0  0.0  3.0;    # pz
-             0.0 -5.0  0.0  0.0;]
-    final = [-107.586659754  14.769525931  -111.052945103   10.541838348;
-               88.693094313  66.732075229  -135.011048697  216.489086428;
-                0.0           0.0             0.580938720  357.985889110;
-               -0.972143888  -0.017934642    -0.992390595    0.028702222;
-                0.852999481   0.666821600    -0.932762255    1.985858411;
-                0.0           0.0            -0.047583468    2.972879185;]
-    traj_ODE_prob::ODEProblem = ODEProblem(traj, (@SVector zeros(Float64,6)), (0,traj_t_final))
-    init_traj = (prob,i,repeat) -> remake(prob; u0=SVector{6}([init[k,i] for k in 1:6]), tspan=(init[7,i],traj_t_final))
-    ensemble_prob::EnsembleProblem = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    solc = nothing
-    @test begin
-        solc = solve(ensemble_prob, OrdinaryDiffEq.Tsit5(), EnsembleThreads(), trajectories=size(init,2), adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false);
-        mapreduce(function((k,i),) ≈(final[k,i],solc.u[i].u[end][k],rtol=1e-2) end, *, [(k,i) for k in 1:6, i in 1:size(init,2)])
+    @info "Running with $(Threads.nthreads()) threads ..."
+
+    tmpdir = mktempdir()
+
+    @info "Testing ADK-CTMC ..."
+    @testset "ADK-CTMC" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_ADK-CTMC_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
     end
+
+    @info "Testing ADK-CTMC (3D) ..."
+    @testset "ADK-CTMC (3D)" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 3,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 2000,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5,1.0),
+                final_p_num         = (250,250,100),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 200,
+                ss_kz_max           = 1.0,
+                ss_kz_num           = 100,
+                output_path         = "$tmpdir/test_ADK-CTMC_3D_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-CTMC (Monte-Carlo) ..."
+    @testset "ADK-CTMC (Monte-Carlo)" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                sample_monte_carlo  = true,
+                mc_kt_num           = 8000,
+                mc_kd_max           = 2.0,
+                output_path         = "$tmpdir/test_ADK-CTMC_MonteCarlo_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-CTMC (SAEAtom) ..."
+    @testset "ADK-CTMC (SAEAtom)" begin
+        t = get_atom("He")
+        l = Cos4Laser(peak_int=8e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_ADK-CTMC_He_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-CTMC (Bichromatic) ..."
+    @testset "ADK-CTMC (Bichromatic)" begin
+        t = get_atom("H")
+        l1 = Cos4Laser(peak_int=1e15, wave_len=800., cyc_num=10.0, ellip=1.)
+        l2 = Cos4Laser(peak_int=1e15, wave_len=400., cyc_num=20.0, ellip=-1.)
+        l = BichromaticLaser(l1,l2)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-500,500),
+                sample_t_num        = 2000,
+                traj_t_final        = 550,
+                final_p_max         = (4.0,4.0),
+                final_p_num         = (400,400),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_ADK-CTMC_Bichromatic_400+800_CP_CR.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = [:Pre, :Jac]
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-CTMC (HDF5 output) ..."
+    @testset "ADK-CTMC (HDF5 output)" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_fmt          = :h5,
+                output_path         = "$tmpdir/test_ADK-CTMC_4e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-QTMC ..."
+    @testset "ADK-QTMC" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_ADK-QTMC_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-SCTS ..."
+    @testset "ADK-SCTS" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_ADK-SCTS_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing SFAAE-CTMC ..."
+    @testset "SFAAE-CTMC" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFAAE,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_SFAAE-CTMC_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing SFAAE-QTMC ..."
+    @testset "SFAAE-QTMC" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFAAE,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_SFAAE-QTMC_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing SFAAE-SCTS ..."
+    @testset "SFAAE-SCTS" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFAAE,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_SFAAE-SCTS_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing SFA-CTMC ..."
+    @testset "SFA-CTMC" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFA,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_SFA-CTMC_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing SFA-QTMC ..."
+    @testset "SFA-QTMC" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFA,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_SFA-QTMC_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing SFA-SCTS ..."
+    @testset "SFA-SCTS" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFA,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_SFA-SCTS_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOADK-CTMC ..."
+    @testset "MOADK-CTMC" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOADK-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOADK-QTMC ..."
+    @testset "MOADK-QTMC" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOADK-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOADK-SCTS ..."
+    @testset "MOADK-SCTS" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOADK-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFAAE-CTMC ..."
+    @testset "MOSFAAE-CTMC" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFAAE,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOSFAAE-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFAAE-QTMC ..."
+    @testset "MOSFAAE-QTMC" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFAAE,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOSFAAE-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFAAE-SCTS ..."
+    @testset "MOSFAAE-SCTS" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFAAE,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOSFAAE-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFA-CTMC ..."
+    @testset "MOSFA-CTMC" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFA,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOSFA-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFA-QTMC ..."
+    @testset "MOSFA-QTMC" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFA,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOSFA-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :QTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing MOSFA-SCTS ..."
+    @testset "MOSFA-SCTS" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :SFA,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_MOSFA-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+
+    @info "Testing WFAT-CTMC ..."
+    @testset "WFAT-CTMC" begin
+        t = GenericMolecule("Molecule_Hydrogen.h5")
+        l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :WFAT,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-80,80),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_WFAT-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
+                traj_rtol           = 1e-6
+            )
+            true
+        end
+    end
+
 end

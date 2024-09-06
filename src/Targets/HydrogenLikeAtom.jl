@@ -59,49 +59,85 @@ TargetPotential(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.
 TargetForce(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.soft_core)^(-1.5) .* (x,y,z)
 
 "Gets the trajectory function according to given parameter."
-function TrajectoryFunction(t::HydrogenLikeAtom, laserFx::Function, laserFy::Function, phase_method::Symbol; kwargs...)
+function TrajectoryFunction(t::HydrogenLikeAtom, dimension::Integer, laserFx::Function, laserFy::Function, phase_method::Symbol; kwargs...)
     Z  = t.nucl_charge
     Ip = t.Ip
     soft_core = t.soft_core
-    if phase_method == :CTMC
-        function traj_dipole_ctmc(u,p,t)
-            # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
-            tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
-            du1 = u[4]
-            du2 = u[5]
-            du3 = u[6]
-            du4 = tFx-laserFx(t)
-            du5 = tFy-laserFy(t)
-            du6 = tFz
-            @SVector [du1,du2,du3,du4,du5,du6]
+    if dimension == 2
+        if phase_method == :CTMC
+            function traj_dipole_ctmc_2d(u,p,t)
+                # tFx, tFy = targetF(u[1],u[2])
+                tFx, tFy = -Z*(u[1]^2+u[2]^2+soft_core)^(-1.5) .* (u[1],u[2])
+                du1 = u[3]
+                du2 = u[4]
+                du3 = tFx-laserFx(t)
+                du4 = tFy-laserFy(t)
+                @SVector [du1,du2,du3,du4]
+            end
+        elseif phase_method == :QTMC
+            function traj_dipole_qtmc_2d(u,p,t)
+                tFx, tFy = -Z*(u[1]^2+u[2]^2+soft_core)^(-1.5) .* (u[1],u[2])
+                du1 = u[3]
+                du2 = u[4]
+                du3 = tFx-laserFx(t)
+                du4 = tFy-laserFy(t)
+                # du5 = -(Ip + (du1^2+du2^2)/2 + targetP(u[1],u[2]))
+                du5 = -(Ip + (du1^2+du2^2)/2 - Z*(u[1]^2+u[2]^2+soft_core)^(-0.5))
+                @SVector [du1,du2,du3,du4,du5]
+            end
+        elseif phase_method == :SCTS
+            function traj_dipole_scts_2d(u,p,t)
+                tFx, tFy = -Z*(u[1]^2+u[2]^2+soft_core)^(-1.5) .* (u[1],u[2])
+                du1 = u[3]
+                du2 = u[4]
+                du3 = tFx-laserFx(t)
+                du4 = tFy-laserFy(t)
+                # du5 = -(Ip + (du1^2+du2^2)/2 + targetP(u[1],u[2]) + (u[1]*tFx+u[2]*tFy))
+                du5 = -(Ip + (du1^2+du2^2)/2 - Z*(u[1]^2+u[2]^2+soft_core)^(-0.5) + (u[1]*tFx+u[2]*tFy))
+                @SVector [du1,du2,du3,du4,du5]
+            end
         end
-    elseif phase_method == :QTMC
-        function traj_dipole_qtmc(u,p,t)
-            # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
-            tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
-            du1 = u[4]
-            du2 = u[5]
-            du3 = u[6]
-            du4 = tFx-laserFx(t)
-            du5 = tFy-laserFy(t)
-            du6 = tFz
-            # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]))
-            du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-0.5))
-            @SVector [du1,du2,du3,du4,du5,du6,du7]
-        end
-    elseif phase_method == :SCTS
-        function traj_dipole_scts(u,p,t)
-            # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
-            tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
-            du1 = u[4]
-            du2 = u[5]
-            du3 = u[6]
-            du4 = tFx-laserFx(t)
-            du5 = tFy-laserFy(t)
-            du6 = tFz
-            # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-            du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-            @SVector [du1,du2,du3,du4,du5,du6,du7]
+    else
+        if phase_method == :CTMC
+            function traj_dipole_ctmc_3d(u,p,t)
+                # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
+                du1 = u[4]
+                du2 = u[5]
+                du3 = u[6]
+                du4 = tFx-laserFx(t)
+                du5 = tFy-laserFy(t)
+                du6 = tFz
+                @SVector [du1,du2,du3,du4,du5,du6]
+            end
+        elseif phase_method == :QTMC
+            function traj_dipole_qtmc_3d(u,p,t)
+                # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
+                du1 = u[4]
+                du2 = u[5]
+                du3 = u[6]
+                du4 = tFx-laserFx(t)
+                du5 = tFy-laserFy(t)
+                du6 = tFz
+                # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]))
+                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-0.5))
+                @SVector [du1,du2,du3,du4,du5,du6,du7]
+            end
+        elseif phase_method == :SCTS
+            function traj_dipole_scts_3d(u,p,t)
+                # tFx, tFy, tFz = targetF(u[1],u[2],u[3])
+                tFx, tFy, tFz = -Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-1.5) .* (u[1],u[2],u[3])
+                du1 = u[4]
+                du2 = u[5]
+                du3 = u[6]
+                du4 = tFx-laserFx(t)
+                du5 = tFy-laserFy(t)
+                du6 = tFz
+                # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+soft_core)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                @SVector [du1,du2,du3,du4,du5,du6,du7]
+            end
         end
     end
 end

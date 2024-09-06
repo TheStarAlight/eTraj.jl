@@ -1,15 +1,9 @@
 
-using Rotations
-using Base.Threads
-using SpecialFunctions
-using StaticArrays
-using Random
-using ForwardDiff
-
 "Electron sampler which generates initial electron samples using the SFAAE or MO-SFAAE method."
 struct SFAAESampler <: ElectronSampler
     laser   ::Laser;
     target  ::Target;
+    dimension;
     monte_carlo;
     t_samples;
     ss_kd_samples;
@@ -25,6 +19,7 @@ struct SFAAESampler <: ElectronSampler
     function SFAAESampler(;
         laser               ::Laser,
         target              ::Target,
+        dimension           ::Integer,
         sample_t_intv       ::Tuple{<:Real,<:Real},
         sample_t_num        ::Integer,
         sample_cutoff_limit ::Real,
@@ -32,16 +27,16 @@ struct SFAAESampler <: ElectronSampler
         traj_phase_method   ::Symbol,
         rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}},
             #* for step-sampling (!sample_monte_carlo)
-        ss_kd_max           ::Real      = 0,
-        ss_kd_num           ::Integer   = 0,
-        ss_kz_max           ::Real      = 0,
-        ss_kz_num           ::Integer   = 0,
+        ss_kd_max           ::Real,
+        ss_kd_num           ::Integer,
+        ss_kz_max           ::Real,
+        ss_kz_num           ::Integer,
             #* for Monte-Carlo-sampling (sample_monte_carlo)
-        mc_kt_num           ::Integer   = 0,
-        mc_kd_max           ::Real      = 0,
-        mc_kz_max           ::Real      = 0,
+        mc_kt_num           ::Integer,
+        mc_kd_max           ::Real,
+        mc_kz_max           ::Real,
             #* for target <: MoleculeBase
-        mol_orbit_idx       ::Integer   = 0,
+        mol_orbit_idx       ::Integer,
         kwargs...   # kwargs are surplus params.
         )
 
@@ -56,11 +51,13 @@ struct SFAAESampler <: ElectronSampler
                 rate_prefix = Set()
             elseif rate_prefix == :Full
                 rate_prefix = Set([:PreCC, :Jac])
+            elseif rate_prefix in [:Pre, :PreCC, :Jac]
+                rate_prefix = Set([rate_prefix])
             else
                 error("[SFAAESampler] Undefined tunneling rate prefix [$rate_prefix].")
                 return
             end
-        else # a list containing Pre|PreCC, Jac.
+        else # a collection containing Pre|PreCC, Jac.
             if length(rate_prefix) == 0
                 rate_prefix = []
             elseif ! mapreduce(p->in(p,[:Pre,:PreCC,:Jac]), *, rate_prefix)
@@ -103,17 +100,30 @@ struct SFAAESampler <: ElectronSampler
         # check sampling parameters.
         @assert (sample_t_num>0) "[SFAAESampler] Invalid time sample number $sample_t_num."
         @assert (sample_cutoff_limit≥0) "[SFAAESampler] Invalid cut-off limit $sample_cutoff_limit."
-        if ! sample_monte_carlo # check SS sampling parameters.
-            @assert (ss_kd_num>0 && ss_kz_num>0) "[SFAAESampler] Invalid kd/kz sample number $ss_kd_num/$ss_kz_num."
-            @assert (ss_kd_max>0 && ss_kz_max>0) "[SFAAESampler] Invalid kd/kz sample boundaries $ss_kd_max/$ss_kz_max."
-        else                    # check MC sampling parameters.
-            @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFAAESampler] Invalid sampling time interval $sample_t_intv."
-            @assert (mc_kt_num>0) "[SFAAESampler] Invalid sampling kt_num $mc_kt_num."
-            @assert (mc_kd_max>0 && mc_kz_max>0) "[SFAAESampler] Invalid kd/kz sample boundaries $mc_kd_max/$mc_kz_max."
+        if dimension == 3
+            if ! sample_monte_carlo # check SS sampling parameters.
+                @assert (ss_kd_num>0 && ss_kz_num>0) "[SFAAESampler] Invalid kd,kz sample number $ss_kd_num,$ss_kz_num."
+                @assert (ss_kd_max>0 && ss_kz_max>0) "[SFAAESampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max."
+            else                    # check MC sampling parameters.
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFAAESampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[SFAAESampler] Invalid sampling kt_num $mc_kt_num."
+                @assert (mc_kd_max>0 && mc_kz_max>0) "[SFAAESampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max."
+            end
+        else # dimension == 2
+            if ! sample_monte_carlo
+                @assert ss_kd_num>0 "[SFAAESampler] Invalid kd sample number $ss_kd_num."
+                @assert ss_kd_max>0 "[SFAAESampler] Invalid kd sample boundaries $ss_kd_max."
+                ss_kz_num, ss_kz_max = 1, 0.0
+            else
+                @assert (sample_t_intv[1] < sample_t_intv[2]) "[SFAAESampler] Invalid sampling time interval $sample_t_intv."
+                @assert mc_kt_num>0 "[SFAAESampler] Invalid sampling kt_num $mc_kt_num."
+                @assert mc_kd_max>0 "[SFAAESampler] Invalid kd sample boundaries $mc_kd_max."
+                ss_kz_max = 0.0
+            end
         end
         # finish initialization.
         return if ! sample_monte_carlo
-            new(laser,target,
+            new(laser,target,dimension,
                 sample_monte_carlo,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
@@ -122,7 +132,7 @@ struct SFAAESampler <: ElectronSampler
         else
             seed = 1836 # seed is mp/me :P
             t_samples = sort!(rand(MersenneTwister(seed), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
-            new(laser,target,
+            new(laser,target,dimension,
                 sample_monte_carlo,
                 t_samples,
                 0:0,0:0,    # for SS params. pass empty values
@@ -152,8 +162,8 @@ function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
     tr = sp.t_samples[batch_id]
     Fx::Function = LaserFx(sp.laser)
     Fy::Function = LaserFy(sp.laser)
-    dFxt = ForwardDiff.derivative(Fx,tr)
-    dFyt = ForwardDiff.derivative(Fy,tr)
+    dFxt = derivative(Fx,tr)
+    dFyt = derivative(Fy,tr)
     Fxtr = Fx(tr)
     Fytr = Fy(tr)
     Ftr  = hypot(Fxtr,Fytr)
@@ -182,9 +192,6 @@ function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
     prefix = sp.rate_prefix
     cutoff_limit = sp.cutoff_limit
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
-    if Ftr == 0 || ADKAmpExp(Ftr,Ip,0.0,0.0)^2 < cutoff_limit/1e5
-        return nothing
-    end
 
     # determines Euler angles from FF to MF (α,β,γ)
     target_rot =
@@ -199,12 +206,12 @@ function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
     if target isa MoleculeBase
         mol_wigner_D_mat = zeros(ComplexF64, lMax+1, 2lMax+1, 2lMax+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[l+1, m+l+1, m_+l+1].
         for l in 0:lMax for m in -l:l for m_ in -l:l
-            mol_wigner_D_mat[l+1, m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ_)
+            mol_wigner_D_mat[l+1, m+l+1, m_+l+1] = wignerDjmn(l,m,m_, α,β,γ_)
         end; end; end
     elseif target isa SAEAtomBase
         atm_wigner_D_mat = zeros(ComplexF64, 2l+1, 2l+1) # to get D_{m,m'}^l (α,β,γ), call wigner_D_mat[m+l+1, m_+l+1].
         for m in -l:l for m_ in -l:l
-            atm_wigner_D_mat[m+l+1, m_+l+1] = WignerD.wignerDjmn(l,m,m_, α,β,γ_)
+            atm_wigner_D_mat[m+l+1, m_+l+1] = wignerDjmn(l,m,m_, α,β,γ_)
         end; end
     end
     # computes spherical harmonics beforehand
@@ -258,9 +265,9 @@ function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
     jac(kd,kz) = abs(Ftr + sqrt(kd^2+kz^2)/Ftr^2*FxdFy_FydFx)
     step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
     dkdt = if ! sp.monte_carlo
-        step(sp.t_samples) * step(sp.ss_kd_samples) * step(sp.ss_kz_samples)
+        step(sp.t_samples) * step(sp.ss_kd_samples) * (sp.dimension == 3 ? step(sp.ss_kz_samples) : 1)
     else
-        step(sp.t_samples) * 4*sp.mc_kd_max*sp.mc_kz_max/sp.mc_kt_num
+        step(sp.t_samples) * 4*sp.mc_kd_max*(sp.dimension == 3 ? sp.mc_kz_max : 1)/sp.mc_kt_num
     end
     amplitude::Function =
         if isempty(prefix)
@@ -279,12 +286,16 @@ function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
                     amp_precc(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * pre_cc(kx,ky,kz,tr+1im*ti)
                 end
             else # [:Jac]
-                amp_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * sqrt(jac)
+                amp_jac(kx,ky,kd,kz,ti) = sqrt(dkdt) * ADKAmpExp(sqrt(F2eff(kx,ky)),Ip,kd,kz) * sqrt(jac(kd,kz))
             end
         end
 
     phase_method = sp.phase_method
-    dim = (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    dim = if sp.dimension == 3
+        (phase_method == :CTMC) ? 8 : 9 # x,y,z,kx,ky,kz,t0,rate[,phase]
+    else
+        (phase_method == :CTMC) ? 6 : 7 # x,y,kx,ky,t0,rate[,phase]
+    end
 
     sample_count_thread = zeros(Int,nthreads())
     init_thread = if ! sp.monte_carlo
@@ -315,17 +326,29 @@ function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1
-                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
-                if phase_method != :CTMC
-                    init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp) + ((kd0^2+kz0^2+2Ip)/F2eff(kx0,ky0))^2*(Fxtr*dFxt+Fytr*dFyt)/8
+                if sp.dimension == 3
+                    init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
+                    if phase_method != :CTMC
+                        init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                    end
+                else # dimension == 2
+                    init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate]
+                    if phase_method != :CTMC
+                        init_thread[7,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                    end
                 end
             end
         end
     else
-        seed = 299792458
+        seed = 299792458 + batch_id
         rng = Random.MersenneTwister(seed) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
-            kd0, kz0 = gen_rand_pt(rng, sp.mc_kd_max, sp.mc_kz_max)
+            if sp.dimension == 3
+                kd0, kz0 = gen_rand_pt_2dsq(rng, sp.mc_kd_max, sp.mc_kz_max)
+            else
+                kd0 = gen_rand_pt_1d(rng, sp.mc_kd_max)
+                kz0 = 0.0
+            end
             kx0 = kd0*-sin(φ)
             ky0 = kd0* cos(φ)
             r0 = r_exit(kx0,ky0,kz0)
@@ -341,9 +364,16 @@ function gen_electron_batch(sp::SFAAESampler, batch_id::Integer)
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1
-            init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
-            if phase_method != :CTMC
-                init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp) + ((kd0^2+kz0^2+2Ip)/F2eff(kx0,ky0))^2*(Fxtr*dFxt+Fytr*dFyt)/8
+            if sp.dimension == 3
+                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
+                if phase_method != :CTMC
+                    init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                end
+            else # dimension == 2
+                init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate]
+                if phase_method != :CTMC
+                    init_thread[7,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                end
             end
         end
     end
