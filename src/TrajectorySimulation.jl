@@ -1,5 +1,6 @@
 
 using Dates
+using Unitful, UnitfulAtomic
 using HDF5: h5open
 using JLD2: jldopen, write
 using YAML  # YAML: write
@@ -49,17 +50,17 @@ Performs a semiclassical simulation with given parameters.
 - `laser::Laser`                                        : Parameters of the laser field.
 - `target::Target`                                      : Parameters of the target.
 - `dimension = 2|3`                                     : Dimension of simulation which indicates 2D/3D simulation, 2D simulation is carried out in the xy plane.
-- `sample_t_intv = (start,stop)`                        : Time interval in which the initial electrons are sampled (in a.u.).
+- `sample_t_intv = (start,stop)`                        : Time interval in which the initial electrons are sampled (numerically in **a.u.** or a `Unitful.Quantity`).
 - `sample_t_num`                                        : Number of time samples.
-- `traj_t_final`                                        : Time when every trajectory simulation ends.
+- `traj_t_final`                                        : Time when every trajectory simulation ends (numerically in **a.u.** or a `Unitful.Quantity`).
 - `final_p_max = (pxMax,pyMax[,pzMax])`                 : Boundaries of final momentum spectrum collected in two/three dimensions.
 - `final_p_num = (pxNum,pyNum[,pzNum])`                 : Numbers of final momentum spectrum collected in two/three dimensions.
 
 ## Required params. for step-sampling methods:
-- `ss_kd_max`   : Boundary of kd (momentum's transversal component in the polarization (xy) plane) samples.
-- `ss_kd_num`   : Number of kd (momentum's transversal component in the polarization (xy) plane) samples.
-- `ss_kz_max`   : [3D simulation] Boundary of kz (momentum's component along propagation direction (z ax.)) samples.
-- `ss_kz_num`   : [3D simulation] Number of kz (momentum's component along propagation direction (z ax.)) samples (an even number is required).
+- `ss_kd_max`   : Boundary of kd (momentum's transversal component in the polarization (xy) plane) samples (in a.u.).
+- `ss_kd_num`   : Number of kd (momentum's transversal component in the polarization (xy) plane) samples (in a.u.).
+- `ss_kz_max`   : [3D simulation] Boundary of kz (momentum's component along propagation direction (z ax.)) samples (in a.u.).
+- `ss_kz_num`   : [3D simulation] Number of kz (momentum's component along propagation direction (z ax.)) samples (an even number is required) (in a.u.).
 
 ## Required params. for Monte-Carlo-sampling methods:
 - `mc_kt_num`   : Number of kt (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
@@ -93,9 +94,9 @@ function perform_traj_simulation(;
     laser               ::Laser,
     target              ::Target,
     dimension           ::Integer,
-    sample_t_intv       ::Tuple{<:Real,<:Real},
+    sample_t_intv,      # Tuple{<:Real,<:Real}
     sample_t_num        ::Integer,
-    traj_t_final        ::Real,
+    traj_t_final,       # Real
     final_p_max,        # Tuple{<:Real,<:Real} or Tuple{<:Real,<:Real,<:Real}
     final_p_num,        # Tuple{<:Integer,<:Integer} or Tuple{<:Integer,<:Integer,<:Integer}
         #* req. params. for step-sampling (ss) methods
@@ -155,6 +156,10 @@ function TrajectorySimulationJob(; kwargs...)
         traj_phase_method, traj_rtol, sample_cutoff_limit, sample_monte_carlo, rate_prefix,
         mol_orbit_idx = kwargs
     #* check parameters
+    # make conversions
+    (traj_t_final isa Quantity) && (traj_t_final = (uconvert(u"fs", traj_t_final) |> auconvert).val)
+    (sample_t_intv[1] isa Quantity) && (sample_t_intv[1] = (uconvert(u"fs", sample_t_intv[1]) |> auconvert).val)
+    (sample_t_intv[2] isa Quantity) && (sample_t_intv[2] = (uconvert(u"fs", sample_t_intv[2]) |> auconvert).val)
     # dimension check
     @assert dimension in (2,3) "[TrajectorySimulationJob] `dimension` must be either 2 or 3."
     @assert length(final_p_max)==length(final_p_num)==dimension "[perform_traj_simulation] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."

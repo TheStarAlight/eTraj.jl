@@ -4,6 +4,8 @@ using StaticArrays: @SVector
 using OrderedCollections: OrderedDict
 using Parameters: @pack!
 using SpecialFunctions: gamma
+using Unitful: Quantity, uconvert, eV
+using UnitfulAtomic: auconvert
 
 # GenericMolecule
 using HDF5: File, h5open, haskey, create_group, open_group, read_dataset, write_dataset, delete_object

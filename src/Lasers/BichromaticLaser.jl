@@ -3,17 +3,21 @@
 struct BichromaticLaser <: Laser
     laser1::MonochromaticLaser
     laser2::MonochromaticLaser
-    delay::Real
-    """
-    Initializes a new `BichromaticLaser` using two `MonochromaticLaser`s.
-    ## Parameters
-    - `laser1, laser2::MonochromaticLaser`  : Two `MonochromaticLaser`s.
-    - `delay = 0.0`                         : Delay of `laser2` respective to `laser1`.
-    """
-    function BichromaticLaser(laser1::MonochromaticLaser, laser2::MonochromaticLaser, delay::Real=0.0)
-        new(laser1,laser2,delay)
-    end
-    BichromaticLaser(;laser1::MonochromaticLaser, laser2::MonochromaticLaser, delay::Real=0.0) = BichromaticLaser(laser1,laser2,delay)
+    delay
+end
+
+"""
+    BichromaticLaser(l1::MonochromaticLaser, l2::MonochromaticLaser [, delay=0.0]) <: Laser
+
+Initializes a new `BichromaticLaser` with two `MonochromaticLaser`s.
+
+## Parameters
+- `l1, l2::MonochromaticLaser`  : Two `MonochromaticLaser`s.
+- `delay`                       : Time delay of `l2` respective to `l1` (numerically in **a.u.** or a `Unitful.Quantity`).
+"""
+function BichromaticLaser(;l1::MonochromaticLaser, l2::MonochromaticLaser, delay=0.0)
+    (delay isa Quantity) && (delay = auconvert(delay).val)
+    BichromaticLaser(l1,l2,delay)
 end
 
 "Gets the first `MonochromaticLaser` that consists of `l`."

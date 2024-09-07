@@ -19,21 +19,37 @@ struct HydrogenLikeAtom <: SAEAtomBase
     soft_core;
     "Name of the atom."
     name::String;
-    "Initializes a new instance of `HydrogenLikeAtom`."
-    function HydrogenLikeAtom(Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]")
-        @assert Ip>0 "[HydrogenLikeAtom] Ip should be positive."
-        @assert l≥0 && m≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
-        @assert soft_core≥0 "[HydrogenLikeAtom] Soft core should be non-negative."
-        @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[HydrogenLikeAtom] asymp_coeff should be either `:hartree` or a positive number."
-        C = 0.0
-        if asymp_coeff == :hartree
-            C = hartree_asymp_coeff(Z,Ip,l)
-        else
-            C = asymp_coeff
-        end
-        new(Ip, Z, l, m, C, quan_ax_θ, quan_ax_ϕ, soft_core, name)
+end
+
+"""
+    HydrogenLikeAtom(Ip, Z [,l=0] [,m=0] [,asymp_coeff=:hartree|<coeff>] [,quan_ax_θ=0.0] [,quan_ax_ϕ=0.0] [,soft_core=0.2] [,name]) <: SAEAtomBase
+
+Initializes a new instance of `HydrogenLikeAtom`.
+
+## Parameters
+- `Ip`  : Ionization potential of the atom (numerically in **a.u.** or a `Unitful.Quantity`).
+- `Z`   : Nuclear charge number.
+- `l=0` : Angular quantum number (*optional, default 0*).
+- `m=0` : Magnetic quantum number (*optional, default 0*).
+- `asymp_coeff=:hartree` : Asymptotic coefficient related to the wavefunction's behavior when r→∞ (*`:hartree` or a positive number*). Passing `:hartree` (by default) indicates automatic calculation using the Hartree formula.
+- `quan_ax_θ=0.0`   : Orientation angle θ of the quantization axis relative to the lab frame (*optional, default 0.0*).
+- `quan_ax_ϕ=0.0`   : Orientation angle ϕ of the quantization axis relative to the lab frame (*optional, default 0.0*).
+- `soft_core=0.2`   : Soft core parameter of the Coulomb potential (*optional, default 0.2*).
+- `name::String`    : Name of the atom.
+"""
+function HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]")
+    (Ip isa Quantity) && (Ip = (uconvert(eV,Ip) |> auconvert).val)
+    @assert Ip>0 "[HydrogenLikeAtom] `Ip` should be positive."
+    @assert l≥0 && m≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
+    @assert soft_core≥0 "[HydrogenLikeAtom] `soft_core` should be non-negative."
+    @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[HydrogenLikeAtom] asymp_coeff should be either `:hartree` or a positive number."
+    C = 0.0
+    if asymp_coeff == :hartree
+        C = hartree_asymp_coeff(Z,Ip,l)
+    else
+        C = asymp_coeff
     end
-    HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]") = HydrogenLikeAtom(Ip, Z, l, m, asymp_coeff, quan_ax_θ, quan_ax_ϕ, soft_core, name)
+    HydrogenLikeAtom(Ip, Z, l, m, C, quan_ax_θ, quan_ax_ϕ, soft_core, name)
 end
 
 "Gets the ionization potential of the atom."

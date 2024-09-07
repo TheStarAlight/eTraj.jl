@@ -121,7 +121,7 @@ using Test
         t = get_atom("H")
         l1 = Cos4Laser(peak_int=1e15, wave_len=800., cyc_num=10.0, ellip=1.)
         l2 = Cos4Laser(peak_int=1e15, wave_len=400., cyc_num=20.0, ellip=-1.)
-        l = BichromaticLaser(l1,l2)
+        l = BichromaticLaser(l1=l1,l2=l2)
         @test begin
             perform_traj_simulation(
                 init_cond_method    = :ADK,

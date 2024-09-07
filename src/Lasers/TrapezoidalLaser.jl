@@ -18,54 +18,47 @@ struct TrapezoidalLaser <: MonochromaticLaser
     "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
     "Time shift of the laser relative to the beginning of TURN-ON (in a.u.)."
-    t_shift;
-    """
-    Initializes a new monochromatic elliptically polarized laser field with Trapezoidal-shape envelope.
-    # Parameters
-    - `peak_int`        : Peak intensity of the laser field (in W/cm²).
-    - `wave_len`        : Wavelength of the laser field (in nm).
-    - `cyc_num_turn_on` : Number of cycles of the laser field in the turn-on.
-    - `cyc_num_turn_off`: Number of cycles of the laser field in the turn-off.
-    - `cyc_num_const`   : Number of cycles of the laser field in the constant-intensity.
-    - `ellip`           : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
-    - `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
-    - `t_shift`         : Time shift of the laser (in a.u.) relative to the beginning of TURN-ON (optional, default 0).
-    """
-    function TrapezoidalLaser(peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip, azi=0., cep=0., t_shift=0.)
-        @assert peak_int>0  "[TrapezoidalLaser] Peak intensity must be positive."
-        @assert wave_len>0  "[TrapezoidalLaser] Wavelength must be positive."
-        @assert cyc_num_turn_on>0 && cyc_num_turn_off>0 && cyc_num_const≥0  "[TrapezoidalLaser] Cycle number must be positive."
-        @assert -1≤ellip≤1  "[TrapezoidalLaser] Ellipticity must be in [-1,1]."
-        new(peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip, azi, cep, t_shift)
-    end
-    """
-    Initializes a new monochromatic elliptically polarized laser field with Trapezoidal-shape envelope.
-    # Parameters
-    - `peak_int`        : Peak intensity of the laser field (in W/cm²).
-    - `wave_len`        : Wavelength of the laser field (in nm). Must specify either `wave_len` or `ang_freq`.
-    - `ang_freq`        : Angular frequency of the laser field (in a.u.). Must specify either `wave_len` or `ang_freq`.
-    - `cyc_num_turn_on` : Number of cycles of the laser field in the turn-on.
-    - `cyc_num_turn_off`: Number of cycles of the laser field in the turn-off.
-    - `cyc_num_const`   : Number of cycles of the laser field in the constant-intensity.
-    - `ellip`           : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
-    - `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
-    - `t_shift`         : Time shift of the laser (in a.u.) relative to the beginning of TURN-ON (optional, default 0).
-    """
-    function TrapezoidalLaser(; peak_int,
-                                wave_len=-1, ang_freq=-1,     # must specify either waveLen or angFreq.
-                                cyc_num_turn_on, cyc_num_turn_off, cyc_num_const,
-                                ellip, azi=0., cep=0., t_shift=0.)
-        @assert wave_len>0 || ang_freq>0    "[TrapezoidalLaser] Must specify either wave_len or ang_freq."
-        @assert cyc_num_turn_on>0 && cyc_num_turn_off>0 && cyc_num_const≥0  "[TrapezoidalLaser] Cycle number must be positive."
-        if wave_len>0 && ang_freq>0
-            @warn "[TrapezoidalLaser] Both wave_len & ang_freq are specified, will use wave_len."
-        end
-        if wave_len==-1
-            wave_len = 45.563352525 / ang_freq
-        end
-        TrapezoidalLaser(peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip, azi, cep, t_shift)
-    end
+    t_turn_on;
 end
+
+"""
+    TrapezoidalLaser(peak_int, wave_len|ang_freq, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip [, azi=0.0] [, cep=0.0] [, t_turn_on=0.0]) <: MonochromaticLaser
+
+Initializes a new monochromatic elliptically polarized laser field with trapezoidal-shape envelope.
+
+# Parameters
+- `peak_int`        : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
+- `wave_len`        : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
+- `ang_freq`        : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
+- `cyc_num_turn_on` : Number of cycles of the laser field in the turn-on.
+- `cyc_num_turn_off`: Number of cycles of the laser field in the turn-off.
+- `cyc_num_const`   : Number of cycles of the laser field in the constant-intensity.
+- `ellip`           : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+- `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (in **radians**) *(optional, default 0)*.
+- `cep`             : Carrier-Envelope-Phase of the laser field *(optional, default 0)*.
+- `t_turn_on`       : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the beginning of TURN-ON *(optional, default 0)*.
+"""
+function TrapezoidalLaser(; peak_int,
+                            wave_len=0, ang_freq=0,     # must specify either wave_len or ang_freq.
+                            cyc_num_turn_on, cyc_num_turn_off, cyc_num_const,
+                            ellip, azi=0., cep=0., t_turn_on=0.)
+    # make conversions
+    (peak_int isa Quantity) && (peak_int = uconvert(W/cm^2, peak_int).val)
+    (wave_len isa Quantity) && (wave_len = uconvert(nm, wave_len).val)
+    (ang_freq isa Quantity) && (ang_freq = (uconvert(eV, ang_freq) |> auconvert).val)
+    (t_turn_on isa Quantity) && (t_turn_on = (uconvert(eV, t_turn_on) |> auconvert).val)
+    # ================
+    @assert wave_len>0 || ang_freq>0    "[TrapezoidalLaser] Must specify either `wave_len` or `ang_freq`."
+    @assert cyc_num_turn_on>0 && cyc_num_turn_off>0 && cyc_num_const≥0  "[TrapezoidalLaser] Cycle numbers must be positive."
+    if wave_len>0 && ang_freq>0
+        @warn "[TrapezoidalLaser] Both `wave_len` & `ang_freq` are specified, will use `wave_len`."
+    end
+    if wave_len==0
+        wave_len = 45.563352525 / ang_freq
+    end
+    TrapezoidalLaser(peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip, azi, cep, t_turn_on)
+end
+
 "Gets the peak intensity of the laser field (in W/cm²)."
 PeakInt(l::TrapezoidalLaser) = l.peak_int
 "Gets the wave length of the laser field (in nm)."
@@ -89,7 +82,7 @@ Period(l::TrapezoidalLaser) = 2π / AngFreq(l)
 "Gets the Carrier-Envelope Phase (CEP) of the laser field."
 CEP(l::TrapezoidalLaser) = l.cep
 "Gets the time shift relative to the beginning of TURN-ON (in a.u.)."
-TimeShift(l::TrapezoidalLaser) = l.t_shift
+TimeTurnOn(l::TrapezoidalLaser) = l.t_turn_on
 "Gets the peak electric field intensity of the laser field (in a.u.)."
 LaserF0(l::TrapezoidalLaser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
 "Gets the peak vector potential intensity of the laser field (in a.u.)."
@@ -204,11 +197,11 @@ function Base.show(io::IO, l::TrapezoidalLaser)
     elseif abs(l.ellip) == 1
         print(io, " [circularly polarized]")
     end
-    if l.t_shift != 0
-        if isinteger(l.t_shift)
-            @printf(io, ", rises @ t=%i a.u.", l.t_shift)
+    if l.t_turn_on != 0
+        if isinteger(l.t_turn_on)
+            @printf(io, ", rises @ t=%i a.u.", l.t_turn_on)
         else
-            @printf(io, ", rises @ t=%.2f a.u.", l.t_shift)
+            @printf(io, ", rises @ t=%.2f a.u.", l.t_turn_on)
         end
     end
     if l.cep != 0
@@ -231,7 +224,7 @@ function Serialize(l::TrapezoidalLaser)
     ellip               = l.ellip
     azi                 = l.azi
     cep                 = l.cep
-    t_shift             = l.t_shift
+    t_shift             = l.t_turn_on
     @pack! dict = (type, peak_int, wave_len, cyc_num_turn_on, cyc_num_const, cyc_num_turn_off, ellip, azi, cep, t_shift)
     return dict
 end

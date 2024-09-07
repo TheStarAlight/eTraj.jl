@@ -16,7 +16,7 @@ struct SAEAtom <: SAEAtomBase
     quan_ax_θ;
     "Orientation of the quantization axis ϕ."
     quan_ax_ϕ;
-    "Atomic parameters used to fit the atomic potential. See [J. Phys. B 38 2593 (2005)]"
+    "Parameters used to fit the atomic potential. See [J. Phys. B 38 2593 (2005)]"
     a1;
     b1;
     a2;
@@ -25,21 +25,37 @@ struct SAEAtom <: SAEAtomBase
     b3;
     "Name of the atom."
     name::String;
-    "Initializes a new instance of `SAEAtom`."
-    function SAEAtom( Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
-        @assert Ip>0 "[SAEAtom] Ip should be positive."
-        @assert l≥0 && m≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
-        @assert b1≥0 && b2≥0 && b3≥0 "[SAEAtom] b1,b2,b3 should be non-negative."
-        @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[SAEAtom] asymp_coeff should be either `:hartree` or a positive number."
-        C = 0.0
-        if asymp_coeff == :hartree
-            C = hartree_asymp_coeff(Z,Ip,l)
-        else
-            C = asymp_coeff
-        end
-        new(Ip,Z,l,m,C,quan_ax_θ,quan_ax_ϕ,a1,b1,a2,b2,a3,b3,name)
+end
+
+"""
+    SAEAtom(Ip, Z [,l=0] [,m=0] [,asymp_coeff=:hartree|<coeff>] [,quan_ax_θ=0.0] [,quan_ax_ϕ=0.0] [,a1,b1,a2,b2,a3,b3] [,name]) <: SAEAtomBase
+
+Initializes a new instance of `SAEAtom`.
+
+## Parameters
+- `Ip`  : Ionization potential of the atom (numerically in **a.u.** or a `Unitful.Quantity`).
+- `Z`   : Nuclear charge number.
+- `l=0` : Angular quantum number (*optional, default 0*).
+- `m=0` : Magnetic quantum number (*optional, default 0*).
+- `asymp_coeff=:hartree`: Asymptotic coefficient related to the wavefunction's behavior when r→∞ (*`:hartree` or a positive number*). Passing `:hartree` (by default) indicates automatic calculation using the Hartree formula.
+- `quan_ax_θ=0.0`       : Orientation angle θ of the quantization axis relative to the lab frame (*optional, default 0.0*).
+- `quan_ax_ϕ=0.0`       : Orientation angle ϕ of the quantization axis relative to the lab frame (*optional, default 0.0*).
+- `a1,b1,a2,b2,a3,b3`   : Parameters used to fit the atomic potential. See [*J. Phys. B* **38**, 2593 (2005)]
+- `name::String`        : Name of the atom.
+"""
+function SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
+    (Ip isa Quantity) && (Ip = (uconvert(eV,Ip) |> auconvert).val)
+    @assert Ip>0 "[SAEAtom] Ip should be positive."
+    @assert l≥0 && m≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
+    @assert b1≥0 && b2≥0 && b3≥0 "[SAEAtom] b1,b2,b3 should be non-negative."
+    @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[SAEAtom] asymp_coeff should be either `:hartree` or a positive number."
+    C = 0.0
+    if asymp_coeff == :hartree
+        C = hartree_asymp_coeff(Z,Ip,l)
+    else
+        C = asymp_coeff
     end
-    SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]") = SAEAtom(Ip,Z,l,m,asymp_coeff,quan_ax_θ,quan_ax_ϕ,a1,b1,a2,b2,a3,b3,name)
+    SAEAtom(Ip,Z,l,m,C,quan_ax_θ,quan_ax_ϕ,a1,b1,a2,b2,a3,b3,name)
 end
 
 "Gets the ionization potential of the atom."

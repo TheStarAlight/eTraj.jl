@@ -12,7 +12,7 @@ export UnitEnvelope
 # Cos2, Cos4
 export CycNum
 # Trapezoidal
-export CycNumTurnOn, CycNumConst, CycNumTurnOff, CycNumTotal
+export CycNumTurnOn, CycNumConst, CycNumTurnOff, CycNumTotal, TimeTurnOn
 # Gaussian
 export SpreadCycNum, SpreadDuration, FWHM_Duration
 # BichromaticLaser

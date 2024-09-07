@@ -3,7 +3,7 @@
 struct Cos2Laser <: MonochromaticLaser
     "Peak intensity of the laser field (in W/cm^2)."
     peak_int;
-    "Wavelength of the laser field (in NANOMETER)."
+    "Wavelength of the laser field (in nm)."
     wave_len;
     "Cycle number of the laser field."
     cyc_num;
@@ -15,60 +15,54 @@ struct Cos2Laser <: MonochromaticLaser
     cep;
     "Time shift of the laser relative to the peak (in a.u.)."
     t_shift;
-    """
-    Initializes a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
-    # Parameters
-    - `peak_int`    : Peak intensity of the laser field (in W/cm²).
-    - `wave_len`    : Wavelength of the laser field (in nm).
-    - `cyc_num`     : Number of cycles of the laser field.
-    - `ellip`       : Ellipticity of the laser field [-1≤e≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
-    - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
-    - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
-    - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
-    """
-    function Cos2Laser(peak_int, wave_len, cyc_num, ellip, azi=0., cep=0., t_shift=0.)
-        @assert peak_int>0  "[Cos2Laser] Peak intensity must be positive."
-        @assert wave_len>0  "[Cos2Laser] Wavelength must be positive."
-        @assert cyc_num>0   "[Cos2Laser] Cycle number must be positive."
-        @assert -1≤ellip≤1  "[Cos2Laser] Ellipticity must be in [-1,1]."
-        new(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
-    end
-    """
-    Initializes a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
-    # Parameters
-    - `peak_int`    : Peak intensity of the laser field (in W/cm²).
-    - `wave_len`    : Wave length of the laser field (in nm). Must specify either `wave_len` or `ang_freq`.
-    - `ang_freq`    : Angular frequency of the laser field (in a.u.). Must specify either `wave_len` or `ang_freq`.
-    - `cyc_num`     : Number of cycles of the laser field. Must specify either `cyc_num` or `duration`.
-    - `duration`    : Duration of the laser field (in a.u.). Must specify either `cyc_num` or `duration`.
-    - `ellip`       : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
-    - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians) (optional, default 0).
-    - `cep`         : Carrier-Envelope-Phase of the laser field (optional, default 0).
-    - `t_shift`     : Time shift of the laser (in a.u.) relative to the peak (optional, default 0).
-    """
-    function Cos2Laser(;peak_int,
-                        wave_len=-1, ang_freq=-1,   # must specify either wave_len or ang_freq.
-                        cyc_num=-1,  duration=-1,   # must specify either cyc_num or duration.
-                        ellip, azi=0., cep=0., t_shift=0.)
-        @assert wave_len>0 || ang_freq>0    "[Cos2Laser] Must specify either wave_len or ang_freq."
-        @assert cyc_num>0 || duration>0     "[Cos2Laser] Must specify either cyc_num or duration."
-        if wave_len>0 && ang_freq>0
-            @warn "[Cos2Laser] Both wave_len & ang_freq are specified, will use wave_len."
-        end
-        if cyc_num>0 && duration>0
-            @warn "[Cos2Laser] Both cyc_num & duration are specified, will use cyc_num."
-        end
-        if wave_len==-1
-            wave_len = 45.563352525 / ang_freq
-        else
-            ang_freq = 45.563352525 / wave_len
-        end
-        if cyc_num==-1
-            cyc_num = duration / (2π/ang_freq)
-        end
-        Cos2Laser(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
-    end
 end
+
+"""
+    Cos2Laser(peak_int, wave_len|ang_freq, cyc_num|duration, ellip [, azi=0.0] [, cep=0.0] [, t_shift=0.0]) <: MonochromaticLaser
+
+Initializes a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
+
+# Parameters
+- `peak_int`    : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
+- `wave_len`    : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
+- `ang_freq`    : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
+- `cyc_num`     : Number of cycles of the laser field.
+- `duration`    : Duration of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
+- `ellip`       : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+- `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in **radians**) *(optional, default 0)*.
+- `cep`         : Carrier-Envelope-Phase of the laser field *(optional, default 0)*.
+- `t_shift`     : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
+"""
+function Cos2Laser(;peak_int,
+                    wave_len=0, ang_freq=0,   # must specify either wave_len or ang_freq.
+                    cyc_num=0,  duration=0,   # must specify either cyc_num or duration.
+                    ellip, azi=0., cep=0., t_shift=0.)
+    # make conversions
+    (peak_int isa Quantity) && (peak_int = uconvert(W/cm^2, peak_int).val)
+    (wave_len isa Quantity) && (wave_len = uconvert(nm, wave_len).val)
+    (ang_freq isa Quantity) && (ang_freq = (uconvert(eV, ang_freq) |> auconvert).val)
+    (duration isa Quantity) && (duration = (uconvert(fs, duration) |> auconvert).val)
+    (t_shift  isa Quantity) && (t_shift  = (uconvert(fs, t_shift)  |> auconvert).val)
+    # ================
+    @assert wave_len>0 || ang_freq>0    "[Cos2Laser] Must specify either `wave_len` or `ang_freq`."
+    @assert cyc_num>0 || duration>0     "[Cos2Laser] Must specify either `cyc_num` or `duration`."
+    if wave_len>0 && ang_freq>0
+        @warn "[Cos2Laser] Both `wave_len` & `ang_freq` are specified, will use `wave_len`."
+    end
+    if cyc_num>0 && duration>0
+        @warn "[Cos2Laser] Both `cyc_num` & `duration` are specified, will use `cyc_num`."
+    end
+    if wave_len==0
+        wave_len = 45.563352525 / ang_freq
+    else
+        ang_freq = 45.563352525 / wave_len
+    end
+    if cyc_num==0
+        cyc_num = duration / (2π/ang_freq)
+    end
+    Cos2Laser(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
+end
+
 "Gets the peak intensity of the laser field (in W/cm²)."
 PeakInt(l::Cos2Laser) = l.peak_int
 "Gets the wave length of the laser field (in nm)."

@@ -1,5 +1,6 @@
 using SemiclassicalSFI
 using SemiclassicalSFI.Targets
+using Unitful
 using Test
 
 @info "# Testing Targets ..."
@@ -9,9 +10,10 @@ using Test
     @info "Testing HydrogenLikeAtom ..."
     @testset verbose=true "HydrogenLikeAtom" begin
         t1 = HydrogenLikeAtom(Ip=0.5, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, soft_core=0.2, name="H")
-        t2 = HydrogenLikeAtom(0.5,1,0,0,:hartree, π/2,π, 0.2,"H")
+        t1_= HydrogenLikeAtom(Ip=13.605693123044498u"eV", Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, soft_core=0.2, name="H")
+        t2 = HydrogenLikeAtom(0.5,1,0,0,1.0, π/2,π, 0.2,"H")
         t3 = get_atom("H"; quan_ax_θ=π/2, quan_ax_ϕ=π)
-        @test t1 == t2 == t3
+        @test t1 == t1_ == t2 == t3
         @test begin
             show(t1)
             println()
@@ -31,8 +33,9 @@ using Test
 
     @info "Testing SAEAtom ..."
     @testset verbose=true "SAEAtom" begin
-        t1 = SAEAtom(Ip=0.9035698802, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, a1= 1.230723 , b1=0.6620055, a2=-1.325040 , b2=1.236224 , a3=-0.2307230 , b3=0.4804286, name="He")
-        t2 = SAEAtom(0.9035698802, 1, 0, 0, :hartree, π/2, π, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
+        t1 = SAEAtom(Ip=0.9035698802, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
+        t1_= SAEAtom(Ip=24.58738901045456u"eV", Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
+        t2 = SAEAtom(0.9035698802, 1, 0, 0, 0.9124458182520485, π/2, π, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
         t3 = get_atom("He"; quan_ax_θ=π/2, quan_ax_ϕ=π)
         @test t1 == t2 == t3
         @test begin
@@ -52,7 +55,7 @@ using Test
     end
 
     @info "Testing Atom Database ..."
-    @testset verbose=true "Atom Databse" begin
+    @testset verbose=true "Atom Database" begin
         t1 = get_atom("H")
         @test TargetName(t1)        == "H"
         @test AsympNuclCharge(t1)   == 1
