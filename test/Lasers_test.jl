@@ -109,7 +109,7 @@ using Test
         l1 = TrapezoidalLaser(peak_int=4e14, wave_len=800., cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
         l2 = TrapezoidalLaser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
         l3 = TrapezoidalLaser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
-        l4 = TrapezoidalLaser(peak_int=4e14u"W/cm^2", ang_freq=1.5498024802806117u"eV", cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
+        l4 = TrapezoidalLaser(peak_int=4e14u"W/cm^2", ang_freq=1.5498024802806117u"eV", cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=0.24188843265767443u"fs")
         l = TrapezoidalLaser(4e14, 800., 2., 2., 6., 1., π/2, π, 10.)
         @test l == l1
         @test l == l2

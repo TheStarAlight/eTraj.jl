@@ -83,53 +83,50 @@ using Test
         m1 = GenericMolecule(atoms=["C","C","C","C","C","C","H","H","H","H","H","H"],
                     atom_coords=[0 0 1.4 ; 1.212 0 0.7 ; 1.212 0 -0.7 ; 0 0 -1.4 ; -1.212 0 -0.7 ; -1.212 0 0.7 ; 0 0 2.48; 2.148 0 1.24; 2.148 0 -1.24; 0 0 -2.48; -2.148 0 -1.24; -2.148 0 1.24],
                     charge=0, name="Benzene")
-        m2 = GenericMolecule(["C","C","C","C","C","C","H","H","H","H","H","H"],
-                    [0 0 1.4 ; 1.212 0 0.7 ; 1.212 0 -0.7 ; 0 0 -1.4 ; -1.212 0 -0.7 ; -1.212 0 0.7 ; 0 0 2.48; 2.148 0 1.24; 2.148 0 -1.24; 0 0 -2.48; -2.148 0 -1.24; -2.148 0 1.24],
-                    0,"Benzene")
-        @test MolAtoms(m1) == MolAtoms(m2)
-        @test MolAtomCoords(m1) == MolAtomCoords(m2)
-        @test MolCharge(m1) == MolCharge(m2)
-        @test TargetName(m1) == TargetName(m2)
+        @test MolAtoms(m1) == ["C","C","C","C","C","C","H","H","H","H","H","H"]
+        @test MolAtomCoords(m1) == [0 0 1.4 ; 1.212 0 0.7 ; 1.212 0 -0.7 ; 0 0 -1.4 ; -1.212 0 -0.7 ; -1.212 0 0.7 ; 0 0 2.48; 2.148 0 1.24; 2.148 0 -1.24; 0 0 -2.48; -2.148 0 -1.24; -2.148 0 1.24]
+        @test MolCharge(m1) == 0
+        @test TargetName(m1) == "Benzene"
         # init from existing file
-        m3 = GenericMolecule("Molecule_Hydrogen.h5")
+        m2 = GenericMolecule("Molecule_Hydrogen.h5")
         @test begin
-            show(m3)
+            show(m2)
             println()
             true
         end
-        @test MolAtoms(m3)      == ["H","H"]
-        @test MolAtomCoords(m3) == [0.0 0.0 -0.375; 0.0 0.0 0.375]
-        @test MolCharge(m3)     == 0
-        @test MolEnergyDataAvailable(m3) == true
-        @test MolEnergyLevels(m3)[1] ≈ -0.591627497396511
-        @test MolHOMOIndex(m3)  == 1
-        @test MolHOMOEnergy(m3) == MolEnergyLevels(m3)[MolHOMOIndex(m3)]
-        @test MolWFATAvailableIndices(m3) == Set([0])
+        @test MolAtoms(m2)      == ["H","H"]
+        @test MolAtomCoords(m2) == [0.0 0.0 -0.375; 0.0 0.0 0.375]
+        @test MolCharge(m2)     == 0
+        @test MolEnergyDataAvailable(m2) == true
+        @test MolEnergyLevels(m2)[1] ≈ -0.591627497396511
+        @test MolHOMOIndex(m2)  == 1
+        @test MolHOMOEnergy(m2) == MolEnergyLevels(m2)[MolHOMOIndex(m2)]
+        @test MolWFATAvailableIndices(m2) == Set([0])
         begin
-            μ,IntData = MolWFATData(m3,0)
+            μ,IntData = MolWFATData(m2,0)
             @test reduce(*, abs.(μ) .<= [1e-10,1e-10,1e-10])
             @test IntData[1,1,1,1] ≈ 1.6855748476079413 + 0.0im
         end
-        @test reduce(*, abs2.(MolWFATStructureFactor_G(m3,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.4246531020464377, 2.5759319076269223])
-        @test MolAsympCoeffAvailableIndices(m3) == Set([0])
-        @test MolAsympCoeff(m3, 0)[1,1] ≈ 1.0902102938182585
+        @test reduce(*, abs2.(MolWFATStructureFactor_G(m2,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.4246531020464377, 2.5759319076269223])
+        @test MolAsympCoeffAvailableIndices(m2) == Set([0])
+        @test MolAsympCoeff(m2, 0)[1,1] ≈ 1.0902102938182585
         begin
             @test begin
-                SetMolRotation!(m3,π,π/2,π/3)
-                reduce(*, MolRotation(m3) .≈ (π,π/2,π/3))
+                SetMolRotation!(m2,π,π/2,π/3)
+                reduce(*, MolRotation(m2) .≈ (π,π/2,π/3))
             end
             @test begin
-                SetMolRotation!(m3,(π/2,π/3,π/4))
-                reduce(*, MolRotation(m3) .≈ (π/2,π/3,π/4))
+                SetMolRotation!(m2,(π/2,π/3,π/4))
+                reduce(*, MolRotation(m2) .≈ (π/2,π/3,π/4))
             end
         end
-        @test MolExportAtomInfo(m3) == "H [0.0, 0.0, -0.375]; H [0.0, 0.0, 0.375]"
+        @test MolExportAtomInfo(m2) == "H [0.0, 0.0, -0.375]; H [0.0, 0.0, 0.375]"
         # MolCalcEnergyData!, _MolSaveEnergyData, MolCalcWFATData!, MolCalcAsympCoeff!, _MolSaveWFATData, MolSaveDataAs are not included in the test
-        @test IonPotential(m3)      == -MolHOMOEnergy(m3)
-        @test IonPotential(m3,0)    == -MolHOMOEnergy(m3)
-        @test AsympNuclCharge(m3)   == 1
-        @test TargetName(m3)        == "Hydrogen"
-        @test TargetPotential(m3)(1.0,1.0,1.0) == -0.5
-        @test reduce(*, TargetForce(m3)(1.0,1.0,1.0) .== (-1/8,-1/8,-1/8))
+        @test IonPotential(m2)      == -MolHOMOEnergy(m2)
+        @test IonPotential(m2,0)    == -MolHOMOEnergy(m2)
+        @test AsympNuclCharge(m2)   == 1
+        @test TargetName(m2)        == "Hydrogen"
+        @test TargetPotential(m2)(1.0,1.0,1.0) == -0.5
+        @test reduce(*, TargetForce(m2)(1.0,1.0,1.0) .== (-1/8,-1/8,-1/8))
     end
 end

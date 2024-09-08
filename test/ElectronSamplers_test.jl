@@ -10,7 +10,7 @@ using Test
 
     t = get_atom("H")
     tmol = GenericMolecule("Molecule_Hydrogen.h5")
-    tmol_rot = GenericMolecule("Molecule_Hydrogen.h5", 0,π/2,0)
+    tmol_rot = GenericMolecule("Molecule_Hydrogen.h5", rot_β=π/2)
     l = Cos4Laser(peak_int=1e15, wave_len=800.0, cyc_num=2, ellip=1.0)
     params = Dict{Symbol,Any}(
         :init_cond_method   => :ADK,

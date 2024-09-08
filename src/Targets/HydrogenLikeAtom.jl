@@ -24,7 +24,7 @@ end
 """
     HydrogenLikeAtom(Ip, Z [,l=0] [,m=0] [,asymp_coeff=:hartree|<coeff>] [,quan_ax_θ=0.0] [,quan_ax_ϕ=0.0] [,soft_core=0.2] [,name]) <: SAEAtomBase
 
-Initializes a new instance of `HydrogenLikeAtom`.
+Initializes a new `HydrogenLikeAtom`.
 
 ## Parameters
 - `Ip`  : Ionization potential of the atom (numerically in **a.u.** or a `Unitful.Quantity`).
@@ -36,6 +36,20 @@ Initializes a new instance of `HydrogenLikeAtom`.
 - `quan_ax_ϕ=0.0`   : Orientation angle ϕ of the quantization axis relative to the lab frame (*optional, default 0.0*).
 - `soft_core=0.2`   : Soft core parameter of the Coulomb potential (*optional, default 0.2*).
 - `name::String`    : Name of the atom.
+
+## Examples
+```jldoctest
+julia> t = HydrogenLikeAtom(Ip=0.5, Z=1, name="H")
+[HydrogenLikeAtom] Atom H, Ip=0.5000, Z=1, soft_core=0.2000
+
+julia> using Unitful
+
+julia> t = HydrogenLikeAtom(Ip=3.4u"eV", Z=1, l=1, name="H")
+[HydrogenLikeAtom] Atom H (p orbital, m=0), Ip=0.1249, Z=1, soft_core=0.2000
+```
+
+## See Also
+The [`get_atom`](@ref) method provides some atom presets for use.
 """
 function HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]")
     (Ip isa Quantity) && (Ip = (uconvert(eV,Ip) |> auconvert).val)
@@ -160,7 +174,7 @@ end
 
 "Prints the information of the atom."
 function Base.show(io::IO, t::HydrogenLikeAtom)
-    @printf(io, "[HydrogenLikeAtom] Atom %s, Ip=%.4f, Z=%i, soft_core=%.4f", t.name, t.Ip, t.nucl_charge, t.soft_core)
+    @printf(io, "[HydrogenLikeAtom] Atom %s%s, Ip=%.4f, Z=%i, soft_core=%.4f", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, t.nucl_charge, t.soft_core)
 end
 
 "Returns a `Dict{Symbol,Any}` containing properties of the object."

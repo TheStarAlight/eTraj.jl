@@ -37,6 +37,16 @@ Initializes a new monochromatic elliptically polarized laser field with trapezoi
 - `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (in **radians**) *(optional, default 0)*.
 - `cep`             : Carrier-Envelope-Phase of the laser field *(optional, default 0)*.
 - `t_turn_on`       : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the beginning of TURN-ON *(optional, default 0)*.
+
+## Examples
+```jldoctest
+julia> l = TrapezoidalLaser(peak_int=4e14, wave_len=800.0, cyc_num_turn_on=2, cyc_num_turn_off=2, cyc_num_const=6, ellip=1.0)
+[MonochromaticLaser] Envelope Trapezoidal, wavelen=800 nm, turn_on/const/turn_off 2/6/2 cycle(s), ε=1 [circularly polarized]
+
+julia> using Unitful
+
+julia> TrapezoidalLaser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", cyc_num_turn_on=2, cyc_num_turn_off=2, cyc_num_const=6, ellip=0.0, t_turn_on=-10.0u"fs")
+[MonochromaticLaser] Envelope Trapezoidal, wavelen=800 nm, turn_on/const/turn_off 2/6/2 cycle(s), ε=0 [linearly polarized], rises @ t=-413.41 a.u.
 """
 function TrapezoidalLaser(; peak_int,
                             wave_len=0, ang_freq=0,     # must specify either wave_len or ang_freq.
@@ -46,7 +56,7 @@ function TrapezoidalLaser(; peak_int,
     (peak_int isa Quantity) && (peak_int = uconvert(W/cm^2, peak_int).val)
     (wave_len isa Quantity) && (wave_len = uconvert(nm, wave_len).val)
     (ang_freq isa Quantity) && (ang_freq = (uconvert(eV, ang_freq) |> auconvert).val)
-    (t_turn_on isa Quantity) && (t_turn_on = (uconvert(eV, t_turn_on) |> auconvert).val)
+    (t_turn_on isa Quantity) && (t_turn_on = (uconvert(fs, t_turn_on) |> auconvert).val)
     # ================
     @assert wave_len>0 || ang_freq>0    "[TrapezoidalLaser] Must specify either `wave_len` or `ang_freq`."
     @assert cyc_num_turn_on>0 && cyc_num_turn_off>0 && cyc_num_const≥0  "[TrapezoidalLaser] Cycle numbers must be positive."

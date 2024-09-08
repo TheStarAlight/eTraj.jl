@@ -13,7 +13,7 @@ if Sys.iswindows()
 else
 
     @testset verbose=true "PySCFMolecularCalculator" begin
-        mol = GenericMolecule(["H","H"], [0 0 -0.375; 0 0 0.375], 0, "Hydrogen")
+        mol = GenericMolecule(atoms=["H","H"], atom_coords=[0 0 -0.375; 0 0 0.375], charge=0, name="Hydrogen")
         #* initialization and energy calculation
         @testset verbose=true "Energy" begin
             MolCalcEnergyData!(mol, MCType=PySCFMolecularCalculator, basis="cc-pVTZ")

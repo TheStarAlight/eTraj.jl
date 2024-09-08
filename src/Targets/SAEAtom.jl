@@ -30,7 +30,7 @@ end
 """
     SAEAtom(Ip, Z [,l=0] [,m=0] [,asymp_coeff=:hartree|<coeff>] [,quan_ax_θ=0.0] [,quan_ax_ϕ=0.0] [,a1,b1,a2,b2,a3,b3] [,name]) <: SAEAtomBase
 
-Initializes a new instance of `SAEAtom`.
+Initializes a new `SAEAtom`.
 
 ## Parameters
 - `Ip`  : Ionization potential of the atom (numerically in **a.u.** or a `Unitful.Quantity`).
@@ -42,6 +42,20 @@ Initializes a new instance of `SAEAtom`.
 - `quan_ax_ϕ=0.0`       : Orientation angle ϕ of the quantization axis relative to the lab frame (*optional, default 0.0*).
 - `a1,b1,a2,b2,a3,b3`   : Parameters used to fit the atomic potential. See [*J. Phys. B* **38**, 2593 (2005)]
 - `name::String`        : Name of the atom.
+
+## Examples
+```jldoctest
+julia> t = SAEAtom(Ip=0.9035, Z=1, asymp_coeff=:hartree, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
+[SAEAtom] Atom He, Ip=0.9035, Z=1
+
+julia> using Unitful
+
+julia> t = SAEAtom(Ip=12.13u"eV", Z=1, l=1, a1=51.35554, b1=2.111554, a2=-99.92747, b2=3.737221, a3=1.644457, b3=0.4306465, asymp_coeff=1.3, name="Xe")
+[SAEAtom] Atom Xe (p orbital, m=0), Ip=0.4458, Z=1
+```
+
+## See Also
+The [`get_atom`](@ref) method provides some atom presets for use.
 """
 function SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
     (Ip isa Quantity) && (Ip = (uconvert(eV,Ip) |> auconvert).val)
@@ -188,7 +202,7 @@ end
 
 "Prints the information of the atom."
 function Base.show(io::IO, t::SAEAtom)
-    @printf(io, "[SAEAtom] Atom %s, Ip=%.4f, Z=%i", t.name, t.Ip, t.nucl_charge)
+    @printf(io, "[SAEAtom] Atom %s%s, Ip=%.4f, Z=%i", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, t.nucl_charge)
 end
 
 "Returns a `Dict{Symbol,Any}` containing properties of the object."

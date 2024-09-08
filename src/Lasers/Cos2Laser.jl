@@ -22,7 +22,7 @@ end
 
 Initializes a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
 
-# Parameters
+## Parameters
 - `peak_int`    : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
 - `wave_len`    : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
 - `ang_freq`    : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
@@ -32,6 +32,17 @@ Initializes a new monochromatic elliptically polarized laser field with Cos2-sha
 - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in **radians**) *(optional, default 0)*.
 - `cep`         : Carrier-Envelope-Phase of the laser field *(optional, default 0)*.
 - `t_shift`     : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
+
+## Examples
+```jldoctest
+julia> l = Cos2Laser(peak_int=4e14, wave_len=800.0, cyc_num=2.0, ellip=1.0)
+[MonochromaticLaser] Envelope cos², wavelen=800 nm, 2 cycle(s), ε=1 [circularly polarized]
+
+julia> using Unitful
+
+julia> l = Cos2Laser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", duration=5.34u"fs", ellip=0.0)
+[MonochromaticLaser] Envelope cos², wavelen=800.00 nm, 2.00 cycle(s), ε=0 [linearly polarized]
+```
 """
 function Cos2Laser(;peak_int,
                     wave_len=0, ang_freq=0,   # must specify either wave_len or ang_freq.

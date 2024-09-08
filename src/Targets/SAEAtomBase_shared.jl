@@ -8,3 +8,13 @@ function hartree_asymp_coeff(Z,Ip,l)
     n = Z/sqrt(2*Ip)
     return 2^(n-1) / sqrt(n*gamma(n+l+1)*gamma(n-l))
 end
+
+"Returns a string about the l orbital info."
+function l_info(l::Integer)
+    letter = "spdfg"
+    if l<5
+        return letter[l+1] * " orbital"
+    else
+        return "l=$l"
+    end
+end

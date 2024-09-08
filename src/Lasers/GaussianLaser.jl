@@ -33,6 +33,16 @@ Initializes a new monochromatic elliptically polarized laser field with Gaussian
 - `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (in **radians**) *(optional, default 0)*.
 - `cep`             : Carrier-Envelope-Phase of the laser field *(optional, default 0)*.
 - `t_shift`         : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
+
+## Examples
+```jldoctest
+julia> l = GaussianLaser(peak_int=4e14, wave_len=800.0, spread_cyc_num=2.0, ellip=1.0)
+[MonochromaticLaser] Envelope Gaussian, wavelen=800 nm, temporal width 4 cycle(s) [FWHM 12.57 fs], ε=1 [circularly polarized]
+
+julia> using Unitful
+
+julia> l = GaussianLaser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", FWHM_duration=12.57u"fs", ellip=0.0)
+[MonochromaticLaser] Envelope Gaussian, wavelen=800.00 nm, temporal width 4.00 cycle(s) [FWHM 12.57 fs], ε=0 [linearly polarized]
 """
 function GaussianLaser(;peak_int,
                         wave_len=0, ang_freq=0,   # must specify either wave_len or ang_freq.
