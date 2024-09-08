@@ -37,12 +37,12 @@ Initializes a new monochromatic elliptically polarized laser field with Gaussian
 ## Examples
 ```jldoctest
 julia> l = GaussianLaser(peak_int=4e14, wave_len=800.0, spread_cyc_num=2.0, ellip=1.0)
-[MonochromaticLaser] Envelope Gaussian, wavelen=800 nm, temporal width 4 cycle(s) [FWHM 12.57 fs], ε=1 [circularly polarized]
+[MonochromaticLaser] Envelope Gaussian, peak intensity 4.0e+14 W/cm², wavelen=800 nm, temporal width 4 cycle(s) [FWHM 12.57 fs], ε=1 [circularly polarized]
 
 julia> using Unitful
 
 julia> l = GaussianLaser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", FWHM_duration=12.57u"fs", ellip=0.0)
-[MonochromaticLaser] Envelope Gaussian, wavelen=800.00 nm, temporal width 4.00 cycle(s) [FWHM 12.57 fs], ε=0 [linearly polarized]
+[MonochromaticLaser] Envelope Gaussian, peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, temporal width 4.00 cycle(s) [FWHM 12.57 fs], ε=0 [linearly polarized]
 """
 function GaussianLaser(;peak_int,
                         wave_len=0, ang_freq=0,   # must specify either wave_len or ang_freq.
@@ -181,6 +181,7 @@ end
 "Prints the information about the laser."
 function Base.show(io::IO, l::GaussianLaser)
     print(io, "[MonochromaticLaser] Envelope Gaussian, ")
+    @printf(io, "peak intensity %.1e W/cm², ", l.peak_int)
     if isinteger(l.wave_len)
         @printf(io, "wavelen=%i nm, ", l.wave_len)
     else

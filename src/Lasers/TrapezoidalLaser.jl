@@ -41,12 +41,12 @@ Initializes a new monochromatic elliptically polarized laser field with trapezoi
 ## Examples
 ```jldoctest
 julia> l = TrapezoidalLaser(peak_int=4e14, wave_len=800.0, cyc_num_turn_on=2, cyc_num_turn_off=2, cyc_num_const=6, ellip=1.0)
-[MonochromaticLaser] Envelope Trapezoidal, wavelen=800 nm, turn_on/const/turn_off 2/6/2 cycle(s), ε=1 [circularly polarized]
+[MonochromaticLaser] Envelope Trapezoidal, peak intensity 4.0e+14 W/cm², wavelen=800 nm, turn_on/const/turn_off 2/6/2 cycle(s), ε=1 [circularly polarized]
 
 julia> using Unitful
 
 julia> TrapezoidalLaser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", cyc_num_turn_on=2, cyc_num_turn_off=2, cyc_num_const=6, ellip=0.0, t_turn_on=-10.0u"fs")
-[MonochromaticLaser] Envelope Trapezoidal, wavelen=800 nm, turn_on/const/turn_off 2/6/2 cycle(s), ε=0 [linearly polarized], rises @ t=-413.41 a.u.
+[MonochromaticLaser] Envelope Trapezoidal, peak intensity 4.0e+14 W/cm², wavelen=800 nm, turn_on/const/turn_off 2/6/2 cycle(s), ε=0 [linearly polarized], rises @ t=-413.41 a.u.
 """
 function TrapezoidalLaser(; peak_int,
                             wave_len=0, ang_freq=0,     # must specify either wave_len or ang_freq.
@@ -187,6 +187,7 @@ end
 "Prints the information about the laser."
 function Base.show(io::IO, l::TrapezoidalLaser)
     print(io, "[MonochromaticLaser] Envelope Trapezoidal, ")
+    @printf(io, "peak intensity %.1e W/cm², ", l.peak_int)
     if isinteger(l.wave_len)
         @printf(io, "wavelen=%i nm, ", l.wave_len)
     else

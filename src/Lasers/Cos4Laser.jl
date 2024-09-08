@@ -36,12 +36,12 @@ Initializes a new monochromatic elliptically polarized laser field with Cos4-sha
 ## Examples
 ```jldoctest
 julia> l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2.0, ellip=1.0)
-[MonochromaticLaser] Envelope cos⁴, wavelen=800 nm, 2 cycle(s), ε=1 [circularly polarized]
+[MonochromaticLaser] Envelope cos⁴, peak intensity 4.0e+14 W/cm², wavelen=800 nm, 2 cycle(s), ε=1 [circularly polarized]
 
 julia> using Unitful
 
 julia> l = Cos4Laser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", duration=5.34u"fs", ellip=0.0)
-[MonochromaticLaser] Envelope cos⁴, wavelen=800.00 nm, 2.00 cycle(s), ε=0 [linearly polarized]
+[MonochromaticLaser] Envelope cos⁴, peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, 2.00 cycle(s), ε=0 [linearly polarized]
 """
 function Cos4Laser(;peak_int,
                     wave_len=0, ang_freq=0,   # must specify either wave_len or ang_freq.
@@ -171,6 +171,7 @@ end
 "Prints the information about the laser."
 function Base.show(io::IO, l::Cos4Laser)
     print(io, "[MonochromaticLaser] Envelope cos⁴, ")
+    @printf(io, "peak intensity %.1e W/cm², ", l.peak_int)
     if isinteger(l.wave_len)
         @printf(io, "wavelen=%i nm, ", l.wave_len)
     else
