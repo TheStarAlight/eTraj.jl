@@ -13,7 +13,7 @@ struct WFATSampler <: ElectronSampler
     mc_kz_max;
     cutoff_limit;
     phase_method;   # currently supports :CTMC.
-    mol_ion_orbit_idx;
+    mol_orbit_ridx;
 
     function WFATSampler(;
         laser               ::Laser,
@@ -24,7 +24,7 @@ struct WFATSampler <: ElectronSampler
         sample_cutoff_limit ::Real,
         sample_monte_carlo  ::Bool,
         traj_phase_method   ::Symbol,
-        mol_orbit_idx       ::Integer,
+        mol_orbit_ridx      ::Integer,
             #* for step-sampling (!sample_monte_carlo)
         ss_kd_max           ::Real,
         ss_kd_num           ::Integer,
@@ -67,10 +67,10 @@ struct WFATSampler <: ElectronSampler
             end
         end
         # check molecular orbital data
-        if ! (mol_orbit_idx in MolWFATAvailableIndices(target))
-            MolCalcWFATData!(target, mol_orbit_idx)
+        if ! (mol_orbit_ridx in MolWFATAvailableIndices(target))
+            MolCalcWFATData!(target, mol_orbit_ridx)
         end
-        if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≥ 0
+        if IonPotential(target, mol_orbit_ridx) <= 0
             error("[WFATSampler] The energy of the ionizing orbit is non-negative.")
         end
         # check Keldysh parameter.
@@ -97,7 +97,7 @@ struct WFATSampler <: ElectronSampler
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 0,0,0,  # for MC params. pass empty values
-                sample_cutoff_limit,traj_phase_method,mol_orbit_idx)
+                sample_cutoff_limit,traj_phase_method,mol_orbit_ridx)
         else
             seed = 1836 # seed is mp/me
             t_samples = sort!(rand(MersenneTwister(seed), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
@@ -106,7 +106,7 @@ struct WFATSampler <: ElectronSampler
                 t_samples,
                 0:0,0:0,    # for SS params. pass empty values
                 mc_kt_num, mc_kd_max, mc_kz_max,
-                sample_cutoff_limit,traj_phase_method,mol_orbit_idx)
+                sample_cutoff_limit,traj_phase_method,mol_orbit_ridx)
         end
     end
 end
@@ -133,7 +133,7 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
     Ftr = hypot(Fxtr,Fytr)
     ϕ  = atan(-Fytr,-Fxtr)   # direction of tunneling exit, which is opposite to F.
     Z  = AsympNuclCharge(sp.target)
-    Ip = IonPotential(sp.target, sp.mol_ion_orbit_idx)
+    Ip = IonPotential(sp.target, sp.mol_orbit_ridx)
     @inline ADKAmpExp(F,Ip,kd,kz) = exp(-(kd^2+kz^2+2*Ip)^1.5/3F)
     cutoff_limit = sp.cutoff_limit
 
@@ -145,10 +145,10 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
     κ = sqrt(2Ip)
     n = Z/κ # n* = Z/κ
     # prepare G (structure factor)
-    nξMax, mMax = MolWFATMaxChannels(sp.target, sp.mol_ion_orbit_idx)
+    nξMax, mMax = MolWFATMaxChannels(sp.target, sp.mol_orbit_ridx)
     G_data = zeros(ComplexF64, nξMax+1, 2mMax+1)    # to obtain G_nξ,m, call G_data[nξ+1, m+mMax+1]
     for nξ in 0:nξMax, m in -mMax:mMax
-        G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.mol_ion_orbit_idx,nξ,m,β,γ)
+        G_data[nξ+1, m+mMax+1] = MolWFATStructureFactor_G(sp.target,sp.mol_orbit_ridx,nξ,m,β,γ)
     end
     # define W_F (modified field factor)
     W(nξ,abs_m,kd,kz) = (κ^(abs_m+2)/2/Ftr^(abs_m+1)/factorial(abs_m)) * (4κ^2/Ftr)^(2n-2nξ-abs_m-1) * (kd^2+kz^2)^abs_m * exp(-2*(κ^2+kd^2+kz^2)^1.5/3Ftr)

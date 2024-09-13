@@ -81,7 +81,8 @@ Performs a semiclassical simulation with given parameters.
                                                               To combine the prefactor and Jacobian factor, pass a `Set` containing `:Pre` OR `:PreCC`, as well as `:Jac`.
 
 ## Optional params. for target `Molecule`:
-- `mol_orbit_idx = 0`       : Index of the ionizing orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1) (default `0`).
+- `mol_orbit_ridx = 0`  : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                          For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
 
 ## Optional params. for interface:
 - `show_progress = true`    : Indicates whether to show the progressbar (Default `true`).
@@ -118,7 +119,7 @@ function perform_traj_simulation(;
         #* opt. params. for SFA, SFA-AE and ADK methods
     rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}} = :Full,
         #* opt. params. for target `MoleculeBase`
-    mol_orbit_idx       ::Integer   = 0,
+    mol_orbit_ridx       ::Integer   = 0,
         #* params. for interface
     show_progress       ::Bool      = true
     )
@@ -130,7 +131,7 @@ function perform_traj_simulation(;
         mc_kt_num, mc_kd_max, mc_kz_max,
         traj_phase_method, traj_rtol, sample_cutoff_limit, sample_monte_carlo, rate_prefix,
         output_fmt, output_path,
-        mol_orbit_idx
+        mol_orbit_ridx
         )   # pack up all parameters
     job = TrajectorySimulationJob(;kwargs...)
     batch_num = ElectronSamplers.batch_num(job.sp)
@@ -154,7 +155,7 @@ function TrajectorySimulationJob(; kwargs...)
         ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
         mc_kt_num, mc_kd_max, mc_kz_max,
         traj_phase_method, traj_rtol, sample_cutoff_limit, sample_monte_carlo, rate_prefix,
-        mol_orbit_idx = kwargs
+        mol_orbit_ridx = kwargs
     #* check parameters
     # make conversions
     (traj_t_final isa Quantity) && (traj_t_final = (uconvert(u"fs", traj_t_final) |> auconvert).val)
@@ -199,7 +200,7 @@ function TrajectorySimulationJob(; kwargs...)
         ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
         mc_kt_num, mc_kd_max, mc_kz_max,
         traj_phase_method, traj_rtol, sample_cutoff_limit, sample_monte_carlo, rate_prefix,
-        mol_orbit_idx
+        mol_orbit_ridx
         )   # pack up all parameters
     sp::ElectronSampler = init_sampler(;kwargs...)
     #* prepare storage
@@ -242,7 +243,7 @@ function TrajectorySimulationJob(; kwargs...)
         @pack! params = (rate_prefix)
     end
     if target isa MoleculeBase
-        @pack! params = (mol_orbit_idx)
+        @pack! params = (mol_orbit_ridx)
     end
     #* initialize job
     return TrajectorySimulationJob(sp,laser,target,dimension,traj_phase_method,traj_t_final,traj_rtol,final_p_max,final_p_num,px,py,pz,nthreads,0,0,ion_prob_sum_temp,ion_prob_collect,classical_prob,ion_prob_final,file,output_fmt,output_path,params)

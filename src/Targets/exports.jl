@@ -10,11 +10,12 @@ export AngularQuantumNumber, MagneticQuantumNumber, AsympCoeff, SoftCore, Quanti
 
 export MoleculeBase, GenericMolecule
 # MoleculeBase's implementations
-export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolEnergyDataAvailable, MolHOMOEnergy, MolHOMOIndex
+export LoadMolecule
+export MolAtoms, MolAtomCoords, MolCharge, MolSpin, MolEnergyLevels, MolEnergyLevel, MolOrbitalOccupation, MolEnergyDataAvailable, MolHOMOEnergy
 export MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolWFATMaxChannels
 export MolAsympCoeffAvailableIndices, MolAsympCoeff, MolAsympCoeff_lMax
 export MolRotation, SetMolRotation!, MolExportAtomInfo
-export MolCalcEnergyData!, MolCalcWFATData!, MolCalcAsympCoeff!, MolSaveDataAs!
+export MolInitCalculator!, MolCalcWFATData!, MolCalcAsympCoeff!, MolSaveDataAs!
 
 export MolecularCalculatorBase
 export PySCFMolecularCalculator

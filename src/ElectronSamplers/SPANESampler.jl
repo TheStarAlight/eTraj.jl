@@ -14,7 +14,7 @@ struct SPANESampler <: ElectronSampler
     cutoff_limit;
     phase_method;
     rate_prefix;
-    mol_ion_orbit_idx;
+    mol_orbit_ridx;
 
     function SPANESampler(;
         laser               ::Laser,
@@ -36,7 +36,7 @@ struct SPANESampler <: ElectronSampler
         mc_kd_max           ::Real,
         mc_kz_max           ::Real,
             #* for target <: MoleculeBase
-        mol_orbit_idx       ::Integer,
+        mol_orbit_ridx      ::Integer,
         kwargs...   # kwargs are surplus params.
         )
 
@@ -77,10 +77,10 @@ struct SPANESampler <: ElectronSampler
         end
         # check molecular orbital
         if target isa MoleculeBase
-            if ! (mol_orbit_idx in MolAsympCoeffAvailableIndices(target))
-                MolCalcAsympCoeff!(target, mol_orbit_idx)
+            if ! (mol_orbit_ridx in MolAsympCoeffAvailableIndices(target))
+                MolCalcAsympCoeff!(target, mol_orbit_ridx)
             end
-            if MolEnergyLevels(target)[MolHOMOIndex(target)+mol_orbit_idx] ≥ 0
+            if IonPotential(target, mol_orbit_ridx) <= 0
                 error("[SPANESampler] The energy of the ionizing orbital of the molecule target is non-negative.")
             end
         end
@@ -128,7 +128,7 @@ struct SPANESampler <: ElectronSampler
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
                 range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
                 0,0,0, # for MC params. pass empty values
-                sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_idx)
+                sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_ridx)
         else
             seed = 1836 # seed is mp/me :P
             t_samples = sort!(rand(MersenneTwister(seed), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
@@ -137,7 +137,7 @@ struct SPANESampler <: ElectronSampler
                 t_samples,
                 0:0,0:0,    # for SS params. pass empty values
                 mc_kt_num, mc_kd_max, mc_kz_max,
-                sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_idx)
+                sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_ridx)
         end
     end
 end
@@ -172,7 +172,7 @@ function gen_electron_batch(sp::SPANESampler, batch_id::Integer)
     Z = AsympNuclCharge(sp.target)
     Ip =
         if target isa MoleculeBase
-            IonPotential(sp.target, sp.mol_ion_orbit_idx)
+            IonPotential(sp.target, sp.mol_orbit_ridx)
         elseif target isa SAEAtomBase
             IonPotential(sp.target)
         end
@@ -182,8 +182,8 @@ function gen_electron_batch(sp::SPANESampler, batch_id::Integer)
         0.0
     end
     if target isa MoleculeBase
-        asymp_coeff = MolAsympCoeff(sp.target, sp.mol_ion_orbit_idx)
-        lMax = MolAsympCoeff_lMax(sp.target, sp.mol_ion_orbit_idx)
+        asymp_coeff = MolAsympCoeff(sp.target, sp.mol_orbit_ridx)
+        lMax = MolAsympCoeff_lMax(sp.target, sp.mol_orbit_ridx)
     elseif target isa SAEAtomBase
         l = AngularQuantumNumber(sp.target)
         m = MagneticQuantumNumber(sp.target)

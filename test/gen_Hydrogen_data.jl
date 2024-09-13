@@ -1,11 +1,14 @@
 # gen_Hydrogen_data.jl
-# This script generates the Molecule_Hydrogen.h5
+# This script generates the Molecule_Hydrogen.jld2
+
+# Tested on AMD Ryzen 9 7950X with 24 threads.
+# WFAT calculation takes ~2 mins, asymp_coeff takes ~4 secs.
 
 using SemiclassicalSFI
 using SemiclassicalSFI.Targets
 
-mol = GenericMolecule(atoms=["H","H"], atom_coords=[0 0 -0.375; 0 0 0.375], charge=0, name="Hydrogen")
-MolCalcEnergyData!(mol, MCType=PySCFMolecularCalculator, basis="cc-pVTZ")
-MolCalcWFATData!(mol, MCType=PySCFMolecularCalculator, grid_rNum=100, grid_θNum=30, grid_ϕNum=30, sf_nξMax=3, sf_mMax=3, sf_lMax=6)
-MolCalcAsympCoeff!(mol, MCType=PySCFMolecularCalculator, grid_rNum=50, grid_rReg=(3,8), grid_θNum=30, grid_ϕNum=30, l_max=6)
-MolSaveDataAs!(mol, "Molecule_Hydrogen.h5")
+molH2 = GenericMolecule(atoms=["H","H"], atom_coords=[0 0 -0.375; 0 0 0.375], charge=0, name="Hydrogen")
+MolInitCalculator!(molH2, basis="cc-pVQZ")
+@time MolCalcWFATData!(molH2, orbit_ridx=0, grid_rNum=400, grid_θNum=90, grid_ϕNum=90, sf_nξMax=6, sf_mMax=6, sf_lMax=6)
+@time MolCalcAsympCoeff!(molH2, orbit_ridx=0, grid_rNum=90, grid_rReg=(3,8), grid_θNum=90, grid_ϕNum=90, l_max=6)
+MolSaveDataAs!(molH2, "Molecule_Hydrogen.jld2")

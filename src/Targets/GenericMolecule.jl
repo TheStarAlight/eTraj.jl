@@ -1,9 +1,6 @@
 
-"Represents a generic molecule."
+"Represents a generic molecule (ion)."
 mutable struct GenericMolecule <: MoleculeBase
-
-    "Path to the data file that stores information and data about the molecule."
-    data_path::String
 
     "Molecular calculator that calculates energy, structure factors ... of the molecule."
     mol_calc
@@ -12,10 +9,12 @@ mutable struct GenericMolecule <: MoleculeBase
 
     "Atoms in the molecule, stored as a vector of String."
     atoms;
-    "Atoms' coordinates in the molecule, stored as a N×3 matrix."
+    "Atoms' coordinates in the molecule (in Å), stored as a N×3 matrix."
     atom_coords;
     "Total charge of the molecule (ion)."
     charge::Integer;
+    "Total spin of the molecule (ion)."
+    spin::Integer;
     "Name of the molecule."
     name::String;
 
@@ -25,13 +24,13 @@ mutable struct GenericMolecule <: MoleculeBase
     energy_data_available::Bool;
     "Energy levels of all the molecular orbitals (MO) of the molecule (in a.u.)."
     energy_levels;
-    "The index of the HOMO of the molecule."
-    HOMO_index;
+    "Orbital occupation of the energy levels."
+    orbit_occ;
 
     # WFAT IntData
     wfat_data_available::Bool;
-    "Available orbital indices of WFAT IntData."
-    wfat_orbital_indices::Set;
+    "Available orbital indices of WFAT integral data."
+    wfat_indices::Set;
     "WFAT integral data of the molecule's molecular orbitals."
     wfat_intdata::Dict;
     "Orbital dipole moment of the molecule's molecular orbitals."
@@ -40,7 +39,7 @@ mutable struct GenericMolecule <: MoleculeBase
     # Asymptotic Coeff
     asymp_coeff_available::Bool;
     "Available orbital indices of asymptotic coefficients."
-    asymp_coeff_orbital_indices::Set;
+    asymp_coeff_indices::Set;
     "Asymptotic coefficients of the molecule's molecular orbitals."
     asymp_coeff::Dict;
 
@@ -54,112 +53,68 @@ end
 
 #* fresh init without data.
 """
-    GenericMolecule(atoms, atom_coords [,charge=0] [,name] [,data_path] [,calc_energy=false] [,rot_α=0.0] [,rot_β=0.0] [,rot_γ=0.0])
+    GenericMolecule(atoms, atom_coords [,charge=0] [,spin=0] [,name] [,rot_α=0.0] [,rot_β=0.0] [,rot_γ=0.0])
 
 Initializes a new `GenericMolecule` with given parameters.
 
 ## Parameters
 - `atoms`                   : Atoms in the molecule, stored as a `Vector` of `String`.
-- `atom_coords`             : Atoms' coordinates in the molecule, stored as a N×3 `Matrix`.
-- `charge`                  : Total charge of the molecule (ion) (*optional, default 0*).
+- `atom_coords`             : Atoms' coordinates in the molecule (numerically in Å or a `Unitful.Quantity`), stored as a N×3 `Matrix`.
+- `charge`                  : Total charge of the molecule (ion) (*optional, default `0`*).
+- `spin`                    : Total spin of the molecule (*optional, default `0`*). Note that each unpaired electron contributes 1/2.
 - `name`                    : Name of the molecule (*optional*).
-- `data_path`               : Path to the molecule's data (*default empty*). Specifying an empty string indicates no saving (but can still be saved later by calling method `MolSaveDataAs`).
-- `calc_energy`             : Indicates whether to calculate the energy data of the molecule upon initialization (optional, *default `false`*).
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (*optional, default 0*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (*optional, default `0`*).
 
 ## Example
 ```
-julia> m1 = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375], name="Hydrogen")
+julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375], name="Hydrogen")
 [GenericMolecule] Hydrogen
-
-julia> m2 = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375], name="Hydrogen", data_path="Molecule_Hydrogen.h5", calc_energy=true)
-[ Info: [GenericMolecule] Data saved for molecule Hydrogen at "Molecule_Hydrogen.h5".
-[ Info: [PySCFMolecularCalculator] Running molecular calculation...
-[ Info: Finished initialization [taking 0.124436023 second(s)].
-[ Info: [GenericMolecule] Energy data saved for molecule Hydrogen at "Molecule_Hydrogen.h5".
-[GenericMolecule] Hydrogen, HOMO_energy=-0.5894
 ```
 """
-function GenericMolecule(;atoms::Vector,atom_coords::Matrix,charge::Integer=0,name::String="[NA]",data_path::String="",calc_energy::Bool=false,rot_α=0.,rot_β=0.,rot_γ=0.)
+function GenericMolecule(;atoms::Vector,atom_coords::Matrix,charge::Integer=0,spin::Integer=0,name::String="[NA]",rot_α=0.,rot_β=0.,rot_γ=0.)
     @assert eltype(atoms) <: String   "[GenericMolecule] Element type of `atoms` must be String."
-    @assert ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[GenericMolecule] `atom_coords` should be of size N×3."
+    @assert atom_coords isa Matrix && ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[GenericMolecule] `atom_coords` should be a Matrix of size N×3."
+    @assert spin>=0 "[GenericMolecule] `spin` must be non-negative."
+    # unit transformation
+    if eltype(atom_coords) <: Quantity
+        atom_coords = map(q->uconvert(u"Å", q).val, atom_coords)
+    end
     mol = GenericMolecule(
-            data_path,  # data_path
-            nothing,    # mol_calc
-            atoms, atom_coords, charge, name,
-            false, nothing, -1,             # energy_data
-            false, Set(), Dict(), Dict(),   # wfat_data
-            false, Set(), Dict(),           # asymp_coeff
-            rot_α,rot_β,rot_γ)
-    if ! (data_path=="")
-        MolSaveDataAs!(mol, data_path)
-    end
-    if calc_energy
-        MolCalcEnergyData!(mol)
-    end
+        nothing,    # mol_calc
+        atoms, atom_coords, charge, spin, name,
+        false, Float64[], Float64[],        # energy_data
+        false, Set(), Dict(), Dict(),   # wfat_data
+        false, Set(), Dict(),           # asymp_coeff
+        rot_α,rot_β,rot_γ)
     return mol
 end
 
 #* init from data.
 """
-    GenericMolecule(ext_data_path; [,rot_α=0.0] [,rot_β=0.0] [,rot_γ=0.0])
+    LoadMolecule(ext_data_path; [rot_α=0.0] [,rot_β=0.0] [,rot_γ=0.0])
 
-Initializes a new `GenericMolecule` with the data stored in `data_path`.
+Initializes a new `GenericMolecule` with the data stored in `ext_data_path`.
 
 ## Parameters
 - `ext_data_path`           : Path to the molecule's data stored externally.
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (*optional, default 0*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (*optional, default `0.0`*).
 """
-function GenericMolecule(ext_data_path::String; rot_α=0.,rot_β=0.,rot_γ=0.)
-    file = h5open(ext_data_path,"r")
-    # reads MolInfo
-    info_group = open_group(file, "Info")
-    atoms = read_dataset(info_group, "atoms")
-    atom_coords = read_dataset(info_group, "atom_coords")
-    charge = read_dataset(info_group, "charge")
-    name = read_dataset(info_group, "name")
-    # reads MolEnergy
-    energy_data_available = haskey(file, "Energy")
-    energy_levels = nothing
-    HOMO_index = -1
-    if energy_data_available
-        energy_group = open_group(file, "Energy")
-        energy_levels = read_dataset(energy_group, "energy_levels")
-        HOMO_index = read_dataset(energy_group, "HOMO_index")
-    end
-    # reads WFAT data
-    wfat_data_available = haskey(file, "WFAT Data")
-    wfat_orbital_indices = Set()
-    wfat_intdata = Dict()
-    wfat_μ = Dict()
-    if wfat_data_available
-        wfat_group = open_group(file, "WFAT Data")
-        wfat_orbital_indices = Set(read_dataset(wfat_group, "orbital_indices"))
-        for idx in wfat_orbital_indices
-            wfat_intdata[idx] = read_dataset(wfat_group, "intdata_$idx")
-            wfat_μ[idx] = read_dataset(wfat_group, "μ_$idx")
-        end
-    end
-    # reads asymptotic coefficients
-    asymp_coeff_available = haskey(file, "Asymptotic Coefficients")
-    asymp_coeff_orbital_indices = Set()
-    asymp_coeff = Dict()
-    if asymp_coeff_available
-        asymp_coeff_group = open_group(file, "Asymptotic Coefficients")
-        asymp_coeff_orbital_indices = Set(read_dataset(asymp_coeff_group, "orbital_indices"))
-        for idx in asymp_coeff_orbital_indices
-            asymp_coeff[idx] = read_dataset(asymp_coeff_group, "coeff_$idx")
-        end
-    end
-
+function LoadMolecule(ext_data_path::String; rot_α=0.,rot_β=0.,rot_γ=0.)
+    file = jldopen(ext_data_path ,"r")
+    @unpack atoms, atom_coords, charge, spin, name,
+        energy_levels, orbit_occ,
+        wfat_indices, wfat_intdata, wfat_μ,
+        asymp_coeff_indices, asymp_coeff = file
+    energy_data_available = !isempty(energy_levels)
+    wfat_data_available = !isempty(wfat_indices)
+    asymp_coeff_available = !isempty(asymp_coeff_indices)
     close(file)
     return GenericMolecule(
-        ext_data_path,
         nothing,
-        atoms, atom_coords, charge, name,
-        energy_data_available, energy_levels, HOMO_index,
-        wfat_data_available, wfat_orbital_indices, wfat_intdata, wfat_μ,
-        asymp_coeff_available, asymp_coeff_orbital_indices, asymp_coeff,
+        atoms, atom_coords, charge, spin, name,
+        energy_data_available, energy_levels, orbit_occ,
+        wfat_data_available, wfat_indices, wfat_intdata, wfat_μ,
+        asymp_coeff_available, asymp_coeff_indices, asymp_coeff,
         rot_α,rot_β,rot_γ)
 end
 
@@ -172,74 +127,147 @@ MolAtoms(mol::GenericMolecule) = mol.atoms
 MolAtomCoords(mol::GenericMolecule) = mol.atom_coords
 "Gets the total charge of the molecule (ion)."
 MolCharge(mol::GenericMolecule) = mol.charge
+"Gets the total spin of the molecule (ion)."
+MolSpin(mol::GenericMolecule) = mol.spin
 "Gets the availability of the energy data of the molecule."
 function MolEnergyDataAvailable(mol::GenericMolecule)
     return mol.energy_data_available
 end
-"Gets the energy levels of the molecule's MOs."
-function MolEnergyLevels(mol::GenericMolecule)
+"""
+    MolEnergyLevels(mol::GenericMolecule [,spin=1|2])
+
+Gets the energy levels of the molecule's MOs.
+
+- `spin`: For closed-shell molecules, the `spin` param should be neglected.
+          For open-shell molecules (with non-zero spins), `spin=1` indicates α orbitals and `spin=2` indicates β orbitals, neglecting `spin` would return both two sets of orbitals.
+"""
+function MolEnergyLevels(mol::GenericMolecule, spin::Integer=0)
     if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
+        error("[GenericMolecule] The energy data is not available, calculate first.")
     end
-    return mol.energy_levels
+    if spin == 0 || mol.spin == 0
+        return mol.energy_levels
+    else
+        if spin == 1
+            mol.energy_levels[1,:]
+        else # spin == 2
+            mol.energy_levels[2,:]
+        end
+    end
 end
-"Gets the orbital index of the molecule's HOMO."
-function MolHOMOIndex(mol::GenericMolecule)
+"""
+    MolEnergyLevel(mol::GenericMolecule, orbit_ridx)
+
+Gets the energy level of the molecule's selected MO.
+
+- `orbit_ridx`: Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
+"""
+function MolEnergyLevel(mol::GenericMolecule, orbit_ridx)
     if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
+        error("[GenericMolecule] The energy data is not available, calculate first.")
     end
-    return mol.HOMO_index
+    if mol.spin != 0
+        @assert orbit_ridx isa Tuple{Int,Int} && orbit_ridx[1] in (1,2) "[GenericMolecule] For an open-shell molecule, `orbit_ridx` should be a two-element tuple `(spin, ridx)`."
+        mol.energy_levels[orbit_ridx[1],_get_HOMO_idx(mol.orbit_occ[orbit_ridx[1],:])+orbit_ridx[2]]
+    else
+        @assert isinteger(orbit_ridx) "[GenericMolecule] For a closed-shell molecule, `orbit_ridx` should be an integer."
+        mol.energy_levels[_get_HOMO_idx(mol.orbit_occ)+orbit_ridx]
+    end
 end
-"Gets the energy of the molecule's HOMO."
-function MolHOMOEnergy(mol::GenericMolecule)
+"""
+    MolOrbitalOccupation(mol::GenericMolecule [,spin=1|2])
+
+Gets the occupation of the molecule's MOs.
+
+- `spin`: For closed-shell molecules, the `spin` param should be neglected.
+          For open-shell molecules (with non-zero spins), `spin=1` indicates α orbitals and `spin=2` indicates β orbitals, neglecting `spin` would return both two sets of orbitals.
+"""
+function MolOrbitalOccupation(mol::GenericMolecule, spin::Integer=0)
     if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
+        error("[GenericMolecule] The energy data is not available, calculate first.")
     end
-    return mol.energy_levels[mol.HOMO_index]
+    if spin == 0 || mol.spin == 0
+        return mol.orbit_occ
+    else
+        if spin == 1
+            mol.orbit_occ[1,:]
+        else # spin == 2
+            mol.orbit_occ[2,:]
+        end
+    end
+end
+"""
+    MolHOMOEnergy(mol::GenericMolecule [,spin=1|2])
+
+Gets the energy of the molecule's HOMO.
+
+- `spin`: For closed-shell molecules, the `spin` param should be neglected.
+          For open-shell molecules (with non-zero spins), `spin=1` indicates α orbitals and `spin=2` indicates β orbitals, neglecting `spin` would give both.
+"""
+function MolHOMOEnergy(mol::GenericMolecule, spin::Integer=0)
+    if ! mol.energy_data_available
+        error("[GenericMolecule] The energy data is not available, calculate first.")
+    end
+    if spin == 0
+        return mol.energy_levels[_get_HOMO_idx(mol.orbit_occ)]
+    else
+        if spin == 1
+            return mol.energy_levels[1,_get_HOMO_idx(mol.orbit_occ[1,:])]
+        elseif spin == 2
+            return mol.energy_levels[2,_get_HOMO_idx(mol.orbit_occ[2,:])]
+        else
+            return [mol.energy_levels[1,_get_HOMO_idx(mol.orbit_occ[1,:])], mol.energy_levels[2,_get_HOMO_idx(mol.orbit_occ[2,:])]]
+        end
+    end
+end
+function _get_HOMO_idx(orbit_occ)
+    # gets the index of HOMO according to orbit_occ
+    findlast(!iszero, orbit_occ)
+end
+function _get_LUMO_idx(orbit_occ)
+    # gets the index of LUMO according to orbit_occ
+    findfirst(iszero, orbit_occ)
 end
 "Gets the available orbital indices (relative to HOMO) of the molecule's WFAT data."
 function MolWFATAvailableIndices(mol::GenericMolecule)
     return if mol.wfat_data_available
-        mol.wfat_orbital_indices
+        mol.wfat_indices
     else
         Set()
     end
 end
 """
-Gets the WFAT data in format `(μ, IntData)`.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+Gets the WFAT data in format `(μ, int_data)`.
+- `orbit_ridx`: Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
 """
-function MolWFATData(mol::GenericMolecule, orbitIdx_relHOMO::Integer=0)
-    if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
+function MolWFATData(mol::GenericMolecule, orbit_ridx)
+    if ! mol.energy_data_available || ! (mol.wfat_data_available || (orbit_ridx in mol.wfat_indices))
+        error("[GenericMolecule] The WFAT data is not available, calculate first.")
     end
-    if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
-        MolCalcWFATData!(mol, orbitIdx_relHOMO)
-    end
-    return mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO]
+    return mol.wfat_μ[orbit_ridx], mol.wfat_intdata[orbit_ridx]
 end
 """
-    MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO, nξ, m, β, γ)
+    MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ, m, β, γ)
 
 Gets the WFAT structure factor ``G_{n_ξ m}`` according to the given Euler angles `β` and `γ` (ZYZ convention).
 Note: the rotational Euler angles of the molecule would not be applied.
 
 ## Parameters
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1).
+- `orbit_ridx`: Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
 - `nξ`  : Parabolic quantum number nξ=0,1,2,⋯ (nξ up to 5 is calculated by default).
 - `m`   : Parabolic quantum number m=⋯,-1,0,1,⋯ (|m| up to 5 is calculated by default).
 - `β`   : Euler angle β, passed as a `Real` value or an `AbstractVector` of `Real`.
 - `γ`   : Euler angle γ, passed as a `Real` value or an `AbstractVector` of `Real`.
 """
-function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β::Real, γ::Real)
-    if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
-    end
-    if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
-        MolCalcWFATData!(mol, orbitIdx_relHOMO)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, β::Real, γ::Real)
+    if ! mol.energy_data_available || ! mol.wfat_data_available || !(orbit_ridx in mol.wfat_indices)
+        error("[GenericMolecule] The WFAT data is not available, calculate first.")
     end
     @assert nξ≥0 "[GenericMolecule] nξ should be non-negative."
-    intdata = mol.wfat_intdata[orbitIdx_relHOMO]
+    intdata = mol.wfat_intdata[orbit_ridx]
     nξMax = size(intdata,1) - 1
     mMax = round(Int,(size(intdata,2)-1)/2)
     lMax = size(intdata,3) - 1
@@ -251,24 +279,21 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Intege
         @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
-    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbitIdx_relHOMO])[3]   # the result is independent of α
+    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
 
     sum = zero(ComplexF64)
     for l in abs(m):lMax, m_ in -l:l
         sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
     end
-    return sum * exp(-sqrt(2IonPotential(mol,orbitIdx_relHOMO))*μz(β,γ))
+    return sum * exp(-sqrt(2IonPotential(mol,orbit_ridx))*μz(β,γ))
 end
-function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Integer, nξ::Integer, m::Integer, β::AbstractVector{T} where T<:Real, γ::AbstractVector{T} where T<:Real)
-    if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
-    end
-    if ! (mol.wfat_data_available || (orbitIdx_relHOMO in mol.wfat_orbital_indices))
-        MolCalcWFATData!(mol, orbitIdx_relHOMO)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, β::AbstractVector{T} where T<:Real, γ::AbstractVector{T} where T<:Real)
+    if ! mol.energy_data_available || ! mol.wfat_data_available || !(orbit_ridx in mol.wfat_indices)
+        error("[GenericMolecule] The WFAT data is not available, calculate first.")
     end
     @assert size(β,1)==size(γ,1) "[GenericMolecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
     @assert nξ≥0 "[GenericMolecule] nξ should be non-negative."
-    intdata = mol.wfat_intdata[orbitIdx_relHOMO]
+    intdata = mol.wfat_intdata[orbit_ridx]
     nξMax = size(intdata,1) - 1
     mMax = round(Int,(size(intdata,2)-1)/2)
     lMax = size(intdata,3) - 1
@@ -280,49 +305,47 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbitIdx_relHOMO::Intege
         @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
-    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbitIdx_relHOMO])[3]   # the result is independent of α
+    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
 
     sum = zeros(ComplexF64,size(β))
     for l in abs(m):lMax, m_ in -l:l
         sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
     end
-    κ = sqrt(2IonPotential(mol,orbitIdx_relHOMO))
+    κ = sqrt(2IonPotential(mol,orbit_ridx))
     return @. sum * exp(-κ*μz(β,γ))
 end
 
 "Gets the maximum value of nξ and |m| calculated in the WFAT integral data."
-function MolWFATMaxChannels(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
-    μ, intdata = MolWFATData(mol, orbitIdx_relHOMO)
-    nξMax = size(intdata,1) - 1
-    mMax = round(Int,(size(intdata,2)-1)/2)
+function MolWFATMaxChannels(mol::GenericMolecule, orbit_ridx)
+    μ, int_data = MolWFATData(mol, orbit_ridx)
+    nξMax = size(int_data,1) - 1
+    mMax = round(Int,(size(int_data,2)-1)/2)
     return (nξMax, mMax)
 end
 
 "Gets the available orbital indices (relative to HOMO) of the molecule's asymptotic coefficients."
 function MolAsympCoeffAvailableIndices(mol::GenericMolecule)
     return if mol.asymp_coeff_available
-        mol.asymp_coeff_orbital_indices
+        mol.asymp_coeff_indices
     else
         Set()
     end
 end
 """
 Gets the asymptotic coefficients of the molecule.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
+- `orbit_ridx`: Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
 """
-function MolAsympCoeff(mol::GenericMolecule, orbitIdx_relHOMO::Integer=0)
-    if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
+function MolAsympCoeff(mol::GenericMolecule, orbit_ridx)
+    if ! mol.energy_data_available || ! mol.asymp_coeff_available || !(orbit_ridx in mol.asymp_coeff_indices)
+        error("[GenericMolecule] The asymptotic coefficient is not available, calculate first.")
     end
-    if ! (mol.asymp_coeff_available || (orbitIdx_relHOMO in mol.asymp_coeff_orbital_indices))
-        MolCalcAsympCoeff!(mol, orbitIdx_relHOMO)
-    end
-    return mol.asymp_coeff[orbitIdx_relHOMO]
+    return mol.asymp_coeff[orbit_ridx]
 end
 
 "Gets the maximum value of l calculated in the asymptotic coefficients."
-function MolAsympCoeff_lMax(mol::GenericMolecule, orbitIdx_relHOMO::Integer=0)
-    return size(MolAsympCoeff(mol, orbitIdx_relHOMO), 1) - 1
+function MolAsympCoeff_lMax(mol::GenericMolecule, orbit_ridx::Integer=0)
+    return size(MolAsympCoeff(mol, orbit_ridx), 1) - 1
 end
 
 """
@@ -348,223 +371,141 @@ Exports the given molecule's atom information to string as `MolecularCalculator`
 **Note**: Rotations defined by the Euler angles wouldn't be applied.
 """
 function MolExportAtomInfo(mol::GenericMolecule)
-    atomToString(i_atm) = join([String(mol.atoms[i_atm]),mol.atom_coords[i_atm,1:3]], " ")
-    return join(map(atomToString, eachindex(mol.atoms)),"; ")
+    atom2str(i_atm) = join([String(mol.atoms[i_atm]),mol.atom_coords[i_atm,1:3]], " ")
+    return join(map(atom2str, eachindex(mol.atoms)),"; ")
 end
 
 # data calculation and operation
-"""
-    MolCalcEnergyData!(mol::GenericMolecule, MCType = PySCFMolecularCalculator; kwargs...)
 
-Calculates the energy data of the molecule and saves the data.
-
-- `MCType`      : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
-- `kwargs...`   : Keyword arguments to pass to the `MolecularCalculator`, e.g. `basis`.
 """
-function MolCalcEnergyData!(mol::GenericMolecule, MCType::Type = PySCFMolecularCalculator; kwargs...)
+    MolInitCalculator!(mol::GenericMolecule, MCType::Type=PySCFMolecularCalculator [;kwargs...])
+
+Initializes the `MolecularCalculator` of `mol` with given parameters.
+- `MCType`      : Type of `MolecularCalculator` if it is not initialized (default is `PySCFMolecularCalculator`).
+- `kwargs...`   : Keyword arguments to pass to the initializer of [`MolecularCalculator`](@ref), e.g., `basis`, ...
+"""
+function MolInitCalculator!(mol::GenericMolecule, MCType::Type = PySCFMolecularCalculator; kwargs...)
     if isnothing(mol.mol_calc)
         if ! (MCType<:MolecularCalculatorBase)
             error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
         end
         mol.mol_calc = MCType(;mol=mol, kwargs...)
+        mol.energy_data_available = true
+        mol.energy_levels = EnergyLevels(mol.mol_calc)
+        mol.orbit_occ = OrbitalOccupation(mol.mol_calc)
+    else
+        @error "[GenericMolecule] Molecule's `MolecularCalculator` is present already."
     end
-    mol.energy_data_available = true
-    mol.energy_levels = EnergyLevels(mol.mol_calc)
-    mol.HOMO_index = HOMOIndex(mol.mol_calc)
-    _MolSaveEnergyData(mol)
-end
-
-function _MolSaveEnergyData(mol::GenericMolecule, file::File)
-    # this method will not close the file handle!
-    if ! mol.energy_data_available
-        return
-    end
-    if ! haskey(file,"Energy")
-        create_group(file,"Energy")
-    end
-    g = open_group(file, "Energy")
-    haskey(g,"energy_levels") && delete_object(g,"energy_levels")   # HDF5 doesn't support overwriting.
-    haskey(g,"HOMO_index") && delete_object(g,"HOMO_index")
-    write_dataset(g,"energy_levels",mol.energy_levels)
-    write_dataset(g,"HOMO_index",mol.HOMO_index)
-end
-function _MolSaveEnergyData(mol::GenericMolecule)
-    # open, write and close.
-    if mol.data_path==""    # would not save if data_path is empty.
-        return
-    end
-    if ! isfile(mol.data_path)
-        error("[GenericMolecule] Destination file \"$(mol.data_path)\" does not exist.")
-    end
-    file = h5open(mol.data_path,"r+")
-    _MolSaveEnergyData(mol,file)
-    close(file)
-    @info "[GenericMolecule] Energy data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    return
 end
 
 """
-    MolCalcWFATData!(mol::GenericMolecule, orbitIdx_relHOMO=0, MCType=PySCFMolecularCalculator; kwargs...)
+    MolCalcWFATData!(mol::GenericMolecule [,orbit_ridx=0] [;kwargs...])
 
-Calculates the WFAT data of the molecule and saves the data.
-- `MCType`              : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
-- `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
-- `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator` and the `calcStructFactorData` method, e.g. `basis`, `grid_rNum`, `grid_rMax`, `sf_lMax`, ⋯
+Calculates the WFAT data of the molecule.
+- `orbit_ridx` : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                 For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
+- `kwargs...` : Keyword arguments to pass to the [`calc_WFAT_data`](@ref) method, e.g. `grid_rNum`, `grid_rMax`, `sf_lMax`, ⋯.
 """
-function MolCalcWFATData!(mol::GenericMolecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
+function MolCalcWFATData!(mol::GenericMolecule, orbit_ridx; kwargs...)
     if isnothing(mol.mol_calc)
-        if ! (MCType<:MolecularCalculatorBase)
-            error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
-        end
-        mol.mol_calc = MCType(;mol=mol, kwargs...)
+        error("[GenericMolecule] Molecule's `MolecularCalculator` is not initialized, call `MolInitCalculator!` first.")
     end
-    if ! mol.energy_data_available  # won't replace if the data exists.
-        MolCalcEnergyData!(mol, MCType)
-    end
-    mol.wfat_data_available = true
-    if isnothing(mol.wfat_orbital_indices)
-        mol.wfat_orbital_indices = Set()
+    if isnothing(mol.wfat_indices)
+        mol.wfat_indices = Set()
         mol.wfat_intdata = Dict()
         mol.wfat_μ = Dict()
     end
-    push!(mol.wfat_orbital_indices, orbitIdx_relHOMO)
-    mol.wfat_μ[orbitIdx_relHOMO], mol.wfat_intdata[orbitIdx_relHOMO] = calc_WFAT_data(;mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
-    _MolSaveWFATData(mol,orbitIdx_relHOMO)
-end
-function _MolSaveWFATData(mol::GenericMolecule, file::File, orbitIdx_relHOMO::Integer)
-    # this method will not close the file handle!
-    if ! mol.wfat_data_available
-        return
+    if mol.spin==0
+        @assert isinteger(orbit_ridx) "[GenericMolecule] For a closed-shell molecule, `orbit_ridx` should be an integer."
+    else
+        @assert orbit_ridx isa Tuple{Int,Int} && orbit_ridx[1] in (1,2) "[GenericMolecule] For an open-shell molecule, `orbit_ridx` should be a two-element tuple `(spin, ridx)`."
     end
-    if ! haskey(file,"WFAT Data")
-        create_group(file,"WFAT Data")
-    end
-    g = open_group(file, "WFAT Data")
-    if ! haskey(g, "orbital_indices")
-        write_dataset(g,"orbital_indices",Vector{Int32}())     # directly passing an empty array [] results in error.
-    end
-    indices = sort!(collect(push!(read_dataset(g,"orbital_indices"),orbitIdx_relHOMO)))
-    haskey(g,"orbital_indices") && delete_object(g,"orbital_indices")   # HDF5 doesn't support overwriting.
-    haskey(g,"intdata_$(orbitIdx_relHOMO)") && delete_object(g,"intdata_$(orbitIdx_relHOMO)")
-    haskey(g,"μ_$(orbitIdx_relHOMO)") && delete_object(g,"μ_$(orbitIdx_relHOMO)")
-    write_dataset(g,"orbital_indices", indices)
-    write_dataset(g,"intdata_$(orbitIdx_relHOMO)", mol.wfat_intdata[orbitIdx_relHOMO])  # WFAT data is stored separately in different datasets!
-    write_dataset(g,"μ_$(orbitIdx_relHOMO)", mol.wfat_μ[orbitIdx_relHOMO])
-end
-function _MolSaveWFATData(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
-    # open, write and close.
-    if mol.data_path==""    # would not save if data_path is empty.
-        return
-    end
-    if ! isfile(mol.data_path)
-        error("[GenericMolecule] Destination file \"$(mol.data_path)\" does not exist.")
-    end
-    file = h5open(mol.data_path,"r+")
-    _MolSaveWFATData(mol,file,orbitIdx_relHOMO)
-    close(file)
-    @info "[GenericMolecule] WFAT data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    mol.wfat_μ[orbit_ridx], mol.wfat_intdata[orbit_ridx] = calc_WFAT_data(;mc=mol.mol_calc, orbit_ridx=orbit_ridx, kwargs...)
+    push!(mol.wfat_indices, orbit_ridx)
+    mol.wfat_data_available = true
+    return
 end
 """
-    MolCalcAsympCoeff!(mol::GenericMolecule, orbitIdx_relHOMO=0, MCType=PySCFMolecularCalculator; kwargs...)
+    MolCalcAsympCoeff!(mol::GenericMolecule, orbit_ridx; kwargs...)
 
-Calculates the asymptotic coefficients of the molecule and saves the data.
-- `MCType`              : Type of `MolecularCalculator` if it is not initialized. `PySCFMolecularCalculator` if `MC` is not specified.
-- `orbitIdx_relHOMO`    : Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1) (default 0).
-- `kwargs...`           : Keyword arguments to pass to the `MolecularCalculator`, e.g. `grid_rNum`, `l_max`.
+Calculates the asymptotic coefficients of the molecule.
+- `orbit_ridx` : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                 For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
+- `kwargs...` : Keyword arguments to pass to the [`calc_asymp_coeff`](@ref), e.g. `grid_rNum`, `l_max`.
 """
-function MolCalcAsympCoeff!(mol::GenericMolecule, orbitIdx_relHOMO::Integer = 0, MCType::Type = PySCFMolecularCalculator; kwargs...)
+function MolCalcAsympCoeff!(mol::GenericMolecule, orbit_ridx; kwargs...)
     if isnothing(mol.mol_calc)
-        if ! (MCType<:MolecularCalculatorBase)
-            error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
-        end
-        mol.mol_calc = MCType(;mol=mol, kwargs...)
-    end
-    if ! mol.energy_data_available  # won't replace if the data exists.
-        MolCalcEnergyData!(mol, MCType)
+        error("[GenericMolecule] Molecule's `MolecularCalculator` is not initialized, call `MolInitCalculator!` first.")
     end
     if isnothing(mol.asymp_coeff_available)
-        mol.asymp_coeff_orbital_indices = Set()
+        mol.asymp_coeff_indices = Set()
         mol.asymp_coeff = Dict()
     end
-    push!(mol.asymp_coeff_orbital_indices, orbitIdx_relHOMO)
-    mol.asymp_coeff[orbitIdx_relHOMO] = calc_asymp_coeff(; mc=mol.mol_calc, orbitIdx_relHOMO=orbitIdx_relHOMO, kwargs...)
+    if mol.spin==0
+        @assert isinteger(orbit_ridx) "[GenericMolecule] For a closed-shell molecule, `orbit_ridx` should be an integer."
+    else
+        @assert orbit_ridx isa Tuple{Int,Int} && orbit_ridx[1] in (1,2) "[GenericMolecule] For an open-shell molecule, `orbit_ridx` should be a two-element tuple `(spin, ridx)`."
+    end
+    mol.asymp_coeff[orbit_ridx] = calc_asymp_coeff(; mc=mol.mol_calc, orbit_ridx=orbit_ridx, kwargs...)
+    push!(mol.asymp_coeff_indices, orbit_ridx)
     mol.asymp_coeff_available = true
-    _MolSaveAsympCoeff(mol, orbitIdx_relHOMO)
-end
-function _MolSaveAsympCoeff(mol::GenericMolecule, file::File, orbitIdx_relHOMO::Integer)
-    # this method will not close the file handle!
-    if ! mol.asymp_coeff_available
-        return
-    end
-    if ! haskey(file, "Asymptotic Coefficients")
-        create_group(file, "Asymptotic Coefficients")
-    end
-    g = open_group(file, "Asymptotic Coefficients")
-    if ! haskey(g, "orbital_indices")
-        write_dataset(g,"orbital_indices",Vector{Int32}())     # directly passing an empty array [] results in error.
-    end
-    indices = sort!(collect(push!(read_dataset(g,"orbital_indices"),orbitIdx_relHOMO)))
-    haskey(g,"orbital_indices") && delete_object(g,"orbital_indices")   # HDF5 doesn't support overwriting.
-    haskey(g,"coeff_$(orbitIdx_relHOMO)") && delete_object(g,"coeff_$(orbitIdx_relHOMO)")
-    write_dataset(g,"orbital_indices", indices)
-    write_dataset(g,"coeff_$(orbitIdx_relHOMO)", mol.asymp_coeff[orbitIdx_relHOMO])
-end
-function _MolSaveAsympCoeff(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
-    # open, write and close.
-    if mol.data_path==""    # would not save if data_path is empty.
-        return
-    end
-    if ! isfile(mol.data_path)
-        error("[GenericMolecule] Destination file \"$(mol.data_path)\" does not exist.")
-    end
-    file = h5open(mol.data_path,"r+")
-    _MolSaveAsympCoeff(mol,file,orbitIdx_relHOMO)
-    close(file)
-    @info "[GenericMolecule] Asymptotic coefficients of orbital index $(orbitIdx_relHOMO) saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+    return
 end
 
-"Saves the data of the `GenericMolecule` to the `data_path` (will change the `Molecule`'s inner field `data_path`)."
-function MolSaveDataAs!(mol::GenericMolecule, data_path::String)
-    function defaultFileName()
+"""
+    MolSaveDataAs!(mol::GenericMolecule, data_path [,overwrite=false])
+
+Saves the data of the `GenericMolecule` to the `data_path`. To overwrite the existing file, set `overwrite=true`.
+"""
+function MolSaveDataAs!(mol::GenericMolecule, data_path::String, overwrite::Bool=false)
+    function default_filename()
         Y,M,D = yearmonthday(now())
         h,m,s = hour(now()), minute(now()), second(now())
         return "Molecule_$(mol.name)_$(string(Y,pad=4))$(string(M,pad=2))$(string(D,pad=2))-$(string(h,pad=2))$(string(m,pad=2))$(string(s,pad=2)).h5"
     end
-    if isfile(data_path) || data_path==""        # if destination exists or not specified, saving as default file name.
-        defaultPath = defaultFileName()
-        if isfile(data_path)
-            @warn "[GenericMolecule] Destination file \"$data_path\" already exists. Saving at \"$defaultPath\"."
-        elseif data_path==""
-            @warn "[GenericMolecule] Destination file not specified. Saving at \"$defaultPath\"."
-        end
-        data_path = defaultPath
-    end
-    mol.data_path = data_path
-    file = h5open(data_path, "w")
-    #* writes Info
-    info_group = create_group(file, "Info")
-    info_group["atoms"] = mol.atoms
-    info_group["atom_coords"] = mol.atom_coords
-    info_group["charge"] = mol.charge
-    info_group["name"] = mol.name
-    #* writes Energy
-    if mol.energy_data_available
-        _MolSaveEnergyData(mol,file)
-    end
-    #* writes WFAT
-    if mol.wfat_data_available
-        for idx in mol.wfat_orbital_indices
-            _MolSaveWFATData(mol,file,idx)
-        end
-    end
-    #* writes Asymptotic Coeff
-    if mol.asymp_coeff_available
-        for idx in mol.asymp_coeff_orbital_indices
-            _MolSaveAsympCoeff(mol,file,idx)
-        end
-    end
+    # if destination exists or not specified, saving as default file name.
+    default_path = default_filename()
+    if isfile(data_path)
+        if !overwrite
+            @warn "[GenericMolecule] Destination file `$data_path` already exists. Saving at `$default_path`."
+            data_path = default_path
+        else
 
-    close(file)
-    @info "[GenericMolecule] Data saved for molecule $(mol.name) at \"$(mol.data_path)\"."
+        end
+    elseif data_path==""
+        @warn "[GenericMolecule] Destination file not specified. Saving at `$default_path`."
+        data_path = default_path
+    end
+    atoms       = mol.atoms
+    atom_coords = mol.atom_coords
+    charge      = mol.charge
+    spin        = mol.spin
+    name        = mol.name
+    energy_levels   = mol.energy_levels
+    orbit_occ       = mol.orbit_occ
+    wfat_indices    = mol.wfat_indices
+    wfat_intdata    = mol.wfat_intdata
+    wfat_μ      = mol.wfat_μ
+    asymp_coeff_indices = mol.asymp_coeff_indices
+    asymp_coeff = mol.asymp_coeff
+    function write_jld2(path)
+        file = jldopen(path, "w")
+        @pack! file = atoms, atom_coords, charge, spin, name,
+            energy_levels, orbit_occ,
+            wfat_indices, wfat_intdata, wfat_μ,
+            asymp_coeff_indices, asymp_coeff
+        close(file)
+    end
+    try
+        write_jld2(data_path)
+        @info "[GenericMolecule] Data saved for molecule $(mol.name) at `$(data_path)`."
+    catch
+        @error "[GenericMolecule] Error writing to `$data_path`, trying to save at `$(default_path)`."
+        write_jld2(default_path)
+        @info "[GenericMolecule] Data saved for molecule $(mol.name) at `$(default_path)`."
+    end
+    return
 end
 
 #* Properties & methods that implement the supertype Target.
@@ -572,23 +513,20 @@ end
 "Gets the ionization potential of the molecule's HOMO."
 function IonPotential(mol::GenericMolecule)
     if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
+        error("[GenericMolecule] The energy data is not available, calculate first.")
     end
-    return -MolHOMOEnergy(mol)
+    return -maximum(MolHOMOEnergy(mol))
 end
 """
 Gets the ionization potential of the specified MO of molecule.
-- `orbitIdx_relHOMO`: Index of selected orbital relative to the HOMO (e.g., 0 indicates HOMO, and -1 indicates HOMO-1).
+- `orbit_ridx`: Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
 """
-function IonPotential(mol::GenericMolecule, orbitIdx_relHOMO::Integer)
+function IonPotential(mol::GenericMolecule, orbit_ridx)
     if ! mol.energy_data_available
-        MolCalcEnergyData!(mol)
+        error("[GenericMolecule] The energy data is not available, calculate first.")
     end
-    idx = mol.HOMO_index+orbitIdx_relHOMO
-    if ! (0<idx<size(mol.energy_levels,1))
-        error("[GenericMolecule] Orbital index out of bound.")
-    end
-    return -mol.energy_levels[idx]
+    return -MolEnergyLevel(mol,orbit_ridx)
 end
 "Gets the asymptotic nuclear charge of the molecule (ion) (after an electron got ionized)."
 AsympNuclCharge(mol::GenericMolecule) = mol.charge + 1
@@ -681,27 +619,95 @@ function TrajectoryFunction(mol::GenericMolecule, dimension::Integer, laserFx::F
     end
 end
 
-using Printf
 function Base.show(io::IO, mol::GenericMolecule)
     @printf(io, "[GenericMolecule] %s", mol.name)
+    if mol.asymp_coeff_available
+        @printf(io, ", asymp coeff of %s available", join(_MOstring.(sort(mol.asymp_coeff_indices|>collect))," & "))
+    end
+    if mol.wfat_data_available
+        @printf(io, ", WFAT data of %s available", join(_MOstring.(sort(mol.wfat_indices|>collect))," & "))
+    end
     if mol.energy_data_available
-        @printf(io, ", HOMO_energy=%.4f", MolHOMOEnergy(mol))
+        println(io)
+        if mol.spin==0
+            spin11="-↿⇂-"
+            spin00="----"
+            HOMO_idx = _get_HOMO_idx(mol.orbit_occ)
+            #        %-3s  %-7s    %7f__ %4s
+            #        11122222223333333__4444
+            @printf "#          E (Ha)  occp\n"
+            @printf "⋮  ⋮         ⋮      ⋮⋮ \n"
+            @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+2 "LUMO+1" mol.energy_levels[HOMO_idx+2] spin00
+            @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+1 "LUMO"   mol.energy_levels[HOMO_idx+1] spin00
+            @printf "%-3s%-7s%7.3f  %4s"   HOMO_idx   "HOMO"   mol.energy_levels[HOMO_idx  ] spin11
+            HOMO_idx>1 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-1 "HOMO-1" mol.energy_levels[HOMO_idx-1] spin11)
+            HOMO_idx>2 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-2 "HOMO-2" mol.energy_levels[HOMO_idx-2] spin11)
+            HOMO_idx>3 && (@printf "\n⋮    ⋮        ⋮     ⋮⋮")
+        else
+            HOMO_alp_idx = _get_HOMO_idx(mol.orbit_occ[1,:])
+            HOMO_bet_idx = _get_HOMO_idx(mol.orbit_occ[2,:])
+            idx_max = max(HOMO_alp_idx,HOMO_bet_idx)+2
+            idx_min = max(min(HOMO_alp_idx,HOMO_bet_idx)-2,1)
+            #        %-3s  %-7s    %7f__%4s__    %6f_%-7s
+            #        11122222223333333__4444__555555_6666666
+            @printf "#          Eα(Ha)  occp  Eβ(Ha)\n"
+            @printf "⋮    ⋮        ⋮     ⋮⋮      ⋮     ⋮"
+            for i in idx_max:-1:idx_min
+                @printf "\n%-3s%-7s%7.3f  %4s  %6.3f %-7s" i _MOstring(i-HOMO_alp_idx) mol.energy_levels[1,i] _MO_occ_string(mol.orbit_occ[1,i],mol.orbit_occ[2,i]) mol.energy_levels[2,i] _MOstring(i-HOMO_bet_idx)
+            end
+            idx_min>1 && (@printf "\n⋮    ⋮        ⋮     ⋮⋮      ⋮     ⋮")
+        end
     end
 end
 
-using Parameters, OrderedCollections
-"Returns a `Dict{Symbol,Any}` containing properties of the object."
+function _MO_occ_string(α,β)
+    spin11="-↿⇂-"
+    spin10="-↿--"
+    spin01="--⇂-"
+    spin00="----"
+    return if !iszero(α)
+        if !iszero(β)
+            spin11
+        else
+            spin10
+        end
+    else
+        if !iszero(β)
+            spin01
+        else
+            spin00
+        end
+    end
+end
+
+function _MOstring(orbit_ridx)
+    if orbit_ridx isa Integer
+        return if orbit_ridx == 0
+            "HOMO"
+        elseif orbit_ridx < 0
+            "HOMO" * string(orbit_ridx)
+        elseif orbit_ridx == 1
+            "LUMO"
+        else
+            "LUMO+" * string(orbit_ridx-1)
+        end
+    else # open-shell (spin, idx)
+        return (orbit_ridx[1]==1 ? "α-" : "β-") * _MOstring(orbit_ridx[2])
+    end
+end
+
+"Returns a `Dict{Symbol,Any}` containing basic properties of the object."
 function Serialize(t::GenericMolecule)
     dict = OrderedDict{Symbol,Any}()
     type        = typeof(t)
-    data_path   = t.data_path
     atoms       = t.atoms
     atom_coords = t.atom_coords
     charge      = t.charge
+    spin        = t.spin
     name        = t.name
     rot_alp     = t.rot_α
     rot_bet     = t.rot_β
     rot_gam     = t.rot_γ
-    @pack! dict = (type, data_path, atoms, atom_coords, charge, name, rot_alp, rot_bet, rot_gam)
+    @pack! dict = (type, atoms, atom_coords, charge, spin, name, rot_alp, rot_bet, rot_gam)
     return dict
 end

@@ -88,7 +88,7 @@ using Test
         @test MolCharge(m1) == 0
         @test TargetName(m1) == "Benzene"
         # init from existing file
-        m2 = GenericMolecule("Molecule_Hydrogen.h5")
+        m2 = LoadMolecule("Molecule_Hydrogen.jld2")
         @test begin
             show(m2)
             println()
@@ -98,18 +98,18 @@ using Test
         @test MolAtomCoords(m2) == [0.0 0.0 -0.375; 0.0 0.0 0.375]
         @test MolCharge(m2)     == 0
         @test MolEnergyDataAvailable(m2) == true
-        @test MolEnergyLevels(m2)[1] ≈ -0.591627497396511
-        @test MolHOMOIndex(m2)  == 1
-        @test MolHOMOEnergy(m2) == MolEnergyLevels(m2)[MolHOMOIndex(m2)]
+        @test MolEnergyLevels(m2)[1] ≈ -0.591819099386013
+        @test MolHOMOEnergy(m2) ≈ -0.591819099386013
         @test MolWFATAvailableIndices(m2) == Set([0])
         begin
             μ,IntData = MolWFATData(m2,0)
             @test reduce(*, abs.(μ) .<= [1e-10,1e-10,1e-10])
-            @test IntData[1,1,1,1] ≈ 1.6855748476079413 + 0.0im
+            @test IntData[1,1,1,1] ≈ 1.7276641139621103
         end
-        @test reduce(*, abs2.(MolWFATStructureFactor_G(m2,0,0,0,[0.0,π/2],[0.0,0.0])) .≈ [3.4246531020464377, 2.5759319076269223])
+        @test abs2(MolWFATStructureFactor_G(m2,0,0,0,0.0,0.0)) ≈ 3.594605830985567
+        @test abs2(MolWFATStructureFactor_G(m2,0,0,0,π/2,0.0)) ≈ 2.707676191146582
         @test MolAsympCoeffAvailableIndices(m2) == Set([0])
-        @test MolAsympCoeff(m2, 0)[1,1] ≈ 1.0902102938182585
+        @test MolAsympCoeff(m2, 0)[1,1] ≈ 1.0843994462656439
         begin
             @test begin
                 SetMolRotation!(m2,π,π/2,π/3)
@@ -121,12 +121,17 @@ using Test
             end
         end
         @test MolExportAtomInfo(m2) == "H [0.0, 0.0, -0.375]; H [0.0, 0.0, 0.375]"
-        # MolCalcEnergyData!, _MolSaveEnergyData, MolCalcWFATData!, MolCalcAsympCoeff!, _MolSaveWFATData, MolSaveDataAs are not included in the test
         @test IonPotential(m2)      == -MolHOMOEnergy(m2)
         @test IonPotential(m2,0)    == -MolHOMOEnergy(m2)
         @test AsympNuclCharge(m2)   == 1
         @test TargetName(m2)        == "Hydrogen"
         @test TargetPotential(m2)(1.0,1.0,1.0) == -0.5
         @test reduce(*, TargetForce(m2)(1.0,1.0,1.0) .== (-1/8,-1/8,-1/8))
+        @test begin
+            tmp_file, tmp_io = mktemp()
+            close(tmp_io)
+            MolSaveDataAs!(m2, tmp_file, true)
+            true
+        end
     end
 end
