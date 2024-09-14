@@ -35,7 +35,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
         time = [0.0]
         try
             mc._pyscf  = pyimport("pyscf")
-            mc._pymol  = mc._pyscf.gto.M(atom=MolExportAtomInfo(mol), charge=MolCharge(mol), spin=2*MolSpin(mol), basis=basis, symmetry=true, verbose=0)
+            mc._pymol  = mc._pyscf.gto.M(atom=MolExportAtomInfo(mol), charge=MolCharge(mol), spin=Int(2*MolSpin(mol)), basis=basis, symmetry=true, verbose=0)
             mc._pytask =
                 if MolSpin(mol)==0  # For `spin=0`, the RHF method would be invoked, and the UHF otherwise.
                     mc._pyscf.scf.RHF(mc._pymol)
@@ -49,7 +49,7 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
             rethrow()
         end
         if ! mc._pytask.converged
-            error("[PySCFMolecularCalculator] SCF calculation unable to converge.")
+            @warn "[PySCFMolecularCalculator] SCF calculation unable to converge, the result might be inaccurate."
         end
         if MolSpin(mol) == 0
             mc.energy_levels = mc._pytask.mo_energy
@@ -97,6 +97,7 @@ Calculates the data used in WFAT structure factor calculation of the given molec
 - `sf_nξMax`    : The maximum number of nξ used in calculation (*default `3`*).
 - `sf_mMax`     : The maximum number of |m| used in calculation (*default `3`*).
 - `sf_lMax`     : The maximum angular quantum number l used in calculation (*default `6`*).
+- `swap_HOMO_LUMO=false` : If the HOMO & LUMO share the same energy level (but different symmetries), set `swap_HOMO_LUMO=true` when calculating LUMO (`ridx=1`). The program would swap the coefficients of HOMO and LUMO.
 """
 function calc_WFAT_data(;
             mc::PySCFMolecularCalculator,
@@ -107,7 +108,8 @@ function calc_WFAT_data(;
             grid_ϕNum::Int  = 60,
             sf_nξMax ::Int = 5,
             sf_mMax  ::Int = 5,
-            sf_lMax  ::Int = 10,
+            sf_lMax  ::Int = 6,
+            swap_HOMO_LUMO::Bool = false,
             kwargs...)
     # == PROCEDURE ==
     # 0. Obtain the coefficients (finished in the initialization).
@@ -116,7 +118,7 @@ function calc_WFAT_data(;
 
     α,β,γ,i,i_pt = 0,0,0,0,0    # mute the linter error
 
-    @info "[PySCFMolecularCalculator] Running calculation of WFAT structure factor data... (ionizing orbital $(_MOstring(orbit_ridx)))"
+    @info "[PySCFMolecularCalculator] Running calculation of WFAT structure factor data... (ionizing orbital $(_MOstring(orbit_ridx)))" * (swap_HOMO_LUMO ? " (`swap_HOMO_LUMO` is on)" : "")
 
     #* Preproceed molecular information
 
@@ -136,6 +138,19 @@ function calc_WFAT_data(;
     num_atom    = pymol.natm        # Total number of atoms.
     num_AO      = closedshell ? size(mo_coeff,1) : size(mo_coeff[1],1)  # Number of atomic orbits (aka AO) or Gaussian basis. (pymol.nao doesn't return an interger!)
     HOMO_idx    = findlast(!iszero, (closedshell ? task.mo_occ : task.mo_occ[spin]))
+    if swap_HOMO_LUMO
+        if ridx != 1
+            @error "[PySCFMolecularCalculator] `swap_HOMO_LUMO` is on while `ridx`!=1. `swap_HOMO_LUMO` would not take effect."
+        else
+            # swap the columns of HOMO and LUMO, and change the ridx from 1 to 0.
+            if closedshell
+                mo_coeff[:,HOMO_idx], mo_coeff[:,HOMO_idx+1] = mo_coeff[:,HOMO_idx+1], mo_coeff[:,HOMO_idx]
+            else
+                mo_coeff[spin][:,HOMO_idx], mo_coeff[spin][:,HOMO_idx+1] = mo_coeff[spin][:,HOMO_idx+1], mo_coeff[spin][:,HOMO_idx]
+            end
+            ridx = 0
+        end
+    end
     orbit_idx   = HOMO_idx + ridx   # NOTE: orbit_idx is the abs index, while orbit_ridx is the index relative to HOMO
     @assert 0<orbit_idx<=num_AO "[PySCFMolecularCalculator] Orbital index $(orbit_ridx) out of range."
 
@@ -581,10 +596,11 @@ function calc_asymp_coeff(;
                 fit_re = curve_fit(model, r_grid, real.(F_lm), p0)
                 coeff = coef(fit_re)[1]     # the fitted re(C_lm)
                 conf_int = confidence_interval(fit_re)[1]   # confidence interval (95%)
+                err = abs((conf_int[2]-conf_int[1])/coeff)/2
                 if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
-                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be too large (<10 a.u.) !)."
-                elseif abs((conf_int[2]-conf_int[1])/coeff) > 0.5   # the error is too large
-                    @warn "[PySCFMolecularCalculator] The fit result of molecular wavefunction (l=$l, m=$m) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be too large (<10 a.u.) !)."
+                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg`."
+                elseif err > 0.2   # the error is too large
+                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction (%.2f for l=%d, m=%d) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg`." err l m
                 else
                     C_lm[l+1,m+l+1] += coeff
                 end
@@ -596,9 +612,9 @@ function calc_asymp_coeff(;
                 conf_int = confidence_interval(fit_im)[1]   # confidence interval (95%)
                 err = abs((conf_int[2]-conf_int[1])/coeff)/2
                 if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
-                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
+                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg`."
                 elseif err > 0.2   # the error is too large
-                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction (%.2f for l=%d, m=%d) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)." err l m
+                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction (%.2f for l=%d, m=%d) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg`." err l m
                 else
                     C_lm[l+1,m+l+1] += coeff * 1im
                 end

@@ -9,8 +9,8 @@ using Test
 @testset verbose=true "ElectronSamplers" begin
 
     t = get_atom("H")
-    tmol = LoadMolecule("Molecule_Hydrogen.jld2")
-    tmol_rot = LoadMolecule("Molecule_Hydrogen.jld2", rot_β=π/2)
+    tmol = get_mol("Hydrogen")
+    tmol_rot = get_mol("Hydrogen"; rot_β=π/2)
     l = Cos4Laser(peak_int=1e15, wave_len=800.0, cyc_num=2, ellip=1.0)
     params = Dict{Symbol,Any}(
         :init_cond_method   => :ADK,
@@ -254,15 +254,15 @@ using Test
         end
         @test begin
             sp = init_sampler(; merge(params, spa, mol, _3d)...)
-            f(sp) == (8,426)
+            f(sp) == (8,422)
         end
         @test begin
             sp = init_sampler(; merge(params, spa, _3d, mol, qtmc)...)
-            f(sp) == (9,426)
+            f(sp) == (9,422)
         end
         @test begin
             sp = init_sampler(; merge(params, spa, _3d, mol, scts)...)
-            f(sp) == (9,426)
+            f(sp) == (9,422)
         end
         @test begin
             sp = init_sampler(; merge(params, spa, mc2d)...)
@@ -304,7 +304,7 @@ using Test
         end
         @test begin
             sp = init_sampler(; merge(params, wfat, mol_rot)...)
-            f(sp) == (6,570)
+            f(sp) == (6,568)
         end
         @test begin
             sp = init_sampler(; merge(params, wfat, _3d, mol)...)

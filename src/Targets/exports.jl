@@ -20,5 +20,6 @@ export MolInitCalculator!, MolCalcWFATData!, MolCalcAsympCoeff!, MolSaveDataAs!
 export MolecularCalculatorBase
 export PySCFMolecularCalculator
 
-# Atom Database
-export get_atom
+# Database
+export get_atom, get_available_atoms
+export get_mol, get_available_mols

@@ -15,7 +15,8 @@ abstract type MoleculeBase <: Target end
 include("SAEAtom.jl")
 include("HydrogenLikeAtom.jl")
 include("SAEAtomBase_shared.jl")
-include("AtomDatabase.jl")
+include("Database/AtomDatabase.jl")
+include("Database/MoleculeDatabase.jl")
 
 include("MolecularCalculators/MolecularCalculatorBase.jl")
 include("GenericMolecule.jl")

@@ -14,7 +14,7 @@ mutable struct GenericMolecule <: MoleculeBase
     "Total charge of the molecule (ion)."
     charge::Integer;
     "Total spin of the molecule (ion)."
-    spin::Integer;
+    spin;
     "Name of the molecule."
     name::String;
 
@@ -45,7 +45,7 @@ mutable struct GenericMolecule <: MoleculeBase
 
     #* properties that would not be stored in data
 
-    "Euler angles (ZYZ convention) specifying the molecule's orientation."  # not stored in data
+    "Euler angles (ZYZ convention) specifying the molecule's orientation (in radians)."  # not stored in data
     rot_α;
     rot_β;
     rot_γ;
@@ -63,22 +63,28 @@ Initializes a new `GenericMolecule` with given parameters.
 - `charge`                  : Total charge of the molecule (ion) (*optional, default `0`*).
 - `spin`                    : Total spin of the molecule (*optional, default `0`*). Note that each unpaired electron contributes 1/2.
 - `name`                    : Name of the molecule (*optional*).
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (*optional, default `0`*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
 
 ## Example
 ```
 julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375], name="Hydrogen")
 [GenericMolecule] Hydrogen
+
+julia> using Unitful
+
+julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375]*u"Å", name="Hydrogen", rot_β=90u"°")
+[GenericMolecule] Hydrogen, αβγ=(0.0°,90.0°,0.0°)
 ```
 """
-function GenericMolecule(;atoms::Vector,atom_coords::Matrix,charge::Integer=0,spin::Integer=0,name::String="[NA]",rot_α=0.,rot_β=0.,rot_γ=0.)
+function GenericMolecule(;atoms::Vector,atom_coords::Matrix,charge::Integer=0,spin=0,name::String="[NA]",rot_α=0.,rot_β=0.,rot_γ=0.)
     @assert eltype(atoms) <: String   "[GenericMolecule] Element type of `atoms` must be String."
     @assert atom_coords isa Matrix && ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[GenericMolecule] `atom_coords` should be a Matrix of size N×3."
     @assert spin>=0 "[GenericMolecule] `spin` must be non-negative."
     # unit transformation
-    if eltype(atom_coords) <: Quantity
-        atom_coords = map(q->uconvert(u"Å", q).val, atom_coords)
-    end
+    (eltype(atom_coords)<:Quantity) && (atom_coords=map(q->uconvert(u"Å", q).val, atom_coords))
+    (typeof(rot_α)<:Quantity) && (rot_α=uconvert(u"rad",rot_α).val)
+    (typeof(rot_β)<:Quantity) && (rot_β=uconvert(u"rad",rot_β).val)
+    (typeof(rot_γ)<:Quantity) && (rot_γ=uconvert(u"rad",rot_γ).val)
     mol = GenericMolecule(
         nothing,    # mol_calc
         atoms, atom_coords, charge, spin, name,
@@ -109,6 +115,9 @@ function LoadMolecule(ext_data_path::String; rot_α=0.,rot_β=0.,rot_γ=0.)
     wfat_data_available = !isempty(wfat_indices)
     asymp_coeff_available = !isempty(asymp_coeff_indices)
     close(file)
+    (typeof(rot_α)<:Quantity) && (rot_α=uconvert(u"rad",rot_α).val)
+    (typeof(rot_β)<:Quantity) && (rot_β=uconvert(u"rad",rot_β).val)
+    (typeof(rot_γ)<:Quantity) && (rot_γ=uconvert(u"rad",rot_γ).val)
     return GenericMolecule(
         nothing,
         atoms, atom_coords, charge, spin, name,
@@ -385,17 +394,16 @@ Initializes the `MolecularCalculator` of `mol` with given parameters.
 - `kwargs...`   : Keyword arguments to pass to the initializer of [`MolecularCalculator`](@ref), e.g., `basis`, ...
 """
 function MolInitCalculator!(mol::GenericMolecule, MCType::Type = PySCFMolecularCalculator; kwargs...)
-    if isnothing(mol.mol_calc)
-        if ! (MCType<:MolecularCalculatorBase)
-            error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
-        end
-        mol.mol_calc = MCType(;mol=mol, kwargs...)
-        mol.energy_data_available = true
-        mol.energy_levels = EnergyLevels(mol.mol_calc)
-        mol.orbit_occ = OrbitalOccupation(mol.mol_calc)
-    else
-        @error "[GenericMolecule] Molecule's `MolecularCalculator` is present already."
+    if !isnothing(mol.mol_calc)
+        @warn "[GenericMolecule] Molecule's `MolecularCalculator` is present already, replacing."
     end
+    if ! (MCType<:MolecularCalculatorBase)
+        error("[GenericMolecule] `MCType`'s type $MCType mismatches `MolecularCalculatorBase`.")
+    end
+    mol.mol_calc = MCType(;mol=mol, kwargs...)
+    mol.energy_data_available = true
+    mol.energy_levels = EnergyLevels(mol.mol_calc)
+    mol.orbit_occ = OrbitalOccupation(mol.mol_calc)
     return
 end
 
@@ -621,11 +629,16 @@ end
 
 function Base.show(io::IO, mol::GenericMolecule)
     @printf(io, "[GenericMolecule] %s", mol.name)
+    if !(mol.rot_α==0 && mol.rot_β==0 && mol.rot_γ==0)
+        @printf(io, ", αβγ=(%.1f°,%.1f°,%.1f°)", mol.rot_α*180/π, mol.rot_β*180/π, mol.rot_γ*180/π)
+    end
     if mol.asymp_coeff_available
-        @printf(io, ", asymp coeff of %s available", join(_MOstring.(sort(mol.asymp_coeff_indices|>collect))," & "))
+        println(io)
+        @printf(io, "Asymp coeff of %s available", join(_MOstring.(sort(mol.asymp_coeff_indices|>collect))," & "))
     end
     if mol.wfat_data_available
-        @printf(io, ", WFAT data of %s available", join(_MOstring.(sort(mol.wfat_indices|>collect))," & "))
+        println(io)
+        @printf(io, "WFAT data of %s available", join(_MOstring.(sort(mol.wfat_indices|>collect))," & "))
     end
     if mol.energy_data_available
         println(io)
@@ -636,18 +649,19 @@ function Base.show(io::IO, mol::GenericMolecule)
             #        %-3s  %-7s    %7f__ %4s
             #        11122222223333333__4444
             @printf "#          E (Ha)  occp\n"
-            @printf "⋮  ⋮         ⋮      ⋮⋮ \n"
+            @printf "⋮  ⋮         ⋮      ⋮⋮\n"
             @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+2 "LUMO+1" mol.energy_levels[HOMO_idx+2] spin00
             @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+1 "LUMO"   mol.energy_levels[HOMO_idx+1] spin00
             @printf "%-3s%-7s%7.3f  %4s"   HOMO_idx   "HOMO"   mol.energy_levels[HOMO_idx  ] spin11
             HOMO_idx>1 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-1 "HOMO-1" mol.energy_levels[HOMO_idx-1] spin11)
             HOMO_idx>2 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-2 "HOMO-2" mol.energy_levels[HOMO_idx-2] spin11)
-            HOMO_idx>3 && (@printf "\n⋮    ⋮        ⋮     ⋮⋮")
+            HOMO_idx>3 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-3 "HOMO-3" mol.energy_levels[HOMO_idx-3] spin11)
+            HOMO_idx>4 && (@printf "\n⋮    ⋮        ⋮     ⋮⋮")
         else
             HOMO_alp_idx = _get_HOMO_idx(mol.orbit_occ[1,:])
             HOMO_bet_idx = _get_HOMO_idx(mol.orbit_occ[2,:])
             idx_max = max(HOMO_alp_idx,HOMO_bet_idx)+2
-            idx_min = max(min(HOMO_alp_idx,HOMO_bet_idx)-2,1)
+            idx_min = max(min(HOMO_alp_idx,HOMO_bet_idx)-3,1)
             #        %-3s  %-7s    %7f__%4s__    %6f_%-7s
             #        11122222223333333__4444__555555_6666666
             @printf "#          Eα(Ha)  occp  Eβ(Ha)\n"

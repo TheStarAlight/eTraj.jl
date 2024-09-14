@@ -5,6 +5,7 @@
 
 Constructs a `HydrogenLikeAtom` or `SAEAtom` in the database based on the `name` and `charge` given, other initialization parameters can be passed via `kwargs`.
 For `HydrogenLikeAtom`, the init params include `Ip`,`Z` and `name`; for `SAEAtom`, the init params include `Ip`,`Z`,`a1`,`b1`,`a2`,`b2`,`a3`,`b3`,`l` and `name`.
+The available keys can be found by invoking [`get_available_atoms`](@ref).
 
 ## Examples
 
@@ -27,7 +28,7 @@ ERROR: [get_atom] Atom name key `Xe2p` not found in database.
 [...]
 
 ```
-See also [`HydrogenLikeAtom`](@ref) and [`SAEAtom`](@ref).
+See also [`get_available_atoms`](@ref), [`HydrogenLikeAtom`](@ref) and [`SAEAtom`](@ref).
 
 """
 function get_atom(name::String, charge::Integer=0; kwargs...)
@@ -46,25 +47,30 @@ function get_atom(name::String, charge::Integer=0; kwargs...)
     error("[get_atom] Atom name key `$key` not found in database.")
 end
 
-const HydLikeAtomData = Dict{String, Any}(
-    "H" => Dict{Symbol, Any}(
+"Gets the available atom keys in the atom database, which are used to access atom objects using [`get_atom`](@ref)."
+function get_available_atoms()
+    return vcat(collect(keys(HydLikeAtomData)),collect(keys(SAEAtomData)))
+end
+
+const HydLikeAtomData = OrderedDict{String, Any}(
+    "H" => OrderedDict{Symbol, Any}(
         :Ip => 0.5,
         :Z  => 1,
         :name => "H"
     ),
-    "He1p" => Dict{Symbol, Any}(
+    "He1p" => OrderedDict{Symbol, Any}(
         :Ip => 1.0,
         :Z  => 2,
         :name => "He⁺"
     ),
-    "Li2p" => Dict{Symbol, Any}(
+    "Li2p" => OrderedDict{Symbol, Any}(
         :Ip => 1.5,
         :Z  => 3,
         :name => "Li²⁺"
     ),
     )
-const SAEAtomData = Dict{String, Any}(
-    "He" => Dict{Symbol, Any}(
+const SAEAtomData = OrderedDict{String, Any}(
+    "He" => OrderedDict{Symbol, Any}(
         :Ip => 0.9035698802,
         :Z  => 1,
         :a1 =>  1.230723,
@@ -76,7 +82,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 0,   # 1s²
         :name => "He"
     ),
-    "Ne" => Dict{Symbol, Any}(
+    "Ne" => OrderedDict{Symbol, Any}(
         :Ip => 0.79248225,
         :Z  => 1,
         :a1 =>  8.069321,
@@ -88,7 +94,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [He]2s²2p⁶
         :name => "Ne"
     ),
-    "Ne1p" => Dict{Symbol, Any}(
+    "Ne1p" => OrderedDict{Symbol, Any}(
         :Ip => 1.505361,
         :Z  => 2,
         :a1 =>  8.042896,
@@ -100,7 +106,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [He]2s²2p⁵
         :name => "Ne⁺"
     ),
-    "Ne2p" => Dict{Symbol, Any}(
+    "Ne2p" => OrderedDict{Symbol, Any}(
         :Ip => 2.3307635,
         :Z  => 3,
         :a1 => 7.000000,
@@ -112,7 +118,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [He]2s²2p⁴
         :name => "Ne²⁺"
     ),
-    "Ar" => Dict{Symbol, Any}(
+    "Ar" => OrderedDict{Symbol, Any}(
         :Ip => 0.579155055,
         :Z  => 1,
         :a1 =>  16.03862,
@@ -124,7 +130,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [Ne]3s²3p⁶
         :name => "Ar"
     ),
-    "Ar1p" => Dict{Symbol, Any}(
+    "Ar1p" => OrderedDict{Symbol, Any}(
         :Ip => 1.0153715,
         :Z  => 2,
         :a1 =>  14.98869,
@@ -136,7 +142,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [Ne]3s²3p⁵
         :name => "Ar⁺"
     ),
-    "Ar2p" => Dict{Symbol, Any}(
+    "Ar2p" => OrderedDict{Symbol, Any}(
         :Ip => 1.497,
         :Z  => 3,
         :a1 =>  15.00000,
@@ -148,7 +154,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [Ne]3s²3p⁴
         :name => "Ar²⁺"
     ),
-    "V" => Dict{Symbol, Any}(
+    "V" => OrderedDict{Symbol, Any}(
         :Ip => 0.2479178,
         :Z  => 1,
         :a1 =>  21.27861,
@@ -160,7 +166,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 2,   # [Ar]4s²3d³
         :name => "V"
     ),
-    "Ni" => Dict{Symbol, Any}(
+    "Ni" => OrderedDict{Symbol, Any}(
         :Ip => 0.28076035,
         :Z  => 1,
         :a1 =>  26.81231,
@@ -172,7 +178,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 2,   # [Ar]4s²3d⁸
         :name => "Ni"
     ),
-    "Kr" => Dict{Symbol, Any}(
+    "Kr" => OrderedDict{Symbol, Any}(
         :Ip => 1.02895202,
         :Z  => 1,
         :a1 =>  23.6188,
@@ -184,7 +190,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [Ar]4s²3d¹⁰4p⁶
         :name => "Kr"
     ),
-    "Kr1p" => Dict{Symbol, Any}(
+    "Kr1p" => OrderedDict{Symbol, Any}(
         :Ip => 1.790416,
         :Z  => 2,
         :a1 =>  23.1460,
@@ -196,7 +202,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [Ar]4s²3d¹⁰4p⁵
         :name => "Kr⁺"
     ),
-    "Rb" => Dict{Symbol, Any}(
+    "Rb" => OrderedDict{Symbol, Any}(
         :Ip => 0.153506625,
         :Z  => 1,
         :a1 =>  24.02321,
@@ -208,7 +214,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 0,   # [Kr]5s¹
         :name => "Rb"
     ),
-    "Nb" => Dict{Symbol, Any}(
+    "Nb" => OrderedDict{Symbol, Any}(
         :Ip => 0.248383,
         :Z  => 1,
         :a1 =>  4.000000,
@@ -220,7 +226,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 2,   # [Kr]5s¹4d⁴
         :name => "Nb"
     ),
-    "Pd" => Dict{Symbol, Any}(
+    "Pd" => OrderedDict{Symbol, Any}(
         :Ip => 0.3063732,
         :Z  => 1,
         :a1 =>  43.83606,
@@ -232,7 +238,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 2,   # [Kr]4d¹⁰
         :name => "Pd"
     ),
-    "Xe" => Dict{Symbol, Any}(
+    "Xe" => OrderedDict{Symbol, Any}(
         :Ip => 0.445763535,
         :Z  => 1,
         :a1 =>  51.35554,
@@ -244,7 +250,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [Kr]5s²4d¹⁰5p⁶
         :name => "Xe"
     ),
-    "Xe1p" => Dict{Symbol, Any}(
+    "Xe1p" => OrderedDict{Symbol, Any}(
         :Ip => 0.7708,
         :Z  => 2,
         :a1 =>  37.49194,
@@ -256,7 +262,7 @@ const SAEAtomData = Dict{String, Any}(
         :l  => 1,   # [Kr]5s²4d¹⁰5p⁵
         :name => "Xe⁺"
     ),
-    "Ta" => Dict{Symbol, Any}(
+    "Ta" => OrderedDict{Symbol, Any}(
         :Ip => 0.27744165,
         :Z  => 1,
         :a1 =>   67.70192,

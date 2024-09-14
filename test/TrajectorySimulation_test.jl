@@ -381,7 +381,7 @@ using Test
 
     @info "Testing MOADK-CTMC ..."
     @testset "MOADK-CTMC" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -407,7 +407,7 @@ using Test
 
     @info "Testing MOADK-QTMC ..."
     @testset "MOADK-QTMC" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -433,7 +433,7 @@ using Test
 
     @info "Testing MOADK-SCTS ..."
     @testset "MOADK-SCTS" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -459,7 +459,7 @@ using Test
 
     @info "Testing MOSFA-SPANE-CTMC ..."
     @testset "MOSFA-SPANE-CTMC" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -485,7 +485,7 @@ using Test
 
     @info "Testing MOSFA-SPANE-QTMC ..."
     @testset "MOSFA-SPANE-QTMC" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -511,7 +511,7 @@ using Test
 
     @info "Testing MOSFA-SPANE-SCTS ..."
     @testset "MOSFA-SPANE-SCTS" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -537,7 +537,7 @@ using Test
 
     @info "Testing MOSFA-SPA-CTMC ..."
     @testset "MOSFA-SPA-CTMC" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -563,7 +563,7 @@ using Test
 
     @info "Testing MOSFA-SPA-QTMC ..."
     @testset "MOSFA-SPA-QTMC" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -589,7 +589,7 @@ using Test
 
     @info "Testing MOSFA-SPA-SCTS ..."
     @testset "MOSFA-SPA-SCTS" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
@@ -616,7 +616,7 @@ using Test
 
     @info "Testing WFAT-CTMC ..."
     @testset "WFAT-CTMC" begin
-        t = LoadMolecule("Molecule_Hydrogen.jld2")
+        t = get_mol("Hydrogen")
         l = Cos4Laser(peak_int=3e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
