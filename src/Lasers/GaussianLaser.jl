@@ -1,28 +1,25 @@
 
-"Represents a monochromatic elliptically polarized laser field with Gaussian-shape envelope propagating in z direction."
+"""
+    struct GaussianLaser <: MonochromaticLaser <: Laser
+
+Represents a monochromatic elliptically polarized laser field with Gaussian-shape envelope propagating in z direction.
+"""
 struct GaussianLaser <: MonochromaticLaser
-    "Peak intensity of the laser field (in W/cm^2)."
     peak_int;
-    "Wavelength of the laser field (in NANOMETER)."
     wave_len;
-    "Temporal width (converting to cycle numbers) of the laser field, namely σ."
     spread_cyc_num;
-    "Ellipticity of the laser field."
     ellip;
-    "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
     azi;
-    "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
-    "Time shift of the laser relative to the peak (in a.u.)."
     t_shift;
 end
 
 """
-    GaussianLaser(peak_int, wave_len|ang_freq, spread_cyc_num|spread_duration|FWHM_duration, ellip [, azi=0.0] [, cep=0.0] [, t_shift=0.0]) <: MonochromaticLaser
+    GaussianLaser(peak_int, wave_len|ang_freq, spread_cyc_num|spread_duration|FWHM_duration, ellip [,azi=0.0] [,cep=0.0] [,t_shift=0.0]) <: MonochromaticLaser
 
 Initializes a new monochromatic elliptically polarized laser field with Gaussian-shape envelope.
 
-# Parameters
+## Parameters
 - `peak_int`        : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
 - `wave_len`        : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
 - `ang_freq`        : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
@@ -43,6 +40,7 @@ julia> using Unitful
 
 julia> l = GaussianLaser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", FWHM_duration=12.57u"fs", ellip=0.0)
 [MonochromaticLaser] Envelope Gaussian, peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, temporal width 4.00 cycle(s) [FWHM 12.57 fs], ε=0 [linearly polarized]
+```
 """
 function GaussianLaser(;peak_int,
                         wave_len=0, ang_freq=0,   # must specify either wave_len or ang_freq.
@@ -79,36 +77,21 @@ function GaussianLaser(;peak_int,
     GaussianLaser(peak_int, wave_len, spread_cyc_num, ellip, azi, cep, t_shift)
 end
 
-"Gets the peak intensity of the laser field (in W/cm²)."
 PeakInt(l::GaussianLaser) = l.peak_int
-"Gets the wave length of the laser field (in nm)."
 WaveLen(l::GaussianLaser) = l.wave_len
-"Gets the half-temporal width (converting to cycle numbers) of the laser field, namely σ."
 SpreadCycNum(l::GaussianLaser) = l.spread_cyc_num
-"Gets the half-temporal width (in a.u.) of the laser field, namely σ."
 SpreadDuration(l::GaussianLaser) = l.spread_cyc_num * Period(l)
-"Gets the temporal FWHM(Full Width at Half Maxima) of the laser field (in a.u.)."
 FWHM_Duration(l::GaussianLaser) = l.spread_cyc_num * Period(l) * (2*sqrt(2*log(2)))
-"Gets the ellipticity of the laser field."
 Ellipticity(l::GaussianLaser) = l.ellip
-"Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
 Azimuth(l::GaussianLaser) = l.azi
-"Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::GaussianLaser) = 45.563352525 / l.wave_len
-"Gets the period of the laser field (in a.u.)."
 Period(l::GaussianLaser) = 2π / AngFreq(l)
-"Gets the Carrier-Envelope Phase (CEP) of the laser field."
 CEP(l::GaussianLaser) = l.cep
-"Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::GaussianLaser) = l.t_shift
-"Gets the peak electric field intensity of the laser field (in a.u.)."
 LaserF0(l::GaussianLaser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
-"Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::GaussianLaser) = LaserF0(l) / AngFreq(l)
-"Gets the Keldysh parameter γ₀ of the laser field, given the ionization energy `Ip` (in a.u.)."
 KeldyshParameter(l::GaussianLaser, Ip) = AngFreq(l) * sqrt(2Ip) / LaserF0(l)
 
-"Gets the unit envelope function (the peak value is 1) of the laser field."
 function UnitEnvelope(l::GaussianLaser)
     local ω = AngFreq(l); local σ = SpreadDuration(l); local Δt = l.t_shift;
     function (t)
@@ -117,7 +100,6 @@ function UnitEnvelope(l::GaussianLaser)
     end
 end
 
-"Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::GaussianLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local σ = SpreadDuration(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -132,7 +114,6 @@ function LaserAx(l::GaussianLaser)
         end
     end
 end
-"Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::GaussianLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local σ = SpreadDuration(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -147,7 +128,6 @@ function LaserAy(l::GaussianLaser)
         end
     end
 end
-"Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::GaussianLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local σ = SpreadDuration(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -162,7 +142,6 @@ function LaserFx(l::GaussianLaser)
         end
     end
 end
-"Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::GaussianLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local σ = SpreadDuration(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -178,7 +157,6 @@ function LaserFy(l::GaussianLaser)
     end
 end
 
-"Prints the information about the laser."
 function Base.show(io::IO, l::GaussianLaser)
     print(io, "[MonochromaticLaser] Envelope Gaussian, ")
     @printf(io, "peak intensity %.1e W/cm², ", l.peak_int)
@@ -217,7 +195,6 @@ function Base.show(io::IO, l::GaussianLaser)
     end
 end
 
-"Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(l::GaussianLaser)
     dict = OrderedDict{Symbol,Any}()
     type            = typeof(l)

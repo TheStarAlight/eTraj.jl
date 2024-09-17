@@ -1,24 +1,21 @@
 
-"Represents a monochromatic elliptically polarized laser field with Cos2-shape envelope propagating in z direction."
+"""
+    struct Cos2Laser <: MonochromaticLaser <: Laser
+
+Represents a monochromatic elliptically polarized laser field with Cos2-shape envelope propagating in z direction.
+"""
 struct Cos2Laser <: MonochromaticLaser
-    "Peak intensity of the laser field (in W/cm^2)."
     peak_int;
-    "Wavelength of the laser field (in nm)."
     wave_len;
-    "Cycle number of the laser field."
     cyc_num;
-    "Ellipticity of the laser field."
     ellip;
-    "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
     azi;
-    "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
-    "Time shift of the laser relative to the peak (in a.u.)."
     t_shift;
 end
 
 """
-    Cos2Laser(peak_int, wave_len|ang_freq, cyc_num|duration, ellip [, azi=0.0] [, cep=0.0] [, t_shift=0.0]) <: MonochromaticLaser
+    Cos2Laser(peak_int, wave_len|ang_freq, cyc_num|duration, ellip [,azi=0.0] [,cep=0.0] [,t_shift=0.0]) <: MonochromaticLaser
 
 Initializes a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
 
@@ -74,32 +71,19 @@ function Cos2Laser(;peak_int,
     Cos2Laser(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
 end
 
-"Gets the peak intensity of the laser field (in W/cm²)."
 PeakInt(l::Cos2Laser) = l.peak_int
-"Gets the wave length of the laser field (in nm)."
 WaveLen(l::Cos2Laser) = l.wave_len
-"Gets the cycle number of the laser field."
 CycNum(l::Cos2Laser) = l.cyc_num
-"Gets the ellipticity of the laser field."
 Ellipticity(l::Cos2Laser) = l.ellip
-"Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
 Azimuth(l::Cos2Laser) = l.azi
-"Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::Cos2Laser) = 45.563352525 / l.wave_len
-"Gets the period of the laser field (in a.u.)."
 Period(l::Cos2Laser) = 2π / AngFreq(l)
-"Gets the Carrier-Envelope Phase (CEP) of the laser field."
 CEP(l::Cos2Laser) = l.cep
-"Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::Cos2Laser) = l.t_shift
-"Gets the peak electric field intensity of the laser field (in a.u.)."
 LaserF0(l::Cos2Laser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
-"Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::Cos2Laser) = LaserF0(l) / AngFreq(l)
-"Gets the Keldysh parameter γ₀ of the laser field, given the ionization energy `Ip` (in a.u.)."
 KeldyshParameter(l::Cos2Laser, Ip) = AngFreq(l) * sqrt(2Ip) / LaserF0(l)
 
-"Gets the unit envelope function (the peak value is 1) of the laser field."
 function UnitEnvelope(l::Cos2Laser)
     local ω = AngFreq(l); local N = CycNum(l); local Δt = l.t_shift;
     function (t)
@@ -108,7 +92,6 @@ function UnitEnvelope(l::Cos2Laser)
     end
 end
 
-"Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::Cos2Laser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -123,7 +106,6 @@ function LaserAx(l::Cos2Laser)
         end
     end
 end
-"Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::Cos2Laser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -138,7 +120,6 @@ function LaserAy(l::Cos2Laser)
         end
     end
 end
-"Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::Cos2Laser)
     local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -153,7 +134,6 @@ function LaserFx(l::Cos2Laser)
         end
     end
 end
-"Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::Cos2Laser)
     local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -169,7 +149,6 @@ function LaserFy(l::Cos2Laser)
     end
 end
 
-"Prints the information about the laser."
 function Base.show(io::IO, l::Cos2Laser)
     print(io, "[MonochromaticLaser] Envelope cos², ")
     @printf(io, "peak intensity %.1e W/cm², ", l.peak_int)
@@ -208,7 +187,6 @@ function Base.show(io::IO, l::Cos2Laser)
     end
 end
 
-"Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(l::Cos2Laser)
     dict = OrderedDict{Symbol,Any}()
     type        = typeof(l)

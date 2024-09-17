@@ -46,6 +46,7 @@ function get_mol(name::String; rot_α=0.,rot_β=0.,rot_γ=0.)
     error("[get_mol] Molecule name `$name` not found in database.")
 end
 
+"Gets the available molecule keys in the molecule database, which are used to access molecule objects using [`get_mol`](@ref)."
 function get_available_mols()
     return collect(keys(MoleculeDataPath))
 end

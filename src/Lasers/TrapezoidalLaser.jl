@@ -1,32 +1,27 @@
 
-"Represents a monochromatic elliptically polarized laser field with Trapezoidal-shape envelope propagating in z direction."
+"""
+    struct TrapezoidalLaser <: MonochromaticLaser <: Laser
+
+Represents a monochromatic elliptically polarized laser field with Trapezoidal-shape envelope propagating in z direction.
+"""
 struct TrapezoidalLaser <: MonochromaticLaser
-    "Peak intensity of the laser field (in W/cm^2)."
     peak_int;
-    "Wavelength of the laser field (in NANOMETER)."
     wave_len;
-    "Cycle number of the laser field in the turn-on."
     cyc_num_turn_on;
-    "Cycle number of the laser field in the turn-off."
     cyc_num_turn_off;
-    "Cycle number of the laser field in the constant-intensity."
     cyc_num_const;
-    "Ellipticity of the laser field."
     ellip;
-    "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
     azi;
-    "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
-    "Time shift of the laser relative to the beginning of TURN-ON (in a.u.)."
     t_turn_on;
 end
 
 """
-    TrapezoidalLaser(peak_int, wave_len|ang_freq, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip [, azi=0.0] [, cep=0.0] [, t_turn_on=0.0]) <: MonochromaticLaser
+    TrapezoidalLaser(peak_int, wave_len|ang_freq, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip [,azi=0.0] [,cep=0.0] [,t_turn_on=0.0]) <: MonochromaticLaser
 
 Initializes a new monochromatic elliptically polarized laser field with trapezoidal-shape envelope.
 
-# Parameters
+## Parameters
 - `peak_int`        : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
 - `wave_len`        : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
 - `ang_freq`        : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
@@ -47,6 +42,7 @@ julia> using Unitful
 
 julia> TrapezoidalLaser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", cyc_num_turn_on=2, cyc_num_turn_off=2, cyc_num_const=6, ellip=0.0, t_turn_on=-10.0u"fs")
 [MonochromaticLaser] Envelope Trapezoidal, peak intensity 4.0e+14 W/cm², wavelen=800 nm, turn_on/const/turn_off 2/6/2 cycle(s), ε=0 [linearly polarized], rises @ t=-413.41 a.u.
+```
 """
 function TrapezoidalLaser(; peak_int,
                             wave_len=0, ang_freq=0,     # must specify either wave_len or ang_freq.
@@ -69,38 +65,22 @@ function TrapezoidalLaser(; peak_int,
     TrapezoidalLaser(peak_int, wave_len, cyc_num_turn_on, cyc_num_turn_off, cyc_num_const, ellip, azi, cep, t_turn_on)
 end
 
-"Gets the peak intensity of the laser field (in W/cm²)."
 PeakInt(l::TrapezoidalLaser) = l.peak_int
-"Gets the wave length of the laser field (in nm)."
 WaveLen(l::TrapezoidalLaser) = l.wave_len
-"Gets the total cycle number of the laser field."
 CycNumTotal(l::TrapezoidalLaser) = l.cyc_num_turn_on + l.cyc_num_turn_off + l.cyc_num_const
-"Gets the cycle number of the laser field in the turn-on."
 CycNumTurnOn(l::TrapezoidalLaser) = l.cyc_num_turn_on
-"Gets the cycle number of the laser field in the turn-off."
 CycNumTurnOff(l::TrapezoidalLaser) = l.cyc_num_turn_off
-"Gets the cycle number of the laser field in the constant-intensity."
 CycNumConst(l::TrapezoidalLaser) = l.cyc_num_const
-"Gets the ellipticity of the laser field."
 Ellipticity(l::TrapezoidalLaser) = l.ellip
-"Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
 Azimuth(l::TrapezoidalLaser) = l.azi
-"Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::TrapezoidalLaser) = 45.563352525 / l.wave_len
-"Gets the period of the laser field (in a.u.)."
 Period(l::TrapezoidalLaser) = 2π / AngFreq(l)
-"Gets the Carrier-Envelope Phase (CEP) of the laser field."
 CEP(l::TrapezoidalLaser) = l.cep
-"Gets the time shift relative to the beginning of TURN-ON (in a.u.)."
 TimeTurnOn(l::TrapezoidalLaser) = l.t_turn_on
-"Gets the peak electric field intensity of the laser field (in a.u.)."
 LaserF0(l::TrapezoidalLaser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
-"Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::TrapezoidalLaser) = LaserF0(l) / AngFreq(l)
-"Gets the Keldysh parameter γ₀ of the laser field, given the ionization energy `Ip` (in a.u.)."
 KeldyshParameter(l::TrapezoidalLaser, Ip) = AngFreq(l) * sqrt(2Ip) / LaserF0(l)
 
-"Gets the unit envelope function (the peak value is 1) of the laser field."
 function UnitEnvelope(l::TrapezoidalLaser)
     local T = Period(l); local Δt = TimeShift(l);
     local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
@@ -111,7 +91,6 @@ function UnitEnvelope(l::TrapezoidalLaser)
     end
 end
 
-"Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::TrapezoidalLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
     local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
@@ -129,7 +108,6 @@ function LaserAx(l::TrapezoidalLaser)
         end
     end
 end
-"Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::TrapezoidalLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
     local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
@@ -147,7 +125,6 @@ function LaserAy(l::TrapezoidalLaser)
         end
     end
 end
-"Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::TrapezoidalLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
     local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
@@ -165,7 +142,6 @@ function LaserFx(l::TrapezoidalLaser)
         end
     end
 end
-"Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::TrapezoidalLaser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local T = Period(l); local Δt = TimeShift(l);
     local N_on = CycNumTurnOn(l); local N_const = CycNumConst(l); local N_off = CycNumTurnOff(l);
@@ -184,7 +160,6 @@ function LaserFy(l::TrapezoidalLaser)
     end
 end
 
-"Prints the information about the laser."
 function Base.show(io::IO, l::TrapezoidalLaser)
     print(io, "[MonochromaticLaser] Envelope Trapezoidal, ")
     @printf(io, "peak intensity %.1e W/cm², ", l.peak_int)
@@ -223,7 +198,6 @@ function Base.show(io::IO, l::TrapezoidalLaser)
     end
 end
 
-"Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(l::TrapezoidalLaser)
     dict = OrderedDict{Symbol,Any}()
     type                = typeof(l)

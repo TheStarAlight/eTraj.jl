@@ -1,28 +1,25 @@
 
-"Represents a monochromatic elliptically polarized laser field with Cos4-shape envelope propagating in z direction."
+"""
+    struct Cos4Laser <: MonochromaticLaser <: Laser
+
+Represents a monochromatic elliptically polarized laser field with Cos4-shape envelope propagating in z direction.
+"""
 struct Cos4Laser <: MonochromaticLaser
-    "Peak intensity of the laser field (in W/cm^2)."
     peak_int;
-    "Wavelength of the laser field (in NANOMETER)."
     wave_len;
-    "Cycle number of the laser field."
     cyc_num;
-    "Ellipticity of the laser field."
     ellip;
-    "Azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
     azi;
-    "Carrier-Envelope-Phase (CEP) of the laser field."
     cep;
-    "Time shift of the laser relative to the peak (in a.u.)."
     t_shift;
 end
 
 """
-    Cos4Laser(peak_int, wave_len|ang_freq, cyc_num|duration, ellip [, azi=0.0] [, cep=0.0] [, t_shift=0.0]) <: MonochromaticLaser
+    Cos4Laser(peak_int, wave_len|ang_freq, cyc_num|duration, ellip [,azi=0.0] [,cep=0.0] [,t_shift=0.0]) <: MonochromaticLaser
 
 Initializes a new monochromatic elliptically polarized laser field with Cos4-shape envelope.
 
-# Parameters
+## Parameters
 - `peak_int`    : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
 - `wave_len`    : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
 - `ang_freq`    : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
@@ -42,6 +39,7 @@ julia> using Unitful
 
 julia> l = Cos4Laser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", duration=5.34u"fs", ellip=0.0)
 [MonochromaticLaser] Envelope cos⁴, peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, 2.00 cycle(s), ε=0 [linearly polarized]
+```
 """
 function Cos4Laser(;peak_int,
                     wave_len=0, ang_freq=0,   # must specify either wave_len or ang_freq.
@@ -73,32 +71,19 @@ function Cos4Laser(;peak_int,
     Cos4Laser(peak_int, wave_len, cyc_num, ellip, azi, cep, t_shift)
 end
 
-"Gets the peak intensity of the laser field (in W/cm²)."
 PeakInt(l::Cos4Laser) = l.peak_int
-"Gets the wave length of the laser field (in nm)."
 WaveLen(l::Cos4Laser) = l.wave_len
-"Gets the cycle number of the laser field."
 CycNum(l::Cos4Laser) = l.cyc_num
-"Gets the ellipticity of the laser field."
 Ellipticity(l::Cos4Laser) = l.ellip
-"Gets the azimuth angle of the laser's polarization's principle axis relative to x axis (in radians)."
 Azimuth(l::Cos4Laser) = l.azi
-"Gets the angular frequency (ω) of the laser field (in a.u.)."
 AngFreq(l::Cos4Laser) = 45.563352525 / l.wave_len
-"Gets the period of the laser field (in a.u.)."
 Period(l::Cos4Laser) = 2π / AngFreq(l)
-"Gets the Carrier-Envelope Phase (CEP) of the laser field."
 CEP(l::Cos4Laser) = l.cep
-"Gets the time shift relative to the peak (in a.u.)."
 TimeShift(l::Cos4Laser) = l.t_shift
-"Gets the peak electric field intensity of the laser field (in a.u.)."
 LaserF0(l::Cos4Laser) = sqrt(l.peak_int/(1.0+l.ellip^2)/3.50944521e16)
-"Gets the peak vector potential intensity of the laser field (in a.u.)."
 LaserA0(l::Cos4Laser) = LaserF0(l) / AngFreq(l)
-"Gets the Keldysh parameter γ₀ of the laser field, given the ionization energy `Ip` (in a.u.)."
 KeldyshParameter(l::Cos4Laser, Ip) = AngFreq(l) * sqrt(2Ip) / LaserF0(l)
 
-"Gets the unit envelope function (the peak value is 1) of the laser field."
 function UnitEnvelope(l::Cos4Laser)
     local ω = AngFreq(l); local N = CycNum(l); local Δt = l.t_shift;
     function (t)
@@ -107,7 +92,6 @@ function UnitEnvelope(l::Cos4Laser)
     end
 end
 
-"Gets the time-dependent x component of the vector potential under dipole approximation."
 function LaserAx(l::Cos4Laser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -122,7 +106,6 @@ function LaserAx(l::Cos4Laser)
         end
     end
 end
-"Gets the time-dependent y component of the vector potential under dipole approximation."
 function LaserAy(l::Cos4Laser)
     local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -137,7 +120,6 @@ function LaserAy(l::Cos4Laser)
         end
     end
 end
-"Gets the time-dependent x component of the electric field strength under dipole approximation."
 function LaserFx(l::Cos4Laser)
     local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -152,7 +134,6 @@ function LaserFx(l::Cos4Laser)
         end
     end
 end
-"Gets the time-dependent y component of the electric field strength under dipole approximation."
 function LaserFy(l::Cos4Laser)
     local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
     return if ϕ==0
@@ -168,7 +149,6 @@ function LaserFy(l::Cos4Laser)
     end
 end
 
-"Prints the information about the laser."
 function Base.show(io::IO, l::Cos4Laser)
     print(io, "[MonochromaticLaser] Envelope cos⁴, ")
     @printf(io, "peak intensity %.1e W/cm², ", l.peak_int)
@@ -207,7 +187,6 @@ function Base.show(io::IO, l::Cos4Laser)
     end
 end
 
-"Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(l::Cos4Laser)
     dict = OrderedDict{Symbol,Any}()
     type        = typeof(l)

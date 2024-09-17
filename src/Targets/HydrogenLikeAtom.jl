@@ -1,23 +1,18 @@
 
-"Represents a Hydrogen-like atom."
+"""
+    struct HydrogenLikeAtom <: SAEAtomBase <: Target
+
+Represents a Hydrogen-like atom.
+"""
 struct HydrogenLikeAtom <: SAEAtomBase
-    "Ionization potential of the atom."
     Ip;
-    "Asymptotic charge of the inner nucleus."
     nucl_charge;
-    "Angular quantum number l."
     l;
-    "Magnetic quantum number m."
     m;
-    "Asymptotic coefficient C_κl."
     asymp_coeff;
-    "Orientation of the quantization axis θ."
     quan_ax_θ;
-    "Orientation of the quantization axis ϕ."
     quan_ax_ϕ;
-    "Soft core parameter of the atom."
     soft_core;
-    "Name of the atom."
     name::String;
 end
 
@@ -66,29 +61,18 @@ function HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coe
     HydrogenLikeAtom(Ip, Z, l, m, C, quan_ax_θ, quan_ax_ϕ, soft_core, name)
 end
 
-"Gets the ionization potential of the atom."
 IonPotential(t::HydrogenLikeAtom) = t.Ip
-"Gets the asymptotic nuclear charge of the atom."
 AsympNuclCharge(t::HydrogenLikeAtom) = t.nucl_charge
-"Gets the angular quantum number l of the atom."
 AngularQuantumNumber(t::HydrogenLikeAtom) = t.l
-"Gets the magnetic quantum number m of the atom."
 MagneticQuantumNumber(t::HydrogenLikeAtom) = t.m
-"Gets the soft core parameter of the atom."
 SoftCore(t::HydrogenLikeAtom) = t.soft_core
-"Gets the orientation of the quantization axis of the atom in spherical coordinates (θ,ϕ)."
 QuantizationAxisOrientaion(t::HydrogenLikeAtom) = (t.quan_ax_θ, t.quan_ax_ϕ)
 
-"Gets the asymptotic coefficient C_κl of the atom."
 AsympCoeff(t::HydrogenLikeAtom) = t.asymp_coeff
-"Gets the name of the atom."
 TargetName(t::HydrogenLikeAtom) = t.name
-"Gets the potential function of the atom."
 TargetPotential(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.soft_core)^(-0.5)
-"Gets the force exerted on the electron from the atom (which is the neg-grad of potential)."
 TargetForce(t::HydrogenLikeAtom) = (x,y,z) -> -t.nucl_charge*(x^2+y^2+z^2+t.soft_core)^(-1.5) .* (x,y,z)
 
-"Gets the trajectory function according to given parameter."
 function TrajectoryFunction(t::HydrogenLikeAtom, dimension::Integer, laserFx::Function, laserFy::Function, phase_method::Symbol; kwargs...)
     Z  = t.nucl_charge
     Ip = t.Ip
@@ -172,12 +156,10 @@ function TrajectoryFunction(t::HydrogenLikeAtom, dimension::Integer, laserFx::Fu
     end
 end
 
-"Prints the information of the atom."
 function Base.show(io::IO, t::HydrogenLikeAtom)
     @printf(io, "[HydrogenLikeAtom] Atom %s%s, Ip=%.4f, Z=%i, soft_core=%.4f", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, t.nucl_charge, t.soft_core)
 end
 
-"Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(t::HydrogenLikeAtom)
     dict = OrderedDict{Symbol,Any}()
     type        = typeof(t)

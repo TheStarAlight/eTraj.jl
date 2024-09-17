@@ -1,29 +1,23 @@
 
-"Represents an atom under single-active-electron (SAE) approximation."
+"""
+    struct SAEAtom <: SAEAtomBase <: Targets
+
+Represents an atom under single-active-electron (SAE) approximation.
+"""
 struct SAEAtom <: SAEAtomBase
-# should implement TargetPotential, TargetForce, TrajectoryFunction.
-    "Ionization potential of the atom."
     Ip;
-    "Asymptotic charge of the inner nucleus."
     nucl_charge;
-    "Angular quantum number l."
     l;
-    "Magnetic quantum number m."
     m;
-    "Asymptotic coefficient C_κl."
     asymp_coeff;
-    "Orientation of the quantization axis θ."
     quan_ax_θ;
-    "Orientation of the quantization axis ϕ."
     quan_ax_ϕ;
-    "Parameters used to fit the atomic potential. See [J. Phys. B 38 2593 (2005)]"
     a1;
     b1;
     a2;
     b2;
     a3;
     b3;
-    "Name of the atom."
     name::String;
 end
 
@@ -72,37 +66,22 @@ function SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartr
     SAEAtom(Ip,Z,l,m,C,quan_ax_θ,quan_ax_ϕ,a1,b1,a2,b2,a3,b3,name)
 end
 
-"Gets the ionization potential of the atom."
+
 IonPotential(t::SAEAtom) = t.Ip
-"Gets the asymptotic nuclear charge of the atom."
 AsympNuclCharge(t::SAEAtom) = t.nucl_charge
-"Gets the angular quantum number l of the atom."
 AngularQuantumNumber(t::SAEAtom) = t.l
-"Gets the magnetic quantum number m of the atom."
 MagneticQuantumNumber(t::SAEAtom) = t.m
-
-"Gets the orientation of the quantization axis of the atom in spherical coordinates (θ,ϕ)."
 QuantizationAxisOrientaion(t::SAEAtom) = (t.quan_ax_θ, t.quan_ax_ϕ)
-
-"Gets the asymptotic coefficient C_κl of the atom."
 AsympCoeff(t::SAEAtom) = t.asymp_coeff
-
-"Gets the name of the atom."
 TargetName(t::SAEAtom) = t.name
-"""
-Gets the potential function of the atom.
-Expression: V(r) = - [Z + a1*exp(-b1*r) + a2*r*exp(-b2*r) + a3*exp(-b3*r)] / r.
-"""
+
 function TargetPotential(t::SAEAtom)
     return function(x,y,z)
         r = sqrt(x^2+y^2+z^2)
         return - (t.nucl_charge + t.a1*exp(-t.b1*r) + t.a2*r*exp(-t.b2*r) + t.a3*exp(-t.b3*r)) / r
     end
 end
-"""
-Gets the force exerted on the electron from the atom (which is the neg-grad of potential).
-Expression: F(rvec) = - rvec / r^3 * [ Z + a1*(1+b1*r)*exp(-b1*r) + a3*(1+b3*r)*exp(-b3*r) ] - rvec * a2*b2/r * exp(-b2*r).
-"""
+
 function TargetForce(t::SAEAtom)
     return function(x,y,z)
         r = sqrt(x^2+y^2+z^2)
@@ -110,7 +89,6 @@ function TargetForce(t::SAEAtom)
     end
 end
 
-"Gets the trajectory function according to given parameter."
 function TrajectoryFunction(t::SAEAtom, dimension::Integer, laserFx::Function, laserFy::Function, phase_method::Symbol; kwargs...)
     Z  = t.nucl_charge
     Ip = t.Ip
@@ -200,12 +178,10 @@ function TrajectoryFunction(t::SAEAtom, dimension::Integer, laserFx::Function, l
     end
 end
 
-"Prints the information of the atom."
 function Base.show(io::IO, t::SAEAtom)
     @printf(io, "[SAEAtom] Atom %s%s, Ip=%.4f, Z=%i", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, t.nucl_charge)
 end
 
-"Returns a `Dict{Symbol,Any}` containing properties of the object."
 function Serialize(t::SAEAtom)
     dict = OrderedDict{Symbol,Any}()
     type        = typeof(t)

@@ -7,8 +7,9 @@ export LaserAx, LaserAy, LaserFx, LaserFy
 export Serialize
 # Laser-specific properties
 # MonochromaticLaser
-export LaserF0, LaserA0, PeakInt, WaveLen, Ellipticity, AngFreq, Period, CEP, Azimuth, TimeShift, KeldyshParameter
-export UnitEnvelope
+export LaserF0, LaserA0, PeakInt, WaveLen, Ellipticity, AngFreq, Period, CEP, Azimuth, KeldyshParameter, UnitEnvelope
+# Cos2, Cos4, Gaussian
+export TimeShift
 # Cos2, Cos4
 export CycNum
 # Trapezoidal
