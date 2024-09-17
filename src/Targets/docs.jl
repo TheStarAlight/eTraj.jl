@@ -248,7 +248,7 @@ MolAsympCoeff_lMax
 @doc """
     MolRotation(mol::GenericMolecule) -> (α,β,γ)
 
-Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ).
+Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ) (in radian).
 """
 MolRotation
 
@@ -256,7 +256,7 @@ MolRotation
     SetMolRotation!(mol::GenericMolecule, α,β,γ)
     SetMolRotation!(mol::GenericMolecule, (α,β,γ))
 
-Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ).
+Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ) (numerically in radian or a `Unitful.Quantity`).
 """
 SetMolRotation!
 

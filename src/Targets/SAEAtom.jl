@@ -32,8 +32,8 @@ Initializes a new `SAEAtom`.
 - `l=0` : Angular quantum number (*optional, default 0*).
 - `m=0` : Magnetic quantum number (*optional, default 0*).
 - `asymp_coeff=:hartree`: Asymptotic coefficient related to the wavefunction's behavior when r→∞ (*`:hartree` or a positive number*). Passing `:hartree` (by default) indicates automatic calculation using the Hartree formula.
-- `quan_ax_θ=0.0`       : Orientation angle θ of the quantization axis relative to the lab frame (*optional, default 0.0*).
-- `quan_ax_ϕ=0.0`       : Orientation angle ϕ of the quantization axis relative to the lab frame (*optional, default 0.0*).
+- `quan_ax_θ=0.0`       : Orientation angle θ of the quantization axis relative to the lab frame (numerically in radian or a `Unitful.Quantity`) (*optional, default 0.0*).
+- `quan_ax_ϕ=0.0`       : Orientation angle ϕ of the quantization axis relative to the lab frame (numerically in radian or a `Unitful.Quantity`) (*optional, default 0.0*).
 - `a1,b1,a2,b2,a3,b3`   : Parameters used to fit the atomic potential. See [*J. Phys. B* **38**, 2593 (2005)]
 - `name::String`        : Name of the atom.
 
@@ -42,17 +42,19 @@ Initializes a new `SAEAtom`.
 julia> t = SAEAtom(Ip=0.9035, Z=1, asymp_coeff=:hartree, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
 [SAEAtom] Atom He, Ip=0.9035, Z=1
 
-julia> using Unitful
+julia> using SemiclassicalSFI.Units
 
-julia> t = SAEAtom(Ip=12.13u"eV", Z=1, l=1, a1=51.35554, b1=2.111554, a2=-99.92747, b2=3.737221, a3=1.644457, b3=0.4306465, asymp_coeff=1.3, name="Xe")
+julia> t = SAEAtom(Ip=12.13eV, Z=1, l=1, a1=51.35554, b1=2.111554, a2=-99.92747, b2=3.737221, a3=1.644457, b3=0.4306465, asymp_coeff=1.3, name="Xe")
 [SAEAtom] Atom Xe (p orbital, m=0), Ip=0.4458, Z=1
 ```
 
 ## See Also
 The [`get_atom`](@ref) method provides some atom presets for use.
 """
-function SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
+function SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ=0.0, quan_ax_ϕ=0.0, a1=0., b1=0., a2=0., b2=0., a3=0., b3=0., name="[NA]")
     (Ip isa Quantity) && (Ip = (uconvert(eV,Ip) |> auconvert).val)
+    (quan_ax_θ isa Quantity) && (quan_ax_θ=uconvert(u"rad",quan_ax_θ).val)
+    (quan_ax_ϕ isa Quantity) && (quan_ax_ϕ=uconvert(u"rad",quan_ax_ϕ).val)
     @assert Ip>0 "[SAEAtom] Ip should be positive."
     @assert l≥0 && m≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
     @assert b1≥0 && b2≥0 && b3≥0 "[SAEAtom] b1,b2,b3 should be non-negative."

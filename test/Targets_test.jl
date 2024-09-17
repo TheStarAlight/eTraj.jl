@@ -1,6 +1,6 @@
 using SemiclassicalSFI
 using SemiclassicalSFI.Targets
-using Unitful
+using SemiclassicalSFI.Units
 using Test
 
 @info "# Testing Targets ..."
@@ -10,9 +10,9 @@ using Test
     @info "Testing HydrogenLikeAtom ..."
     @testset verbose=true "HydrogenLikeAtom" begin
         t1 = HydrogenLikeAtom(Ip=0.5, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, soft_core=0.2, name="H")
-        t1_= HydrogenLikeAtom(Ip=13.605693123044498u"eV", Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, soft_core=0.2, name="H")
+        t1_= HydrogenLikeAtom(Ip=13.605693123044498eV, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=90°, quan_ax_ϕ=π*rad, soft_core=0.2, name="H")
         t2 = HydrogenLikeAtom(0.5,1,0,0,1.0, π/2,π, 0.2,"H")
-        t3 = get_atom("H"; quan_ax_θ=π/2, quan_ax_ϕ=π)
+        t3 = get_atom("H"; quan_ax_θ=90°, quan_ax_ϕ=π*rad)
         @test t1 == t1_ == t2 == t3
         @test begin
             show(t1)
@@ -34,7 +34,7 @@ using Test
     @info "Testing SAEAtom ..."
     @testset verbose=true "SAEAtom" begin
         t1 = SAEAtom(Ip=0.9035698802, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
-        t1_= SAEAtom(Ip=24.58738901045456u"eV", Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
+        t1_= SAEAtom(Ip=24.58738901045456eV, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=90°, quan_ax_ϕ=π*rad, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
         t2 = SAEAtom(0.9035698802, 1, 0, 0, 0.9124458182520485, π/2, π, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
         t3 = get_atom("He"; quan_ax_θ=π/2, quan_ax_ϕ=π)
         @test t1 == t2 == t3
@@ -139,7 +139,7 @@ using Test
         m1 = get_mol("Hydrogen")
         @test TargetName(m1) == "Hydrogen (H₂)"
         @test MolAtoms(m1) == ["H","H"]
-        m2 = get_mol("Oxygen"; rot_α=45u"°", rot_β=π*u"rad", rot_γ=2π)
+        m2 = get_mol("Oxygen"; rot_α=45°, rot_β=π*rad, rot_γ=2π)
         @test TargetName(m2) == "Oxygen (O₂)"
         @test MolAtoms(m2) == ["O","O"]
         @test reduce(&, MolRotation(m2) .≈ (π/4, π, 2π))

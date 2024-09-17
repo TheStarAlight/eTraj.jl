@@ -26,8 +26,8 @@ Initializes a new monochromatic elliptically polarized laser field with Cos2-sha
 - `cyc_num`     : Number of cycles of the laser field.
 - `duration`    : Duration of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
 - `ellip`       : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
-- `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (in **radians**) *(optional, default 0)*.
-- `cep`         : Carrier-Envelope-Phase of the laser field *(optional, default 0)*.
+- `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
+- `cep`         : Carrier-Envelope-Phase of the laser field (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
 - `t_shift`     : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
 
 ## Examples
@@ -35,9 +35,9 @@ Initializes a new monochromatic elliptically polarized laser field with Cos2-sha
 julia> l = Cos2Laser(peak_int=4e14, wave_len=800.0, cyc_num=2.0, ellip=1.0)
 [MonochromaticLaser] Envelope cos², peak intensity 4.0e+14 W/cm², wavelen=800 nm, 2 cycle(s), ε=1 [circularly polarized]
 
-julia> using Unitful
+julia> using SemiclassicalSFI.Units
 
-julia> l = Cos2Laser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", duration=5.34u"fs", ellip=0.0)
+julia> l = Cos2Laser(peak_int=0.4PW/cm^2, ang_freq=1.5498eV, duration=5.34fs, ellip=0.0)
 [MonochromaticLaser] Envelope cos², peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, 2.00 cycle(s), ε=0 [linearly polarized]
 ```
 """
@@ -51,6 +51,8 @@ function Cos2Laser(;peak_int,
     (ang_freq isa Quantity) && (ang_freq = (uconvert(eV, ang_freq) |> auconvert).val)
     (duration isa Quantity) && (duration = (uconvert(fs, duration) |> auconvert).val)
     (t_shift  isa Quantity) && (t_shift  = (uconvert(fs, t_shift)  |> auconvert).val)
+    (azi isa Quantity) && (azi=uconvert(u"rad",azi).val)
+    (cep isa Quantity) && (cep=uconvert(u"rad",cep).val)
     # ================
     @assert wave_len>0 || ang_freq>0    "[Cos2Laser] Must specify either `wave_len` or `ang_freq`."
     @assert cyc_num>0 || duration>0     "[Cos2Laser] Must specify either `cyc_num` or `duration`."

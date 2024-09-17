@@ -1,6 +1,7 @@
 using SemiclassicalSFI
 using SemiclassicalSFI.Targets
 using SemiclassicalSFI.Lasers
+using SemiclassicalSFI.Units
 using Test
 
 @info "# Testing TrajectorySimulation ..."
@@ -46,14 +47,14 @@ using Test
                 target              = t,
                 dimension           = 3,
                 sample_t_intv       = (-80,80),
-                sample_t_num        = 2000,
+                sample_t_num        = 1000,
                 traj_t_final        = 120,
                 final_p_max         = (2.5,2.5,1.0),
                 final_p_num         = (250,250,100),
                 ss_kd_max           = 2.0,
-                ss_kd_num           = 200,
+                ss_kd_num           = 100,
                 ss_kz_max           = 1.0,
-                ss_kz_num           = 100,
+                ss_kz_num           = 50,
                 output_path         = "$tmpdir/test_ADK-CTMC_3D_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
@@ -163,6 +164,32 @@ using Test
                 ss_kd_num           = 800,
                 output_fmt          = :h5,
                 output_path         = "$tmpdir/test_ADK-CTMC_4e14_800nm_2cyc_CP.h5",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-CTMC (with units) ..."
+    @testset "ADK-CTMC (units)" begin
+        t = get_atom("H")
+        l = Cos4Laser(peak_int=4e14W/cm^2, wave_len=800.0nm, duration=5.34fs, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-2.4fs, 2.4fs),
+                sample_t_num        = 400,
+                traj_t_final        = 4.0fs,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_ADK-CTMC_units_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full

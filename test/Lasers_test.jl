@@ -1,6 +1,6 @@
 using SemiclassicalSFI
 using SemiclassicalSFI.Lasers
-using Unitful
+using SemiclassicalSFI.Units
 using Test
 
 @info "# Testing Lasers ..."
@@ -12,8 +12,8 @@ using Test
         l1 = Cos2Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
         l2 = Cos2Laser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
         l3 = Cos2Laser(peak_int=4e14, wave_len=800., duration=220.63996467273427, ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l4 = Cos2Laser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", duration=5.337025523633234u"fs", ellip=1., azi=π/2, cep=π, t_shift=241.88843265767443u"as")
-        l5 = Cos2Laser(peak_int=4e14u"W/cm^2", ang_freq=1.5498024802806117u"eV", duration=5.337025523633234u"fs", ellip=1., azi=π/2, cep=π, t_shift=241.88843265767443u"as")
+        l4 = Cos2Laser(peak_int=4e14W/cm^2, wave_len=800.0nm, duration=5.337025523633234fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
+        l5 = Cos2Laser(peak_int=4e14W/cm^2, ang_freq=1.5498024802806117eV, duration=5.337025523633234fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
         l = Cos2Laser(4e14,800.,2.,1.,π/2,π,10.)
         @test l == l1
         @test l == l2
@@ -43,8 +43,8 @@ using Test
         l1 = Cos4Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
         l2 = Cos4Laser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
         l3 = Cos4Laser(peak_int=4e14, wave_len=800., duration=220.63996467273427, ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l4 = Cos4Laser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", duration=5.337025523633234u"fs", ellip=1., azi=π/2, cep=π, t_shift=241.88843265767443u"as")
-        l5 = Cos4Laser(peak_int=4e14u"W/cm^2", ang_freq=1.5498024802806117u"eV", duration=5.337025523633234u"fs", ellip=1., azi=π/2, cep=π, t_shift=241.88843265767443u"as")
+        l4 = Cos4Laser(peak_int=4e14W/cm^2, wave_len=800.0nm, duration=5.337025523633234fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
+        l5 = Cos4Laser(peak_int=4e14W/cm^2, ang_freq=1.5498024802806117eV, duration=5.337025523633234fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
         l = Cos4Laser(4e14,800.,2.,1.,π/2,π,10.)
         @test l == l1
         @test l == l2
@@ -75,8 +75,8 @@ using Test
         l2 = GaussianLaser(peak_int=4e14, ang_freq=0.05695419065625, spread_cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
         l3 = GaussianLaser(peak_int=4e14, wave_len=800., spread_duration=220.63996467273427, ellip=1., azi=π/2, cep=π, t_shift=10.)
         l4 = GaussianLaser(peak_int=4e14, wave_len=800., FWHM_duration=519.5674115462751, ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l5 = GaussianLaser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", spread_duration=5.337025523633234u"fs", ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l6 = GaussianLaser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", FWHM_duration=12.567734683893338u"fs", ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l5 = GaussianLaser(peak_int=4e14W/cm^2, wave_len=800.0nm, spread_duration=5.337025523633234fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
+        l6 = GaussianLaser(peak_int=4e14W/cm^2, wave_len=800.0nm, FWHM_duration=12.567734683893338fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
         l = GaussianLaser(4e14, 800., 2., 1., π/2, π, 10.)
         @test l == l1
         @test l == l2
@@ -108,8 +108,8 @@ using Test
     @testset verbose=true "TrapezoidalLaser" begin
         l1 = TrapezoidalLaser(peak_int=4e14, wave_len=800., cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
         l2 = TrapezoidalLaser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
-        l3 = TrapezoidalLaser(peak_int=4e14u"W/cm^2", wave_len=800.0u"nm", cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
-        l4 = TrapezoidalLaser(peak_int=4e14u"W/cm^2", ang_freq=1.5498024802806117u"eV", cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=0.24188843265767443u"fs")
+        l3 = TrapezoidalLaser(peak_int=4e14W/cm^2, wave_len=800.0nm, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=90°, cep=π*rad, t_turn_on=0.24188843265767443fs)
+        l4 = TrapezoidalLaser(peak_int=4e14W/cm^2, ang_freq=1.5498024802806117eV, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=90°, cep=π*rad, t_turn_on=0.24188843265767443fs)
         l = TrapezoidalLaser(4e14, 800., 2., 2., 6., 1., π/2, π, 10.)
         @test l == l1
         @test l == l2
@@ -141,7 +141,7 @@ using Test
         l1 = Cos4Laser(peak_int=4e14, wave_len=800., cyc_num=6., ellip=1.)
         l2 = Cos4Laser(peak_int=4e14, wave_len=400., cyc_num=6., ellip=-1.)
         l_ = BichromaticLaser(l1=l1, l2=l2, delay=50.0)
-        l__ = BichromaticLaser(l1=l1, l2=l2, delay=1.2094421632883721u"fs")
+        l__ = BichromaticLaser(l1=l1, l2=l2, delay=1.2094421632883721fs)
         l = BichromaticLaser(l1,l2,50.0)
         @test l === l_
         @test l === l__

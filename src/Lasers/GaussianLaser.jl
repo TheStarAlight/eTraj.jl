@@ -27,8 +27,8 @@ Initializes a new monochromatic elliptically polarized laser field with Gaussian
 - `spread_duration` : Half-temporal width of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
 - `FWHM_duration`   : Temporal FWHM (Full Width at Half Maxima) of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
 - `ellip`           : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
-- `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (in **radians**) *(optional, default 0)*.
-- `cep`             : Carrier-Envelope-Phase of the laser field *(optional, default 0)*.
+- `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
+- `cep`             : Carrier-Envelope-Phase of the laser field (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
 - `t_shift`         : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
 
 ## Examples
@@ -36,9 +36,9 @@ Initializes a new monochromatic elliptically polarized laser field with Gaussian
 julia> l = GaussianLaser(peak_int=4e14, wave_len=800.0, spread_cyc_num=2.0, ellip=1.0)
 [MonochromaticLaser] Envelope Gaussian, peak intensity 4.0e+14 W/cm², wavelen=800 nm, temporal width 4 cycle(s) [FWHM 12.57 fs], ε=1 [circularly polarized]
 
-julia> using Unitful
+julia> using SemiclassicalSFI.Units
 
-julia> l = GaussianLaser(peak_int=0.4u"PW/cm^2", ang_freq=1.5498u"eV", FWHM_duration=12.57u"fs", ellip=0.0)
+julia> l = GaussianLaser(peak_int=0.4PW/cm^2, ang_freq=1.5498eV, FWHM_duration=12.57fs, ellip=0.0)
 [MonochromaticLaser] Envelope Gaussian, peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, temporal width 4.00 cycle(s) [FWHM 12.57 fs], ε=0 [linearly polarized]
 ```
 """
@@ -53,6 +53,8 @@ function GaussianLaser(;peak_int,
     (spread_duration isa Quantity) && (spread_duration = (uconvert(fs, spread_duration) |> auconvert).val)
     (FWHM_duration isa Quantity) && (FWHM_duration = (uconvert(fs, FWHM_duration) |> auconvert).val)
     (t_shift  isa Quantity) && (t_shift  = (uconvert(fs, t_shift) |> auconvert).val)
+    (azi isa Quantity) && (azi=uconvert(u"rad",azi).val)
+    (cep isa Quantity) && (cep=uconvert(u"rad",cep).val)
     # ================
     @assert wave_len>0 || ang_freq>0                                    "[GaussianLaser] Must specify either `wave_len` or `ang_freq`."
     @assert spread_cyc_num>0 || spread_duration>0 || FWHM_duration>0    "[GaussianLaser] Must specify one in `spread_cyc_num`, `spread_duration` and `FWHM_duration`."

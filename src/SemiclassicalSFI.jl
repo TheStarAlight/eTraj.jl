@@ -12,6 +12,7 @@ using .Lasers
 using .Targets
 using .ElectronSamplers
 include("TrajectorySimulation.jl")
+include("Units.jl")
 
 export perform_traj_simulation, Lasers, Targets
 

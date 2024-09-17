@@ -61,9 +61,9 @@ Initializes a new `GenericMolecule` with given parameters.
 julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375], name="Hydrogen")
 [GenericMolecule] Hydrogen
 
-julia> using Unitful
+julia> using SemiclassicalSFI.Units
 
-julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375]*u"Å", name="Hydrogen", rot_β=90u"°")
+julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375]*Å, name="Hydrogen", rot_β=90°)
 [GenericMolecule] Hydrogen, αβγ=(0.0°,90.0°,0.0°)
 ```
 """
@@ -94,7 +94,7 @@ Initializes a new `GenericMolecule` with the data stored in `ext_data_path`.
 
 ## Parameters
 - `ext_data_path`           : Path to the molecule's data stored externally.
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (*optional, default `0.0`*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
 """
 function LoadMolecule(ext_data_path::String; rot_α=0.,rot_β=0.,rot_γ=0.)
     file = jldopen(ext_data_path ,"r")
@@ -294,6 +294,9 @@ end
 
 MolRotation(mol::GenericMolecule) = (mol.rot_α,mol.rot_β,mol.rot_γ)
 function SetMolRotation!(mol::GenericMolecule, α,β,γ)
+    (α isa Quantity) && (α=uconvert(u"rad",α).val)
+    (β isa Quantity) && (β=uconvert(u"rad",β).val)
+    (γ isa Quantity) && (γ=uconvert(u"rad",γ).val)
     mol.rot_α = α; mol.rot_β = β; mol.rot_γ = γ;
     return
 end

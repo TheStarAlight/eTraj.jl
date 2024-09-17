@@ -27,8 +27,8 @@ Initializes a new `HydrogenLikeAtom`.
 - `l=0` : Angular quantum number (*optional, default 0*).
 - `m=0` : Magnetic quantum number (*optional, default 0*).
 - `asymp_coeff=:hartree` : Asymptotic coefficient related to the wavefunction's behavior when r→∞ (*`:hartree` or a positive number*). Passing `:hartree` (by default) indicates automatic calculation using the Hartree formula.
-- `quan_ax_θ=0.0`   : Orientation angle θ of the quantization axis relative to the lab frame (*optional, default 0.0*).
-- `quan_ax_ϕ=0.0`   : Orientation angle ϕ of the quantization axis relative to the lab frame (*optional, default 0.0*).
+- `quan_ax_θ=0.0`   : Orientation angle θ of the quantization axis relative to the lab frame (numerically in radian or a `Unitful.Quantity`) (*optional, default 0.0*).
+- `quan_ax_ϕ=0.0`   : Orientation angle ϕ of the quantization axis relative to the lab frame (numerically in radian or a `Unitful.Quantity`) (*optional, default 0.0*).
 - `soft_core=0.2`   : Soft core parameter of the Coulomb potential (*optional, default 0.2*).
 - `name::String`    : Name of the atom.
 
@@ -37,17 +37,19 @@ Initializes a new `HydrogenLikeAtom`.
 julia> t = HydrogenLikeAtom(Ip=0.5, Z=1, name="H")
 [HydrogenLikeAtom] Atom H, Ip=0.5000, Z=1, soft_core=0.2000
 
-julia> using Unitful
+julia> using SemiclassicalSFI.Units
 
-julia> t = HydrogenLikeAtom(Ip=3.4u"eV", Z=1, l=1, name="H")
+julia> t = HydrogenLikeAtom(Ip=3.4eV, Z=1, l=1, name="H")
 [HydrogenLikeAtom] Atom H (p orbital, m=0), Ip=0.1249, Z=1, soft_core=0.2000
 ```
 
 ## See Also
 The [`get_atom`](@ref) method provides some atom presets for use.
 """
-function HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ::Real=0.0, quan_ax_ϕ::Real=0.0, soft_core::Real=0.2, name="[NA]")
+function HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartree, quan_ax_θ=0.0, quan_ax_ϕ=0.0, soft_core=0.2, name="[NA]")
     (Ip isa Quantity) && (Ip = (uconvert(eV,Ip) |> auconvert).val)
+    (quan_ax_θ isa Quantity) && (quan_ax_θ=uconvert(u"rad",quan_ax_θ).val)
+    (quan_ax_ϕ isa Quantity) && (quan_ax_ϕ=uconvert(u"rad",quan_ax_ϕ).val)
     @assert Ip>0 "[HydrogenLikeAtom] `Ip` should be positive."
     @assert l≥0 && m≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
     @assert soft_core≥0 "[HydrogenLikeAtom] `soft_core` should be non-negative."
