@@ -37,7 +37,7 @@ Initializes a new `HydrogenLikeAtom`.
 julia> t = HydrogenLikeAtom(Ip=0.5, Z=1, name="H")
 [HydrogenLikeAtom] Atom H, Ip=0.5000, Z=1, soft_core=0.2000
 
-julia> using SemiclassicalSFI.Units
+julia> using eTraj.Units
 
 julia> t = HydrogenLikeAtom(Ip=3.4eV, Z=1, l=1, name="H")
 [HydrogenLikeAtom] Atom H (p orbital, m=0), Ip=0.1249, Z=1, soft_core=0.2000

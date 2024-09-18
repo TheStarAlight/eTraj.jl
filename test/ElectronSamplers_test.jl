@@ -1,7 +1,7 @@
-using SemiclassicalSFI
-using SemiclassicalSFI.ElectronSamplers
-using SemiclassicalSFI.Lasers
-using SemiclassicalSFI.Targets
+using eTraj
+using eTraj.ElectronSamplers
+using eTraj.Lasers
+using eTraj.Targets
 using Test
 
 @info "# Testing ElectronSamplers ..."

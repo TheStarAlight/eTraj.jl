@@ -1,6 +1,6 @@
 
-using SemiclassicalSFI
-using SemiclassicalSFI.Targets
+using eTraj
+using eTraj.Targets
 using Unitful
 using Test
 

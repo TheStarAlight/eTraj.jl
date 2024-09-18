@@ -35,7 +35,7 @@ Initializes a new monochromatic elliptically polarized laser field with Cos4-sha
 julia> l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2.0, ellip=1.0)
 [MonochromaticLaser] Envelope cos⁴, peak intensity 4.0e+14 W/cm², wavelen=800 nm, 2 cycle(s), ε=1 [circularly polarized]
 
-julia> using SemiclassicalSFI.Units
+julia> using eTraj.Units
 
 julia> l = Cos4Laser(peak_int=0.4PW/cm^2, ang_freq=1.5498eV, duration=5.34fs, ellip=0.0)
 [MonochromaticLaser] Envelope cos⁴, peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, 2.00 cycle(s), ε=0 [linearly polarized]

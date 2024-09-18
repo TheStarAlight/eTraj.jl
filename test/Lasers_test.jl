@@ -1,6 +1,6 @@
-using SemiclassicalSFI
-using SemiclassicalSFI.Lasers
-using SemiclassicalSFI.Units
+using eTraj
+using eTraj.Lasers
+using eTraj.Units
 using ForwardDiff: derivative
 using Test
 
