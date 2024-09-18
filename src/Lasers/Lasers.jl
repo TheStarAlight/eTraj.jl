@@ -24,7 +24,6 @@ abstract type MonochromaticLaser <: Laser end
 
 include("Cos4Laser.jl")
 include("Cos2Laser.jl")
-include("TrapezoidalLaser.jl")
 include("GaussianLaser.jl")
 include("BichromaticLaser.jl")
 include("docs.jl")

@@ -99,12 +99,12 @@ function LaserAx(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * (abs(ω*real(t))<N*π) * cos(ω*t+φ)
+            A0 * cos(ω*t/(2N))^2 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * cos(ω*t+φ)
         end
     else
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * (abs(ω*real(t))<N*π) * (cos(ω*t+φ)*cos(ϕ)+sin(ω*t+φ)*ε*sin(ϕ))
+            A0 * cos(ω*t/(2N))^2 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * (cos(ω*t+φ)*cos(ϕ)+sin(ω*t+φ)*ε*sin(ϕ))
         end
     end
 end
@@ -113,12 +113,12 @@ function LaserAy(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * (abs(ω*real(t))<N*π) * sin(ω*t+φ) * ε
+            A0 * cos(ω*t/(2N))^2 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * sin(ω*t+φ) * ε
         end
     else
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * (abs(ω*real(t))<N*π) * (cos(ω*t+φ)*-sin(ϕ)+sin(ω*t+φ)*ε*cos(ϕ))
+            A0 * cos(ω*t/(2N))^2 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * (cos(ω*t+φ)*-sin(ϕ)+sin(ω*t+φ)*ε*cos(ϕ))
         end
     end
 end
@@ -127,12 +127,12 @@ function LaserFx(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * (abs(ω*real(t))<N*π) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))
+            F0 * cos(ω*t/(2N)) * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))
         end
     else
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * (abs(ω*real(t))<N*π) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*cos(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*sin(ϕ) )
+            F0 * cos(ω*t/(2N)) * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*cos(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*sin(ϕ) )
         end
     end
 end
@@ -141,12 +141,12 @@ function LaserFy(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * (abs(ω*real(t))<N*π) * ( -cos(ω*t/(2N))*cos(ω*t+φ) + 1/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
+            F0 * cos(ω*t/(2N)) * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * ( -cos(ω*t/(2N))*cos(ω*t+φ) + 1/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
         end
     else
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * (abs(ω*real(t))<N*π) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*-sin(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*cos(ϕ) )
+            F0 * cos(ω*t/(2N)) * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*-sin(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*cos(ϕ) )
         end
     end
 end

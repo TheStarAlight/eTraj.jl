@@ -1,6 +1,7 @@
 using SemiclassicalSFI
 using SemiclassicalSFI.Lasers
 using SemiclassicalSFI.Units
+using ForwardDiff: derivative
 using Test
 
 @info "# Testing Lasers ..."
@@ -36,6 +37,21 @@ using Test
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
+        # testing if A'=-F
+        # non-zero azi
+        l6 = Cos2Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., azi=π/4, cep=π, t_shift=10.)
+        Ax = LaserAx(l6); Ay = LaserAy(l6); Fx = LaserFx(l6); Fy = LaserFy(l6)
+        @test derivative(Ax,0.0) ≈ -Fx(0.0)
+        @test derivative(Ax,10.0) ≈ -Fx(10.0)
+        @test derivative(Ay,0.0) ≈ -Fy(0.0)
+        @test derivative(Ay,10.0) ≈ -Fy(10.0)
+        # zero azi
+        l7 = Cos2Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., cep=π, t_shift=10.)
+        Ax = LaserAx(l7); Ay = LaserAy(l7); Fx = LaserFx(l7); Fy = LaserFy(l7)
+        @test derivative(Ax,0.0) ≈ -Fx(0.0)
+        @test derivative(Ax,10.0) ≈ -Fx(10.0)
+        @test derivative(Ay,0.0) ≈ -Fy(0.0)
+        @test derivative(Ay,10.0) ≈ -Fy(10.0)
     end
 
     @info "Testing Cos4Laser ..."
@@ -67,6 +83,21 @@ using Test
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
+        # testing if A'=-F
+        # non-zero azi
+        l6 = Cos4Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., azi=π/4, cep=π, t_shift=10.)
+        Ax = LaserAx(l6); Ay = LaserAy(l6); Fx = LaserFx(l6); Fy = LaserFy(l6)
+        @test derivative(Ax,0.0) ≈ -Fx(0.0)
+        @test derivative(Ax,10.0) ≈ -Fx(10.0)
+        @test derivative(Ay,0.0) ≈ -Fy(0.0)
+        @test derivative(Ay,10.0) ≈ -Fy(10.0)
+        # zero azi
+        l7 = Cos4Laser(peak_int=4e14, wave_len=800., cyc_num=2., ellip=1., cep=π, t_shift=10.)
+        Ax = LaserAx(l7); Ay = LaserAy(l7); Fx = LaserFx(l7); Fy = LaserFy(l7)
+        @test derivative(Ax,0.0) ≈ -Fx(0.0)
+        @test derivative(Ax,10.0) ≈ -Fx(10.0)
+        @test derivative(Ay,0.0) ≈ -Fy(0.0)
+        @test derivative(Ay,10.0) ≈ -Fy(10.0)
     end
 
     @info "Testing GaussianLaser ..."
@@ -102,38 +133,21 @@ using Test
         @test TimeShift(l1)     == 10.0
         @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
         @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
-    end
-
-    @info "Testing TrapezoidalLaser ..."
-    @testset verbose=true "TrapezoidalLaser" begin
-        l1 = TrapezoidalLaser(peak_int=4e14, wave_len=800., cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
-        l2 = TrapezoidalLaser(peak_int=4e14, ang_freq=0.05695419065625, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=π/2, cep=π, t_turn_on=10.)
-        l3 = TrapezoidalLaser(peak_int=4e14W/cm^2, wave_len=800.0nm, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=90°, cep=π*rad, t_turn_on=0.24188843265767443fs)
-        l4 = TrapezoidalLaser(peak_int=4e14W/cm^2, ang_freq=1.5498024802806117eV, cyc_num_turn_on=2., cyc_num_turn_off=2., cyc_num_const=6., ellip=1., azi=90°, cep=π*rad, t_turn_on=0.24188843265767443fs)
-        l = TrapezoidalLaser(4e14, 800., 2., 2., 6., 1., π/2, π, 10.)
-        @test l == l1
-        @test l == l2
-        @test l == l3
-        @test l == l4
-        @test begin
-            show(l1)
-            println()
-            true
-        end
-        @test PeakInt(l1)       == 4e14
-        @test WaveLen(l1)       == 800.
-        @test CycNumTurnOn(l1)  == 2.
-        @test CycNumTurnOff(l1) == 2.
-        @test CycNumConst(l1)   == 6.
-        @test CycNumTotal(l1)   == 10.
-        @test Ellipticity(l1)   == 1.
-        @test Azimuth(l1)       == π/2
-        @test AngFreq(l1)       == 45.563352525 / WaveLen(l1)
-        @test Period(l1)        == 2π / AngFreq(l1)
-        @test CEP(l1)           == π
-        @test TimeTurnOn(l1)    == 10.0
-        @test LaserF0(l1)       == sqrt(PeakInt(l1)/(1.0+Ellipticity(l1)^2)/3.50944521e16)
-        @test LaserA0(l1)       == LaserF0(l1) / AngFreq(l1)
+        # testing if A'=-F
+        # non-zero azi
+        l7 = GaussianLaser(peak_int=4e14, wave_len=800., spread_cyc_num=2., ellip=1., azi=π/4, cep=π, t_shift=10.)
+        Ax = LaserAx(l7); Ay = LaserAy(l7); Fx = LaserFx(l7); Fy = LaserFy(l7)
+        @test derivative(Ax,0.0) ≈ -Fx(0.0)
+        @test derivative(Ax,20.0) ≈ -Fx(20.0)
+        @test derivative(Ay,0.0) ≈ -Fy(0.0)
+        @test derivative(Ay,20.0) ≈ -Fy(20.0)
+        # zero azi
+        l8 = GaussianLaser(peak_int=4e14, wave_len=800., spread_cyc_num=2., ellip=1., cep=π, t_shift=10.)
+        Ax = LaserAx(l8); Ay = LaserAy(l8); Fx = LaserFx(l8); Fy = LaserFy(l8)
+        @test derivative(Ax,0.0) ≈ -Fx(0.0)
+        @test derivative(Ax,20.0) ≈ -Fx(20.0)
+        @test derivative(Ay,0.0) ≈ -Fy(0.0)
+        @test derivative(Ay,20.0) ≈ -Fy(20.0)
     end
 
     @info "Testing BichromaticLaser ..."

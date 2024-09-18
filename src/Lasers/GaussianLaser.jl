@@ -135,12 +135,12 @@ function LaserFx(l::GaussianLaser)
     return if ϕ==0
         function(t)
             t -= Δt
-            A0 * exp(-t^2/2/σ^2) * (-t/σ^2*cos(ω*t+φ) + ω*sin(ω*t+φ))
+            A0 * exp(-t^2/2/σ^2) * (t/σ^2*cos(ω*t+φ) + ω*sin(ω*t+φ))
         end
     else
         function(t)
             t -= Δt
-            A0 * exp(-t^2/2/σ^2) * (-(t/σ^2*cos(ω*t+φ) - ω*sin(ω*t+φ))*cos(ϕ) + (t/σ^2*sin(ω*t+φ)-ω*cos(ω*t+φ))*ε*sin(ϕ))
+            A0 * exp(-t^2/2/σ^2) * ((t/σ^2*cos(ω*t+φ) + ω*sin(ω*t+φ))*cos(ϕ) + (t/σ^2*sin(ω*t+φ) - ω*cos(ω*t+φ))*ε*sin(ϕ))
         end
     end
 end
@@ -154,7 +154,7 @@ function LaserFy(l::GaussianLaser)
     else
         function(t)
             t -= Δt
-            A0 * exp(-t^2/2/σ^2) * (-(t/σ^2*cos(ω*t+φ) - ω*sin(ω*t+φ))*-sin(ϕ) + (t/σ^2*sin(ω*t+φ)-ω*cos(ω*t+φ))*ε*cos(ϕ))
+            A0 * exp(-t^2/2/σ^2) * ((t/σ^2*cos(ω*t+φ) + ω*sin(ω*t+φ))*-sin(ϕ) + (t/σ^2*sin(ω*t+φ) - ω*cos(ω*t+φ))*ε*cos(ϕ))
         end
     end
 end
