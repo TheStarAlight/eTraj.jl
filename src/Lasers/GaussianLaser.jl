@@ -36,7 +36,7 @@ Initializes a new monochromatic elliptically polarized laser field with Gaussian
 julia> l = GaussianLaser(peak_int=4e14, wave_len=800.0, spread_cyc_num=2.0, ellip=1.0)
 [MonochromaticLaser] Envelope Gaussian, peak intensity 4.0e+14 W/cm², wavelen=800 nm, temporal width 4 cycle(s) [FWHM 12.57 fs], ε=1 [circularly polarized]
 
-julia> using SemiclassicalSFI.Units
+julia> using eTraj.Units
 
 julia> l = GaussianLaser(peak_int=0.4PW/cm^2, ang_freq=1.5498eV, FWHM_duration=12.57fs, ellip=0.0)
 [MonochromaticLaser] Envelope Gaussian, peak intensity 4.0e+14 W/cm², wavelen=800.00 nm, temporal width 4.00 cycle(s) [FWHM 12.57 fs], ε=0 [linearly polarized]

@@ -1,6 +1,6 @@
-using SemiclassicalSFI
-using SemiclassicalSFI.Targets
-using SemiclassicalSFI.Units
+using eTraj
+using eTraj.Targets
+using eTraj.Units
 using Test
 
 @info "# Testing Targets ..."

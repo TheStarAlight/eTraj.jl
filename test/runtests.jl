@@ -1,4 +1,4 @@
-using SemiclassicalSFI
+using eTraj
 using Test
 using Base.Threads
 
@@ -7,7 +7,7 @@ if Threads.nthreads() == 1
 end
 @info "Running with $(Threads.nthreads()) threads ..."
 
-@testset verbose=true "SemiclassicalSFI" begin
+@testset verbose=true "eTraj" begin
     include("Targets_test.jl")
     include("PySCFMolecularCalculator_test.jl")
     include("Lasers_test.jl")

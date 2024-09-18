@@ -2,8 +2,8 @@
 # This script is not included in the program.
 # This script generates the molecule data.
 
-using SemiclassicalSFI
-using SemiclassicalSFI.Targets
+using eTraj
+using eTraj.Targets
 using Unitful
 
 mols = Dict(

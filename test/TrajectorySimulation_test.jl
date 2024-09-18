@@ -1,7 +1,7 @@
-using SemiclassicalSFI
-using SemiclassicalSFI.Targets
-using SemiclassicalSFI.Lasers
-using SemiclassicalSFI.Units
+using eTraj
+using eTraj.Targets
+using eTraj.Lasers
+using eTraj.Units
 using Test
 
 @info "# Testing TrajectorySimulation ..."

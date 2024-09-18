@@ -42,7 +42,7 @@ Initializes a new `SAEAtom`.
 julia> t = SAEAtom(Ip=0.9035, Z=1, asymp_coeff=:hartree, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
 [SAEAtom] Atom He, Ip=0.9035, Z=1
 
-julia> using SemiclassicalSFI.Units
+julia> using eTraj.Units
 
 julia> t = SAEAtom(Ip=12.13eV, Z=1, l=1, a1=51.35554, b1=2.111554, a2=-99.92747, b2=3.737221, a3=1.644457, b3=0.4306465, asymp_coeff=1.3, name="Xe")
 [SAEAtom] Atom Xe (p orbital, m=0), Ip=0.4458, Z=1

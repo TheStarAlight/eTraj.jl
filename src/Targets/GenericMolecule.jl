@@ -61,7 +61,7 @@ Initializes a new `GenericMolecule` with given parameters.
 julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375], name="Hydrogen")
 [GenericMolecule] Hydrogen
 
-julia> using SemiclassicalSFI.Units
+julia> using eTraj.Units
 
 julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375]*Å, name="Hydrogen", rot_β=90°)
 [GenericMolecule] Hydrogen, αβγ=(0.0°,90.0°,0.0°)
