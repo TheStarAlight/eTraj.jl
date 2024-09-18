@@ -53,7 +53,7 @@ using Test
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_ADK-CTMC_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_ADK-CTMC_Cos2Laser_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
@@ -79,7 +79,7 @@ using Test
                 final_p_num         = (250,250),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
-                output_path         = "$tmpdir/test_ADK-CTMC_4e14_800nm_2cyc_CP.jld2",
+                output_path         = "$tmpdir/test_ADK-CTMC_GaussianLaser_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
