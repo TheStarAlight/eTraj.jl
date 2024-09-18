@@ -1,26 +1,31 @@
 
 """
-The Laser module provides information about laser fields.
+    module Lasers
+
+The `Laser` module contains abstraction of laser and provides some pre-defined lasers for use.
 """
 module Lasers
 
-# Lasers
-export Laser, Cos4Laser, Cos2Laser, TrapezoidalLaser, GaussianLaser, MonochromaticLaser
-# Properties
-export PeakInt, WaveLen, Ellipticity, AngFreq, Period, CEP, Azimuth, TimeShift, UnitEnvelope   # General
-export LaserF0, LaserA0, LaserAx, LaserAy, LaserFx, LaserFy     # General
-export Serialize
-export CycNum                                                   # Cos2, Cos4
-export CycNumTurnOn, CycNumConst, CycNumTurnOff, CycNumTotal    # Trapezoidal
-export SpreadCycNum, SpreadDuration, FWHM_Duration              # Gaussian
+include("imports.jl")
+include("exports.jl")
 
+"""
+    abstract type Laser
+
+Represents an abstract laser, supertype of all lasers.
+"""
 abstract type Laser end
+"""
+    abstract type MonochromaticLaser <: Laser
+
+Represents an abstract monochromatic laser.
+"""
 abstract type MonochromaticLaser <: Laser end
-abstract type BichromaticLaser <: Laser end
 
 include("Cos4Laser.jl")
 include("Cos2Laser.jl")
-include("TrapezoidalLaser.jl")
 include("GaussianLaser.jl")
+include("BichromaticLaser.jl")
+include("docs.jl")
 
 end

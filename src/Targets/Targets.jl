@@ -1,37 +1,43 @@
 
 
 """
-The Targets module provides information about the targeting atoms or molecules.
+    module Targets
+
+The `Targets` module contains abstraction of the targets and provides some pre-defined atoms or molecules.
 """
 module Targets
 
-export Target
-export IonPotential, AsympNuclCharge, TargetName, TargetPotential, TargetForce, TrajectoryFunction
-export Serialize
+include("imports.jl")
+include("exports.jl")
 
-export SAEAtomBase, SAEAtom, HydrogenLikeAtom
-export HAtom, He1pAtom, Li2pAtom, HeAtom, NeAtom, Ne1pAtom, Ne2pAtom, ArAtom, Ar1pAtom, Ar2pAtom, VAtom, NiAtom, KrAtom, Kr1pAtom, RbAtom, NbAtom, PdAtom, XeAtom, Xe1pAtom, TaAtom
-export AngularQuantumNumber, MagneticQuantumNumber, AsympCoeff, SoftCore, QuantizationAxisOrientaion
+"""
+    abstract type Target
 
-export MoleculeBase, GenericMolecule
-export MolAtoms, MolAtomCoords, MolCharge, MolEnergyLevels, MolEnergyDataAvailable, MolHOMOEnergy, MolHOMOIndex
-export MolWFATAvailableIndices, MolWFATData, MolWFATStructureFactor_G, MolWFATMaxChannels
-export MolAsympCoeffAvailableIndices, MolAsympCoeff, MolAsympCoeff_lMax
-export MolRotation, SetMolRotation!, MolExportAtomInfo
-export MolCalcEnergyData!, MolCalcWFATData!, MolCalcAsympCoeff!, MolSaveDataAs!
-
-export MolecularCalculators
-export PySCFMolecularCalculator
-
+Represents an abstract target, supertype of all targets.
+"""
 abstract type Target end
+"""
+    abstract type SAEAtomBase <: Target
+
+Represents an abstract atom under single-active-electron approximation.
+"""
 abstract type SAEAtomBase <: Target end
+"""
+    abstract type MoleculeBase <: Target
+
+Represents an abstract molecule.
+"""
 abstract type MoleculeBase <: Target end
 
 include("SAEAtom.jl")
 include("HydrogenLikeAtom.jl")
-include("AtomLibrary.jl")
+include("SAEAtomBase_shared.jl")
+include("Database/AtomDatabase.jl")
+include("Database/MoleculeDatabase.jl")
 
-include("MolecularCalculators/MolecularCalculator.jl")
+include("MolecularCalculators/MolecularCalculatorBase.jl")
 include("GenericMolecule.jl")
+
+include("docs.jl")
 
 end

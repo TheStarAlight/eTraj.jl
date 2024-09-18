@@ -1,20 +1,10 @@
-using ..Targets
-using SpecialFunctions
-using SphericalHarmonics
-using Folds
-using Einsum
-using LsqFit
-using PyCall
-using libcint_jll
-using HDF5
-using Dates
-using ProgressMeter
 
 "An interface of molecular calculation using PySCF."
 mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The molecule to be calculated."
-    # mol::MoleculeBase; # linter reported error when specifying type.
-    mol;
+    mol::MoleculeBase; # linter reported error when specifying type.
+    "Spin of the molecule."
+    spin;
     "The basis function used for calculation."
     basis::String;
 
@@ -25,26 +15,33 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The PySCF computation task object."
     _pytask;
 
-    "HOMO energy."
-    HOMO_energy;
+    "Energy levels."
+    energy_levels;
+    "Orbital occupations."
+    orbit_occ;
     "Total dipole momentum vector in the MF."
     dip_momentum;
 
     """
     Initializes an instance of `PySCFMolecularCalculator` with given parameter.
 
-    # Parameters
-    - `mol::MoleculeBase`   : The molecule to be calculated.
-    - `basis::String`       : Basis set used for calculation (default `cc-pVDZ`).
+    ## Parameters
+    - `mol::MoleculeBase` : The molecule to be calculated.
+    - `basis="cc-pVDZ"` : Basis set used for calculation (*default `"cc-pVDZ"`*).
     """
-    function PySCFMolecularCalculator(; mol, basis::String="cc-pVDZ", kwargs...)
-        mc::PySCFMolecularCalculator = new(mol,basis)
+    function PySCFMolecularCalculator(; mol::MoleculeBase, basis::String="cc-pVDZ", kwargs...)
+        mc::PySCFMolecularCalculator = new(mol,MolSpin(mol),basis)
         @info "[PySCFMolecularCalculator] Running molecular calculation..."
         time = [0.0]
         try
             mc._pyscf  = pyimport("pyscf")
-            mc._pymol  = mc._pyscf.gto.M(atom=MolExportAtomInfo(mol), charge=MolCharge(mol), basis=basis, verbose=0)
-            mc._pytask = mc._pyscf.scf.RHF(mc._pymol)
+            mc._pymol  = mc._pyscf.gto.M(atom=MolExportAtomInfo(mol), charge=MolCharge(mol), spin=Int(2*MolSpin(mol)), basis=basis, symmetry=true, verbose=0)
+            mc._pytask =
+                if MolSpin(mol)==0  # For `spin=0`, the RHF method would be invoked, and the UHF otherwise.
+                    mc._pyscf.scf.RHF(mc._pymol)
+                else
+                    mc._pyscf.scf.UHF(mc._pymol)
+                end
             mc._pytask.chkfile = nothing
             time[1] = @elapsed mc._pytask.run()
         catch
@@ -52,48 +49,33 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
             rethrow()
         end
         if ! mc._pytask.converged
-            error("[PySCFMolecularCalculator] SCF calculation unable to converge.")
+            @warn "[PySCFMolecularCalculator] SCF calculation unable to converge, the result might be inaccurate."
         end
-        mc.HOMO_energy = mc._pytask.mo_energy[HOMOIndex(mc)]
+        if MolSpin(mol) == 0
+            mc.energy_levels = mc._pytask.mo_energy
+            mc.orbit_occ = mc._pytask.mo_occ
+        else
+            mc.energy_levels = vcat(mc._pytask.mo_energy[1]',mc._pytask.mo_energy[2]')
+            mc.orbit_occ = vcat(mc._pytask.mo_occ[1]',mc._pytask.mo_occ[2]')
+        end
         mc.dip_momentum = mc._pytask.dip_moment(unit="AU", verbose=0)
         @info "Finished initialization [taking $(time[1]) second(s)]."
         return mc
     end
 end
 
-"Gets the index of the HOMO."
-function HOMOIndex(mc::PySCFMolecularCalculator)
-    task     = mc._pytask
-    mo_occ   = Int.(task.mo_occ)
-    num_AO   = size(task.mo_coeff,1)
-    idx = 1
-    for i in 1:num_AO
-        if mo_occ[i]==0
-            idx = i; break
-        end
-    end
-    return idx-1    # idx is LUMO, while idx-1 is HOMO
-end
-
-"Gets the energy level of the molecule's HOMO (in a.u.)."
-function HOMOEnergy(mc::PySCFMolecularCalculator)
-    return mc.HOMO_energy
-end
-
-"""
-Gets the energy level of a specific molecular orbital (MO) of the molecule (in a.u.).
-- `orbitIdx::Int`   : Index of the orbital.
-"""
-function EnergyLevel(mc::PySCFMolecularCalculator, orbitIdx::Int)
-    return mc._pytask.mo_energy[orbitIdx]
-end
-
-"Gets the energy levels of all the molecular orbitals (MO) of the molecule (in a.u.)."
+"Gets the energy levels of all the molecular orbitals (MO) of the molecule (*in a.u.*)."
 function EnergyLevels(mc::PySCFMolecularCalculator)
-    return mc._pytask.mo_energy
+    return mc.energy_levels
 end
 
-"Gets the permanent dipole momentum vector of the molecule in the molecular frame (MF) (in a.u.)."
+
+"Gets the occupation status of molecular orbitals."
+function OrbitalOccupation(mc::PySCFMolecularCalculator)
+    return mc.orbit_occ
+end
+
+"Gets the permanent dipole momentum vector of the molecule in the molecular frame (MF) (*in a.u.*)."
 function DipoleMomentum(mc::PySCFMolecularCalculator)
     return mc.dip_momentum
 end
@@ -101,52 +83,79 @@ end
 """
 Calculates the data used in WFAT structure factor calculation of the given molecule.
 
-# Returns
+## Returns
 `(μ, int_data)` : Orbital dipole momentum and the array which stores the integrals.
 
-# Parameters
-- `mc`              : The molecular calculator.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO and -1 indicates HOMO-1) (default 0).
-- `grid_rNum`       : The number of radial grid (default 200).
-- `grid_rMax`       : The maximum radius of the radial grid (default 10.0).
-- `grid_θNum`       : The number of angular grid in the θ direction (default 60).
-- `grid_ϕNum`       : The number of angular grid in the ϕ direction (default 60).
-- `sf_nξMax`        : The maximum number of nξ used in calculation (default 3).
-- `sf_mMax`         : The maximum number of |m| used in calculation (default 3).
-- `sf_lMax`         : The maximum angular quantum number l used in calculation (default 6).
+## Parameters
+- `mc`          : The molecular calculator.
+- `orbit_ridx`  : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                  For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
+- `grid_rNum`   : The number of radial grid (*default `200`*).
+- `grid_rMax`   : The maximum radius of the radial grid (*default `10.0`*).
+- `grid_θNum`   : The number of angular grid in the θ direction (*default `60`*).
+- `grid_ϕNum`   : The number of angular grid in the ϕ direction (*default `60`*).
+- `sf_nξMax`    : The maximum number of nξ used in calculation (*default `3`*).
+- `sf_mMax`     : The maximum number of |m| used in calculation (*default `3`*).
+- `sf_lMax`     : The maximum angular quantum number l used in calculation (*default `6`*).
+- `swap_HOMO_LUMO=false` : If the HOMO & LUMO share the same energy level (but different symmetries), set `swap_HOMO_LUMO=true` when calculating LUMO (`ridx=1`). The program would swap the coefficients of HOMO and LUMO.
 """
 function calc_WFAT_data(;
-                        mc::PySCFMolecularCalculator,
-                        orbitIdx_relHOMO::Int = 0,
-                        grid_rNum::Int  = 200,
-                        grid_rMax::Real = 10.,
-                        grid_θNum::Int  = 60,
-                        grid_ϕNum::Int  = 60,
-                        sf_nξMax ::Int = 5,
-                        sf_mMax  ::Int = 5,
-                        sf_lMax  ::Int = 10,
-                        kwargs...)
+            mc::PySCFMolecularCalculator,
+            orbit_ridx,
+            grid_rNum::Int  = 200,
+            grid_rMax::Real = 10.,
+            grid_θNum::Int  = 60,
+            grid_ϕNum::Int  = 60,
+            sf_nξMax ::Int = 5,
+            sf_mMax  ::Int = 5,
+            sf_lMax  ::Int = 6,
+            swap_HOMO_LUMO::Bool = false,
+            kwargs...)
     # == PROCEDURE ==
     # 0. Obtain the coefficients (finished in the initialization).
     # 1. Calculate the effective core potential.
     # 2. Calculate the integrals and save them as output.
 
-    @info "[PySCFMolecularCalculator] Running calculation of WFAT structure factor data... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
+    α,β,γ,i,i_pt = 0,0,0,0,0    # mute the linter error
 
-    #* Preprocess molecular information
+    @info "[PySCFMolecularCalculator] Running calculation of WFAT structure factor data... (ionizing orbital $(_MOstring(orbit_ridx)))" * (swap_HOMO_LUMO ? " (`swap_HOMO_LUMO` is on)" : "")
+
+    #* Preproceed molecular information
 
     pymol = mc._pymol   # storing the molecule's info and the basis's info.
     task  = mc._pytask  # storing the calculation result.
 
+    closedshell = mc.mol.spin==0    # whether is closed-shell
+    if closedshell
+        @assert isinteger(orbit_ridx) "[PySCFMolecularCalculator] For a closed-shell molecule, `orbit_ridx` should be an integer."
+    else
+        @assert orbit_ridx isa Tuple{Int,Int} && orbit_ridx[1] in (1,2) "[PySCFMolecularCalculator] For an open-shell molecule, `orbit_ridx` should be a two-element tuple `(spin, ridx)`."
+    end
+    spin = closedshell ? 0 : orbit_ridx[1]
+    ridx = closedshell ? orbit_ridx : orbit_ridx[2]
+
     mo_coeff    = task.mo_coeff     # Linear combination coefficients of AO to make up MO.
     num_atom    = pymol.natm        # Total number of atoms.
-    num_AO      = size(mo_coeff,1)  # Number of atomic orbits (aka AO) or Gaussian basis. (pymol.nao doesn't return an interger!)
-    HOMO_orbitIdx = HOMOIndex(mc)
-    orbitIdx = HOMO_orbitIdx + orbitIdx_relHOMO
-    @assert 0<orbitIdx<num_AO "[PySCFMolecularCalculator] Orbit index $(orbitIdx_relHOMO) out of range."
+    num_AO      = closedshell ? size(mo_coeff,1) : size(mo_coeff[1],1)  # Number of atomic orbits (aka AO) or Gaussian basis. (pymol.nao doesn't return an interger!)
+    HOMO_idx    = findlast(!iszero, (closedshell ? task.mo_occ : task.mo_occ[spin]))
+    if swap_HOMO_LUMO
+        if ridx != 1
+            @error "[PySCFMolecularCalculator] `swap_HOMO_LUMO` is on while `ridx`!=1. `swap_HOMO_LUMO` would not take effect."
+        else
+            # swap the columns of HOMO and LUMO, and change the ridx from 1 to 0.
+            if closedshell
+                mo_coeff[:,HOMO_idx], mo_coeff[:,HOMO_idx+1] = mo_coeff[:,HOMO_idx+1], mo_coeff[:,HOMO_idx]
+            else
+                mo_coeff[spin][:,HOMO_idx], mo_coeff[spin][:,HOMO_idx+1] = mo_coeff[spin][:,HOMO_idx+1], mo_coeff[spin][:,HOMO_idx]
+            end
+            ridx = 0
+        end
+    end
+    orbit_idx   = HOMO_idx + ridx   # NOTE: orbit_idx is the abs index, while orbit_ridx is the index relative to HOMO
+    @assert 0<orbit_idx<=num_AO "[PySCFMolecularCalculator] Orbital index $(orbit_ridx) out of range."
 
     Z   = MolCharge(mc.mol)+1
-    Ip  = -task.mo_energy[orbitIdx]
+    Ip  = IonPotential(mc.mol,orbit_ridx)
     if Ip ≤ 0
         error("[PySCFMolecularCalculator] The energy of the selected molecular orbital is positive.")
     end
@@ -203,13 +212,13 @@ function calc_WFAT_data(;
     #*  1.1 Calculate the wavefunction ψ0 & dip_moment μ
     # wavefunction ψ0
     χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
-    orbit_coeff = @view mo_coeff[:,orbitIdx]    # Select the coefficients related to the interested MO.
+    orbit_coeff = closedshell ? (@view mo_coeff[:,orbit_idx]) : (@view mo_coeff[spin][:,orbit_idx]) # Select the coefficients related to the interested MO.
     ψ0 = χi * orbit_coeff                       # Calculate wavefunction of the interested MO (matmul operation).
 
-    # selected orbit's dipole momentum μ (shouldn't be mixed with the total dip. moment. D)
+    # selected orbital's dipole momentum μ (shouldn't be mixed with the total dip moment D)
     dip_int = -1 .* pymol.intor_symmetric("int1e_r")  # I[i,α,β] = ∫(ψα*)(ri)(ψβ)dr, where r1=x, r2=y, r3=z.
-    μ = zeros(3); i,α,β=0,0,0
-    @einsum μ[i] := orbit_coeff[α] * orbit_coeff[β] * dip_int[i,α,β]
+    μ = zeros(3)
+    @einsum μ[i] = orbit_coeff[α] * orbit_coeff[β] * dip_int[i,α,β]
 
     #*  1.2 Calculate the asymptotic Coulomb potential Z/r
     Threads.@threads for ir in 1:grid_rNum
@@ -217,24 +226,39 @@ function calc_WFAT_data(;
     end
 
     #*  1.3 Calculate the nuclear potential Vnuc
-    atomCharges = pymol.atom_charges()
-    atomCoords  = pymol.atom_coords()   # Size: Num_Atoms×3
+    atom_charges = pymol.atom_charges()
+    atom_coords  = pymol.atom_coords()   # Size: Num_Atoms×3
     for iatm in 1:num_atom
-        Folds.map(
-            function (i)
-                Vc_ψ0[i] -= atomCharges[iatm]/sqrt((pt_xyz[i,1]-atomCoords[iatm,1])^2+(pt_xyz[i,2]-atomCoords[iatm,2])^2+(pt_xyz[i,3]-atomCoords[iatm,3])^2+1e-5)
-            end
-        , 1:N)
+        Folds.map(i -> Vc_ψ0[i] -= atom_charges[iatm]/sqrt((pt_xyz[i,1]-atom_coords[iatm,1])^2+(pt_xyz[i,2]-atom_coords[iatm,2])^2+(pt_xyz[i,3]-atom_coords[iatm,3])^2+1e-5),  1:N)
     end
 
     #*  1.4 Calculate the inter-electron interaction: Vd & Vex
+
     batch_size = 200  # the integral takes huge memory and thus needs to be performed in batches.
     batch_num = ceil(Int, N/batch_size)
 
     # density matrix
-    den_mat = zeros(num_AO,num_AO); i,α,β=0,0,0 # den_mat_αβ = ∑_i c[i,α]*c[i,β]
-    occupied_mo_coeff = mo_coeff[:,1:HOMO_orbitIdx]
-    @einsum den_mat[α,β] := 2 * occupied_mo_coeff[α,i] * occupied_mo_coeff[β,i]
+    #   den_mat_αβ = ∑_i c[i,α]*c[i,β]
+    den_mat_Vd  = zeros(num_AO,num_AO)  # density matrix for Vd (including all orbitals).
+    den_mat_Vex = zeros(num_AO,num_AO)  # density matrix for Vex (only orbitals of the same spin).
+    if closedshell
+        occupied_mo_coeff = mo_coeff[:,1:HOMO_idx]
+        @einsum den_mat_Vd[α,β] = 2 * occupied_mo_coeff[α,i] * occupied_mo_coeff[β,i]   # two electrons per orbital
+        den_mat_Vex .= den_mat_Vd / 2
+    else
+        # for open-shell, HOMO_idx cannot be used because it's only the occupied spin.
+        HOMO_idx_1 = findlast(!iszero, task.mo_occ[1])
+        HOMO_idx_2 = findlast(!iszero, task.mo_occ[2])
+        occupied_mo_coeff_1 = mo_coeff[1][:,1:HOMO_idx_1]
+        occupied_mo_coeff_2 = mo_coeff[2][:,1:HOMO_idx_2]
+        @einsum den_mat_Vd[α,β]  = occupied_mo_coeff_1[α,i] * occupied_mo_coeff_1[β,i]
+        @einsum den_mat_Vd[α,β] += occupied_mo_coeff_2[α,i] * occupied_mo_coeff_2[β,i]
+        if spin == 1
+            @einsum den_mat_Vex[α,β] = occupied_mo_coeff_1[α,i] * occupied_mo_coeff_1[β,i]
+        else
+            @einsum den_mat_Vex[α,β] = occupied_mo_coeff_2[α,i] * occupied_mo_coeff_2[β,i]
+        end
+    end
 
     prog11 = ProgressUnknown(dt=0.2, desc="Calculating the effective potential... ($N pts)", color = :cyan, spinner = true)
     prog12 = Progress(N; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1)
@@ -243,8 +267,8 @@ function calc_WFAT_data(;
 
     m_atm  = pymol._atm
     m_nbas = pymol.nbas
-    m_bas = pymol._bas
-    m_env = pymol._env
+    m_bas  = pymol._bas
+    m_env  = pymol._env
     ao_loc = pymol.ao_loc   # example: [0,2,5,7,10] indicates 4 AOs, whose GTOs are of indices 0~1,2~4,5~6,7~9 (indices starting from 0).
 
     """
@@ -354,14 +378,14 @@ function calc_WFAT_data(;
             end
         end
         #* Calculate Vd
-        Vd = zeros(batch_size_this); α,β,i_pt = 0,0,0     # α,β are indices of the basis, i_pt is the index of the points.
-        @einsimd Vd[i_pt] := I[α,β,i_pt] * den_mat[α,β]     # Einstein's summation notation is used.
+        Vd = zeros(batch_size_this)       # α,β are indices of the basis, i_pt is the index of the points.
+        @einsimd Vd[i_pt] = I[α,β,i_pt] * den_mat_Vd[α,β]     # Einstein's summation notation is used.
         Vc_ψ0[pt_idx] .+= Vd            # now it is (Z/r + Vnuc + Vd).
         Vc_ψ0[pt_idx] .*= ψ0[pt_idx]    # now it is (Z/r + Vnuc + Vd) * ψ0.
         #* Calculate Vex_ψ0
         χα = χi[pt_idx,:]   # basis function values on the selected points.
-        Vex_ψ0 = zeros(batch_size_this); α,β,γ,i_pt = 0,0,0,0
-        @einsimd Vex_ψ0[i_pt] := -1/2 * den_mat[α,β] * χα[i_pt,α] * orbit_coeff[γ] * I[β,γ,i_pt]
+        Vex_ψ0 = zeros(batch_size_this)
+        @einsimd Vex_ψ0[i_pt] = - den_mat_Vex[α,β] * χα[i_pt,α] * orbit_coeff[γ] * I[β,γ,i_pt]
         Vc_ψ0[pt_idx] .+= Vex_ψ0    # finished building Vc_ψ0.
 
         next!(prog11,spinner=raw"-\|/"); next!(prog12,step=size(pt_idx,1));
@@ -424,7 +448,7 @@ function calc_WFAT_data(;
     for m_ in -l:l
         for iθ in eachindex(θ_grid)
         for iϕ in eachindex(ϕ_grid)
-            Y_precomp_data[l+1,m_+l+1,iθ,iϕ] = SphericalHarmonics.sphericalharmonic(θ_grid[iθ], ϕ_grid[iϕ]; l=l, m=m_) / (-1)^m_
+            Y_precomp_data[l+1,m_+l+1,iθ,iϕ] = sphericalharmonic(θ_grid[iθ], ϕ_grid[iϕ]; l=l, m=m_) / (-1)^m_
         end; end
     end; end
     "Utilizes the pre-computed data to calculate the Ω_{lm'}^{ν}, where ν=(nξ,m)."
@@ -457,42 +481,53 @@ function calc_WFAT_data(;
 end
 
 """
-Calculates the asymptotic coefficients (used in MO-SFA, MO-SFA-AE and MO-ADK) of the given molecule.
+Calculates the asymptotic coefficients (used in ADK, SFA-SPANE, SFA-SPA) of the given molecule.
 
-# Parameters
-- `mc`              : The molecular calculator.
-- `orbitIdx_relHOMO`: Index of selected orbit relative to the HOMO (e.g., 0 indicates HOMO and -1 indicates HOMO-1) (default 0).
-- `grid_rNum`       : The number of radial grid (default 200).
-- `grid_rReg`       : The region of radial distance to fit the wavefunction to obtain the coefficients (default (3,8)).
-- `grid_θNum`       : The number of angular grid in the θ direction (default 60).
-- `grid_ϕNum`       : The number of angular grid in the ϕ direction (default 60).
-- `l_max`           : The maximum number of l calculated (default 6).
+## Parameters
+- `mc`          : The molecular calculator.
+- `orbit_ridx`  : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
+                  For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
+- `grid_rNum`   : The number of radial grid (*default `200`*).
+- `grid_rReg`   : The region of radial distance to fit the wavefunction to obtain the coefficients (*default `(3,8)`*).
+- `grid_θNum`   : The number of angular grid in the θ direction (*default `60`*).
+- `grid_ϕNum`   : The number of angular grid in the ϕ direction (*default `60`*).
+- `l_max`       : The maximum number of l calculated (*default `6`*).
 """
 function calc_asymp_coeff(;
-                            mc::PySCFMolecularCalculator,
-                            orbitIdx_relHOMO::Int = 0,
-                            grid_rNum::Int  = 200,
-                            grid_rReg::Tuple{<:Real,<:Real} = (3,8),
-                            grid_θNum::Int  = 60,
-                            grid_ϕNum::Int  = 60,
-                            l_max::Int      = 6,
-                            kwargs...)
+            mc::PySCFMolecularCalculator,
+            orbit_ridx,
+            grid_rNum::Int  = 200,
+            grid_rReg::Tuple{<:Real,<:Real} = (3,8),
+            grid_θNum::Int  = 60,
+            grid_ϕNum::Int  = 60,
+            l_max::Int      = 6,
+            kwargs...)
 
-    @info "[PySCFMolecularCalculator] Running calculation of asymptotic coefficients... (ionizing orbital $orbitIdx_relHOMO relative to HOMO)"
+    @info "[PySCFMolecularCalculator] Running calculation of asymptotic coefficients... (ionizing orbital $(_MOstring(orbit_ridx)))"
 
     #* Preprocess molecular information
 
     pymol = mc._pymol   # storing the molecule's info and the basis's info.
     task  = mc._pytask  # storing the calculation result.
 
-    mo_coeff    = task.mo_coeff     # Linear combination coefficients of AO to make up MO.
+    closedshell = mc.mol.spin==0    # whether is closed-shell
+    if closedshell
+        @assert isinteger(orbit_ridx) "[PySCFMolecularCalculator] For a closed-shell molecule, `orbit_ridx` should be an integer."
+    else
+        @assert orbit_ridx isa Tuple{Int,Int} && orbit_ridx[1] in (1,2) "[PySCFMolecularCalculator] For an open-shell molecule, `orbit_ridx` should be a two-element tuple `(spin, ridx)`."
+    end
+    spin = closedshell ? 0 : orbit_ridx[1]
+    ridx = closedshell ? orbit_ridx : orbit_ridx[2]
+
+    # slightly different from WFAT calculation because we only need the ionizing orbital
+    mo_coeff    = closedshell ? task.mo_coeff : task.mo_coeff[spin]   # Linear combination coefficients of AO to make up MO.
     num_AO      = size(mo_coeff,1)  # Number of atomic orbits (aka AO) or Gaussian basis. (pymol.nao doesn't return an interger!)
-    HOMO_orbitIdx = HOMOIndex(mc)
-    orbitIdx = HOMO_orbitIdx + orbitIdx_relHOMO
-    @assert 0<orbitIdx<num_AO "[PySCFMolecularCalculator] Orbit index $(orbitIdx_relHOMO) out of range."
+    HOMO_idx    = findlast(!iszero, (closedshell ? task.mo_occ : task.mo_occ[spin]))
+    orbit_idx   = HOMO_idx + ridx   # NOTE: orbit_idx is the abs index, while orbit_ridx is the index relative to HOMO
+    @assert 0<orbit_idx<=num_AO "[PySCFMolecularCalculator] Orbital index $(orbit_ridx) out of range."
 
     Z   = MolCharge(mc.mol)+1
-    Ip  = -task.mo_energy[orbitIdx]
+    Ip  = IonPotential(mc.mol,orbit_ridx)
     if Ip ≤ 0
         error("[PySCFMolecularCalculator] The energy of the selected molecular orbital is positive.")
     end
@@ -505,7 +540,7 @@ function calc_asymp_coeff(;
     N = grid_rNum*grid_θNum*grid_ϕNum
 
     "Returns the spherical grid indices of the given index of the point."
-    function ptIdx2sphCoordIdx(i::Int)
+    function ptIdx2sphIdx(i::Int)
         iϕ = (i-1) % grid_ϕNum + 1
         iθ = (ceil(Int, i/grid_ϕNum)-1) % grid_θNum + 1
         ir = ceil(Int, i/grid_ϕNum/grid_θNum)
@@ -522,7 +557,7 @@ function calc_asymp_coeff(;
     dθ   = θ_grid[2]-θ_grid[1]
     dϕ   = ϕ_grid[2]-ϕ_grid[1]
     Threads.@threads for i in 1:N
-        ir,iθ,iϕ = ptIdx2sphCoordIdx(i)
+        ir,iθ,iϕ = ptIdx2sphIdx(i)
         r,θ,ϕ = r_grid[ir],θ_grid[iθ],ϕ_grid[iϕ]
         pt_x[i] = r*sin(θ)*cos(ϕ)
         pt_y[i] = r*sin(θ)*sin(ϕ)
@@ -539,7 +574,7 @@ function calc_asymp_coeff(;
 
     #* Calculate the wavefunction ψ0
     χi = pymol.eval_gto("GTOval",pt_xyz)        # Size: N×Num_AO. Wavefunction of all AOs by calling eval_gto.
-    orbit_coeff = @view mo_coeff[:,orbitIdx]    # Select the coefficients related to the interested MO.
+    orbit_coeff = @view mo_coeff[:,orbit_idx]   # Select the coefficients related to the interested MO.
     ψ0 = χi * orbit_coeff                       # Calculate wavefunction of the interested MO (matmul operation).
 
     #* Calculate F_lm(r) and fit C_lm.
@@ -547,10 +582,10 @@ function calc_asymp_coeff(;
     Threads.@threads for l in 0:l_max
         for m in -l:l
             F_lm = zeros(ComplexF64, grid_rNum)
-            Y_lm = SphericalHarmonics.sphericalharmonic.(θ_grid, ϕ_grid'; l=l, m=m)
+            Y_lm = sphericalharmonic.(θ_grid, ϕ_grid'; l=l, m=m)
             # obtain F_lm(r)
             for i in 1:N
-                ir,iθ,iϕ = ptIdx2sphCoordIdx(i)
+                ir,iθ,iϕ = ptIdx2sphIdx(i)
                 F_lm[ir] += conj(Y_lm[iθ,iϕ]) * ψ0[i] * dΩ[i]
             end
             # fit C_lm
@@ -561,10 +596,11 @@ function calc_asymp_coeff(;
                 fit_re = curve_fit(model, r_grid, real.(F_lm), p0)
                 coeff = coef(fit_re)[1]     # the fitted re(C_lm)
                 conf_int = confidence_interval(fit_re)[1]   # confidence interval (95%)
+                err = abs((conf_int[2]-conf_int[1])/coeff)/2
                 if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
-                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
-                elseif abs((conf_int[2]-conf_int[1])/coeff) > 0.5   # the error is too large
-                    @warn "[PySCFMolecularCalculator] The fit result of molecular wavefunction (l=$l, m=$m) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
+                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg`."
+                elseif err > 0.2   # the error is too large
+                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction (%.2f for l=%d, m=%d) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg`." err l m
                 else
                     C_lm[l+1,m+l+1] += coeff
                 end
@@ -574,10 +610,11 @@ function calc_asymp_coeff(;
                 fit_im = curve_fit(model, r_grid, imag.(F_lm), p0)
                 coeff = coef(fit_im)[1]     # the fitted im(C_lm)
                 conf_int = confidence_interval(fit_im)[1]   # confidence interval (95%)
+                err = abs((conf_int[2]-conf_int[1])/coeff)/2
                 if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
-                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
-                elseif abs((conf_int[2]-conf_int[1])/coeff) > 0.5   # the error is too large
-                    @warn "[PySCFMolecularCalculator] The fit result of molecular wavefunction (l=$l, m=$m) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg` (the upper limit shouldn't be to large (<10 a.u.) !)."
+                    @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg`."
+                elseif err > 0.2   # the error is too large
+                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction (%.2f for l=%d, m=%d) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg`." err l m
                 else
                     C_lm[l+1,m+l+1] += coeff * 1im
                 end
