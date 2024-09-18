@@ -95,58 +95,58 @@ function UnitEnvelope(l::Cos4Laser)
 end
 
 function LaserAx(l::Cos4Laser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi; local k = 200/Period(l)
     return if ϕ==0
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^4 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * cos(ω*t+φ)
+            A0 * cos(ω*t/(2N))^4 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * cos(ω*t+φ)
         end
     else
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^4 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * (cos(ω*t+φ)*cos(ϕ)+sin(ω*t+φ)*ε*sin(ϕ))
+            A0 * cos(ω*t/(2N))^4 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * (cos(ω*t+φ)*cos(ϕ)+sin(ω*t+φ)*ε*sin(ϕ))
         end
     end
 end
 function LaserAy(l::Cos4Laser)
-    local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local A0 = LaserA0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi; local k = 200/Period(l)
     return if ϕ==0
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^4 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * sin(ω*t+φ) * ε
+            A0 * cos(ω*t/(2N))^4 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * sin(ω*t+φ) * ε
         end
     else
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^4 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * (cos(ω*t+φ)*-sin(ϕ)+sin(ω*t+φ)*ε*cos(ϕ))
+            A0 * cos(ω*t/(2N))^4 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * (cos(ω*t+φ)*-sin(ϕ)+sin(ω*t+φ)*ε*cos(ϕ))
         end
     end
 end
 function LaserFx(l::Cos4Laser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi; local k = 200/Period(l)
     return if ϕ==0
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N))^3 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))
+            F0 * cos(ω*t/(2N))^3 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))
         end
     else
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N))^3 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))*cos(ϕ) + (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*sin(ϕ) )
+            F0 * cos(ω*t/(2N))^3 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))*cos(ϕ) + (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*sin(ϕ) )
         end
     end
 end
 function LaserFy(l::Cos4Laser)
-    local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi;
+    local F0 = LaserF0(l); local ω = AngFreq(l); local N = CycNum(l); local φ = l.cep; local Δt = l.t_shift; local ε = l.ellip; local ϕ = l.azi; local k = 200/Period(l)
     return if ϕ==0
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N))^3 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
+            F0 * cos(ω*t/(2N))^3 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
         end
     else
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N))^3 * tanh(5*(real(t)-N*π/ω)) * tanh(-5*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))*-sin(ϕ) + (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*cos(ϕ) )
+            F0 * cos(ω*t/(2N))^3 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 2/N*sin(ω*t/(2N))*cos(ω*t+φ))*-sin(ϕ) + (-cos(ω*t/(2N))*cos(ω*t+φ) + 2/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*cos(ϕ) )
         end
     end
 end

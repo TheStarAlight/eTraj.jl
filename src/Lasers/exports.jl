@@ -1,7 +1,7 @@
 
 # Laser types
 export Laser, MonochromaticLaser, BichromaticLaser
-export Cos4Laser, Cos2Laser, TrapezoidalLaser, GaussianLaser
+export Cos4Laser, Cos2Laser, GaussianLaser
 # General properties
 export LaserAx, LaserAy, LaserFx, LaserFy
 export Serialize
@@ -12,8 +12,6 @@ export LaserF0, LaserA0, PeakInt, WaveLen, Ellipticity, AngFreq, Period, CEP, Az
 export TimeShift
 # Cos2, Cos4
 export CycNum
-# Trapezoidal
-export CycNumTurnOn, CycNumConst, CycNumTurnOff, CycNumTotal, TimeTurnOn
 # Gaussian
 export SpreadCycNum, SpreadDuration, FWHM_Duration
 # BichromaticLaser

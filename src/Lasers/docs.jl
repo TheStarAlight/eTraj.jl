@@ -126,43 +126,6 @@ Gets the cycle number of the laser.
 """
 CycNum
 
-# ==== Trapezoidal ====
-
-@doc """
-    CycNumTurnOn(l::TrapezoidalLaser)
-
-Gets the cycle number of the laser in the turn-on.
-"""
-CycNumTurnOn
-
-@doc """
-    CycNumConst(l::TrapezoidalLaser)
-
-Gets the cycle number of the laser in the constant-intensity stage.
-"""
-CycNumConst
-
-@doc """
-    CycNumTurnOff(l::TrapezoidalLaser)
-
-Gets the cycle number of the laser in the turn-off.
-"""
-CycNumTurnOff
-
-@doc """
-    CycNumTotal(l::TrapezoidalLaser)
-
-Gets the total cycle number of the laser.
-"""
-CycNumTotal
-
-@doc """
-    TimeTurnOn(l::TrapezoidalLaser)
-
-Gets the time shift relative to the beginning of turn-on (in a.u.).
-"""
-TimeTurnOn
-
 # ==== Gaussian ====
 
 @doc """
