@@ -119,7 +119,7 @@ function perform_traj_simulation(;
         #* opt. params. for SFA, SFA-AE and ADK methods
     rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}} = :Full,
         #* opt. params. for target `MoleculeBase`
-    mol_orbit_ridx       ::Integer   = 0,
+    mol_orbit_ridx                  = 0,
         #* params. for interface
     show_progress       ::Bool      = true
     )

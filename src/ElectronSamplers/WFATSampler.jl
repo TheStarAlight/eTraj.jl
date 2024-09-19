@@ -24,7 +24,7 @@ struct WFATSampler <: ElectronSampler
         sample_cutoff_limit ::Real,
         sample_monte_carlo  ::Bool,
         traj_phase_method   ::Symbol,
-        mol_orbit_ridx      ::Integer,
+        mol_orbit_ridx,
             #* for step-sampling (!sample_monte_carlo)
         ss_kd_max           ::Real,
         ss_kd_num           ::Integer,

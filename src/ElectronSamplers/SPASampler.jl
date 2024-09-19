@@ -36,7 +36,7 @@ struct SPASampler <: ElectronSampler
         mc_kd_max           ::Real,
         mc_kz_max           ::Real,
             #* for target <: MoleculeBase
-        mol_orbit_ridx      ::Integer,
+        mol_orbit_ridx,
         kwargs...   # kwargs are surplus params.
         )
 

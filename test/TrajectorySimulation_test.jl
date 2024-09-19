@@ -169,6 +169,33 @@ using Test
         end
     end
 
+    @info "Testing ADK-CTMC (Oxygen) ..."
+    @testset "ADK-CTMC (Oxygen)" begin
+        t = get_mol("Oxygen"; rot_β=90°)
+        l = Cos4Laser(peak_int=8e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-110,110),
+                sample_t_num        = 400,
+                traj_t_final        = 120,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 800,
+                output_path         = "$tmpdir/test_ADK-CTMC_Oxygen_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full,
+                mol_orbit_ridx      = (1,0)
+            )
+            true
+        end
+    end
+
     @info "Testing ADK-CTMC (Bichromatic) ..."
     @testset "ADK-CTMC (Bichromatic)" begin
         t = get_atom("H")
