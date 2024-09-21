@@ -197,6 +197,26 @@ function _get_LUMO_idx(orbit_occ)
     # gets the index of LUMO according to orbit_occ
     findfirst(iszero, orbit_occ)
 end
+function _lookup_degenerate_orbital(mol::GenericMolecule, orbit_ridx)
+    # finds other degenerate orbitals of `orbit_ridx`
+    ΔE = 0.0001
+    E_orb = MolEnergyLevel(mol, orbit_ridx)
+    idx = findall(E->abs(E-E_orb)<ΔE, mol.energy_levels)
+    if length(idx) == 1
+        return []
+    end
+    if mol.spin == 0
+        idx .-= _get_HOMO_idx(mol.orbit_occ)
+        # deleteat!(idx, findfirst(isequal(orbit_ridx), idx))
+    else
+        idx = map(cidx->cidx.I, idx)
+        HOMO_alp_idx = _get_HOMO_idx(MolOrbitalOccupation(mol,1))
+        HOMO_bet_idx = _get_HOMO_idx(MolOrbitalOccupation(mol,2))
+        idx = map(i->(i[1], i[2]-(i[1]==1 ? HOMO_alp_idx : HOMO_bet_idx)), idx)
+        # deleteat!(idx, findfirst(isequal(orbit_ridx), idx))
+    end
+    return idx
+end
 
 function MolWFATAvailableIndices(mol::GenericMolecule)
     return if mol.wfat_data_available

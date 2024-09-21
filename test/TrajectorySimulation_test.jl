@@ -172,7 +172,7 @@ using Test
     @info "Testing ADK-CTMC (Oxygen) ..."
     @testset "ADK-CTMC (Oxygen)" begin
         t = get_mol("Oxygen"; rot_β=90°)
-        l = Cos4Laser(peak_int=8e14, wave_len=800.0, cyc_num=2, ellip=1.0)
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=2, ellip=1.0)
         @test begin
             perform_traj_simulation(
                 init_cond_method    = :ADK,

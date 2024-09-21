@@ -64,7 +64,6 @@ MolSaveDataAs!(molCO, "Molecule_CarbonMonoxide.jld2")
 
 molNO = mols["Nitric Oxide"]
 MolInitCalculator!(molNO, basis="cc-pVTZ")  # NO's α-HOMO & α-LUMO are degenerate.
-# HOMO = HOMO-yz; LUMO = HOMO-xz
 @time MolCalcAsympCoeff!(molNO, (1,0); param_prec3...)
 @time MolCalcAsympCoeff!(molNO, (1,1); param_prec3...)
 @time MolCalcWFATData!(molNO, (1,0); param_prec3...)
@@ -73,7 +72,6 @@ MolSaveDataAs!(molNO, "Molecule_NitricOxide.jld2")
 
 molHCl = mols["Hydrochloric Acid"]
 MolInitCalculator!(molHCl, basis="cc-pVTZ")
-# HOMO = HOMO-xz; HOMO-1 = HOMO-yz
 @time MolCalcAsympCoeff!(molHCl, 0; param_prec3...)
 @time MolCalcAsympCoeff!(molHCl,-1; param_prec3...)
 @time MolCalcWFATData!(molHCl, 0; param_prec3...)
@@ -82,7 +80,6 @@ MolSaveDataAs!(molHCl, "Molecule_HydrochloricAcid.jld2")
 
 molCO2 = mols["Carbon Dioxide"]
 MolInitCalculator!(molCO2, basis="cc-pVTZ")
-# HOMO = HOMO-xz ; HOMO-1 = HOMO-yz
 @time MolCalcAsympCoeff!(molCO2, 0; param_prec3...)
 @time MolCalcAsympCoeff!(molCO2,-1; param_prec3...)
 @time MolCalcWFATData!(molCO2, 0; param_prec2...)
@@ -121,7 +118,6 @@ MolSaveDataAs!(molNH3, "Molecule_Ammonia.jld2")
 
 molC2H2 = mols["Acetylene"]
 MolInitCalculator!(molC2H2, basis="cc-pVDZ")
-# HOMO = HOMO-yz ; HOMO-1 = HOMO-xz
 @time MolCalcAsympCoeff!(molC2H2, 0; merge(param_prec3, Dict(:grid_rReg=>(3,10)))...)
 @time MolCalcAsympCoeff!(molC2H2,-1; merge(param_prec3, Dict(:grid_rReg=>(3,10)))...)
 @time MolCalcWFATData!(molC2H2, 0; param_prec2...)

@@ -162,11 +162,20 @@ function TrajectorySimulationJob(; kwargs...)
     ((sample_t_intv[1] isa Quantity) || (sample_t_intv[2] isa Quantity)) && (sample_t_intv = ((uconvert(u"fs", sample_t_intv[1])|>auconvert).val, (uconvert(u"fs", sample_t_intv[2])|>auconvert).val))
     # dimension check
     @assert dimension in (2,3) "[TrajectorySimulationJob] `dimension` must be either 2 or 3."
-    @assert length(final_p_max)==length(final_p_num)==dimension "[perform_traj_simulation] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
+    @assert length(final_p_max)==length(final_p_num)==dimension "[TrajectorySimulationJob] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
     # 3D kz=0 problem
     if dimension == 3 && !sample_monte_carlo && isodd(ss_kz_num)
         @warn "[TrajectorySimulationJob] `ss_kz_num`=$ss_kz_num is an odd number, which may result in anomalous final electron states. Please choose an even number to avoid such problem."
     end
+    # check degenerate orbitals
+    if target isa GenericMolecule
+        energy_levels = MolEnergyLevels(target)
+        deg_orb = Targets._lookup_degenerate_orbital(target, mol_orbit_ridx)
+        if !isempty(deg_orb)
+            @info "[TrajectorySimulationJob] Target `$(TargetName(target))` has degenerate orbitals $(join(deg_orb, ", ", " and "))."
+        end
+    end
+
     # check the path in the first
     if isfile(output_path)
         @warn "[TrajectorySimulationJob] File `$output_path` already exists, will save at `$(default_filename())`."
