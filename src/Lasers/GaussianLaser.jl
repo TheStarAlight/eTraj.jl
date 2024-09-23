@@ -20,15 +20,15 @@ end
 Initializes a new monochromatic elliptically polarized laser field with Gaussian-shape envelope.
 
 ## Parameters
-- `peak_int`        : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
-- `wave_len`        : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
-- `ang_freq`        : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
-- `spread_cyc_num`  : Half-temporal width (converted to **cycle numbers**) of the laser field, namely σ.
-- `spread_duration` : Half-temporal width of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
-- `FWHM_duration`   : Temporal FWHM (Full Width at Half Maxima) of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
-- `ellip`           : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+- `peak_int`        : Peak intensity of the laser (numerically in **W/cm²** or a `Unitful.Quantity`).
+- `wave_len`        : Wavelength of the laser (numerically in **nm** or a `Unitful.Quantity`).
+- `ang_freq`        : Angular frequency of the laser (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
+- `spread_cyc_num`  : Temporal width (converted to **cycle numbers**) of the laser, namely σ.
+- `spread_duration` : Temporal width of the laser (numerically in **a.u.** or a `Unitful.Quantity`).
+- `FWHM_duration`   : Temporal FWHM (Full Width at Half Maxima) of the intensity profile of the laser (numerically in **a.u.** or a `Unitful.Quantity`).
+- `ellip`           : Ellipticity of the laser [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
 - `azi`             : Azimuth angle of the laser's polarization's principle axis relative to x axis (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
-- `cep`             : Carrier-Envelope-Phase of the laser field (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
+- `cep`             : Carrier-Envelope-Phase of the laser (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
 - `t_shift`         : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
 
 ## Examples
@@ -71,7 +71,7 @@ function GaussianLaser(;peak_int,
     end
     if spread_cyc_num==0
         if spread_duration==0
-            spread_cyc_num = FWHM_duration / (2*sqrt(2*log(2))) / (2π/ang_freq)
+            spread_cyc_num = FWHM_duration / (2*sqrt(log(2))) / (2π/ang_freq)
         else
             spread_cyc_num = spread_duration / (2π/ang_freq)
         end
@@ -83,7 +83,7 @@ PeakInt(l::GaussianLaser) = l.peak_int
 WaveLen(l::GaussianLaser) = l.wave_len
 SpreadCycNum(l::GaussianLaser) = l.spread_cyc_num
 SpreadDuration(l::GaussianLaser) = l.spread_cyc_num * Period(l)
-FWHM_Duration(l::GaussianLaser) = l.spread_cyc_num * Period(l) * (2*sqrt(2*log(2)))
+FWHM_Duration(l::GaussianLaser) = l.spread_cyc_num * Period(l) * (2*sqrt(log(2)))
 Ellipticity(l::GaussianLaser) = l.ellip
 Azimuth(l::GaussianLaser) = l.azi
 AngFreq(l::GaussianLaser) = 45.563352525 / l.wave_len
@@ -168,9 +168,9 @@ function Base.show(io::IO, l::GaussianLaser)
         @printf(io, "wavelen=%.2f nm, ", l.wave_len)
     end
     if isinteger(l.spread_cyc_num)
-        @printf(io, "temporal width %i cycle(s) [FWHM %.2f fs], ", 2*l.spread_cyc_num, FWHM_Duration(l)*24.19e-3)
+        @printf(io, "temporal width %i cycle(s) [FWHM %.2f fs], ", l.spread_cyc_num, FWHM_Duration(l)*24.19e-3)
     else
-        @printf(io, "temporal width %.2f cycle(s) [FWHM %.2f fs], ", 2*l.spread_cyc_num, FWHM_Duration(l)*24.19e-3)
+        @printf(io, "temporal width %.2f cycle(s) [FWHM %.2f fs], ", l.spread_cyc_num, FWHM_Duration(l)*24.19e-3)
     end
     if isinteger(l.ellip)
         @printf(io, "ε=%i", l.ellip)

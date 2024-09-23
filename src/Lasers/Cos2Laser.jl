@@ -20,14 +20,14 @@ end
 Initializes a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
 
 ## Parameters
-- `peak_int`    : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
-- `wave_len`    : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
-- `ang_freq`    : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
-- `cyc_num`     : Number of cycles of the laser field.
-- `duration`    : Duration of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
-- `ellip`       : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+- `peak_int`    : Peak intensity of the laser (numerically in **W/cm²** or a `Unitful.Quantity`).
+- `wave_len`    : Wavelength of the laser (numerically in **nm** or a `Unitful.Quantity`).
+- `ang_freq`    : Angular frequency of the laser (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
+- `cyc_num`     : Number of cycles of the laser.
+- `duration`    : Duration of the laser (numerically in **a.u.** or a `Unitful.Quantity`).
+- `ellip`       : Ellipticity of the laser [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
 - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
-- `cep`         : Carrier-Envelope-Phase of the laser field (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
+- `cep`         : Carrier-Envelope-Phase of the laser (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
 - `t_shift`     : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
 
 ## Examples
