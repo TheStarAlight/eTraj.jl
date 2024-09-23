@@ -195,7 +195,7 @@ MolWFATData
 @doc """
     MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ, m, β, γ)
 
-Gets the WFAT structure factor ``G_{n_ξ m}`` according to the given Euler angles `β` and `γ` (ZYZ convention).
+Gets the WFAT structure factor ``G_{n_ξ m}`` according to the given Euler angles `β` and `γ` (z-y'-z'' convention).
 Note: the rotational Euler angles of the molecule would not be applied.
 
 ## Parameters
@@ -248,7 +248,7 @@ MolAsympCoeff_lMax
 @doc """
     MolRotation(mol::GenericMolecule) -> (α,β,γ)
 
-Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ) (in radian).
+Gets the Euler angles (z-y'-z'' convention) specifying the molecule's orientation in format (α,β,γ) (in radian).
 """
 MolRotation
 
@@ -256,7 +256,7 @@ MolRotation
     SetMolRotation!(mol::GenericMolecule, α,β,γ)
     SetMolRotation!(mol::GenericMolecule, (α,β,γ))
 
-Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ) (numerically in radian or a `Unitful.Quantity`).
+Sets the Euler angles (z-y'-z'' convention) specifying the molecule's orientation in format (α,β,γ) (numerically in radian or a `Unitful.Quantity`).
 """
 SetMolRotation!
 

@@ -54,7 +54,7 @@ Initializes a new `GenericMolecule` with given parameters.
 - `charge`      : Total charge of the molecule (ion) (*optional, default `0`*).
 - `spin`        : Total spin of the molecule (*optional, default `0`*). Note that each unpaired electron contributes 1/2.
 - `name`        : Name of the molecule (*optional*).
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (z-y'-z'' convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
 
 ## Example
 ```
@@ -94,7 +94,7 @@ Initializes a new `GenericMolecule` with the data stored in `ext_data_path`.
 
 ## Parameters
 - `ext_data_path`           : Path to the molecule's data stored externally.
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (z-y'-z'' convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
 """
 function LoadMolecule(ext_data_path::String; rot_α=0.,rot_β=0.,rot_γ=0.)
     file = jldopen(ext_data_path ,"r")
