@@ -127,8 +127,8 @@ function TrajectoryFunction(t::SAEAtom, dimension::Integer, laserFx::Function, l
                 du2 = u[4]
                 du3 = tFx-laserFx(t)
                 du4 = tFy-laserFy(t)
-                # du5 = -(Ip + (du1^2+du2^2)/2 + targetP(u[1],u[2]) + (u[1]*tFx+u[2]*tFy))
-                du5 = -(Ip + (du1^2+du2^2)/2 - (Z+a1*exp(-b1*r)+a2*r*exp(-b2*r)+a3*exp(-b3*r))/r + (u[1]*tFx+u[2]*tFy))
+                # du5 = -((du1^2+du2^2)/2 + targetP(u[1],u[2]) + (u[1]*tFx+u[2]*tFy))
+                du5 = -((du1^2+du2^2)/2 - (Z+a1*exp(-b1*r)+a2*r*exp(-b2*r)+a3*exp(-b3*r))/r + (u[1]*tFx+u[2]*tFy))
                 @SVector [du1,du2,du3,du4,du5]
             end
         end
@@ -172,8 +172,8 @@ function TrajectoryFunction(t::SAEAtom, dimension::Integer, laserFx::Function, l
                 du4 = tFx-laserFx(t)
                 du5 = tFy-laserFy(t)
                 du6 = tFz
-                # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - (Z+a1*exp(-b1*r)+a2*r*exp(-b2*r)+a3*exp(-b3*r))/r + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                # du7 = -((du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                du7 = -((du1^2+du2^2+du3^2)/2 - (Z+a1*exp(-b1*r)+a2*r*exp(-b2*r)+a3*exp(-b3*r))/r + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
                 @SVector [du1,du2,du3,du4,du5,du6,du7]
             end
         end

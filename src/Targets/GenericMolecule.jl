@@ -484,8 +484,8 @@ function TrajectoryFunction(mol::GenericMolecule, dimension::Integer, laserFx::F
                 du2 = u[4]
                 du3 = tFx-laserFx(t)
                 du4 = tFy-laserFy(t)
-                # du5 = -(Ip + (du1^2+du2^2)/2 + targetP(u[1],u[2]) + (u[1]*tFx+u[2]*tFy))
-                du5 = -(Ip + (du1^2+du2^2)/2 - Z*(u[1]^2+u[2]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy))
+                # du5 = -((du1^2+du2^2)/2 + targetP(u[1],u[2]) + (u[1]*tFx+u[2]*tFy))
+                du5 = -((du1^2+du2^2)/2 - Z*(u[1]^2+u[2]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy))
                 @SVector [du1,du2,du3,du4,du5]
             end
         end
@@ -526,8 +526,8 @@ function TrajectoryFunction(mol::GenericMolecule, dimension::Integer, laserFx::F
                 du4 = tFx-laserFx(t)
                 du5 = tFy-laserFy(t)
                 du6 = tFz
-                # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                # du7 = -((du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                du7 = -((du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
                 @SVector [du1,du2,du3,du4,du5,du6,du7]
             end
         end
@@ -556,14 +556,14 @@ function Base.show(io::IO, mol::GenericMolecule)
             #        %-3s  %-7s    %7f__ %4s
             #        11122222223333333__4444
             @printf "#          E (Ha)  occp\n"
-            @printf "⋮  ⋮         ⋮      ⋮⋮\n"
+            @printf "⋮    ⋮       ⋮      ⋮⋮\n"
             @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+2 "LUMO+1" mol.energy_levels[HOMO_idx+2] spin00
             @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+1 "LUMO"   mol.energy_levels[HOMO_idx+1] spin00
             @printf "%-3s%-7s%7.3f  %4s"   HOMO_idx   "HOMO"   mol.energy_levels[HOMO_idx  ] spin11
             HOMO_idx>1 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-1 "HOMO-1" mol.energy_levels[HOMO_idx-1] spin11)
             HOMO_idx>2 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-2 "HOMO-2" mol.energy_levels[HOMO_idx-2] spin11)
             HOMO_idx>3 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-3 "HOMO-3" mol.energy_levels[HOMO_idx-3] spin11)
-            HOMO_idx>4 && (@printf "\n⋮    ⋮        ⋮     ⋮⋮")
+            HOMO_idx>4 && (@printf "\n⋮    ⋮       ⋮      ⋮⋮")
         else
             HOMO_alp_idx = _get_HOMO_idx(mol.orbit_occ[1,:])
             HOMO_bet_idx = _get_HOMO_idx(mol.orbit_occ[2,:])
