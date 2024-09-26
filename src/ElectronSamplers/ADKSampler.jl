@@ -79,19 +79,23 @@ struct ADKSampler <: ElectronSampler
         @assert (sample_t_num>0) "[ADKSampler] Invalid time sample number $sample_t_num."
         @assert (sample_cutoff_limit≥0) "[ADKSampler] Invalid cut-off limit $sample_cutoff_limit."
         if dimension == 3
-            if ! sample_monte_carlo # check SS sampling parameters.
+            if ! sample_monte_carlo
                 @assert (ss_kd_num>0 && ss_kz_num>0) "[ADKSampler] Invalid kd,kz sample number $ss_kd_num,$ss_kz_num."
-                @assert (ss_kd_max>0 && ss_kz_max>0) "[ADKSampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max."
-            else                    # check MC sampling parameters.
+                @assert (ss_kd_max>0 || ss_kz_max>0) "[ADKSampler] Invalid kd,kz sample boundaries $ss_kd_max,$ss_kz_max (cannot be zero simultaneously)."
+                kd_samples = range(-abs(ss_kd_max),abs(ss_kd_max); length=ss_kd_num)
+                kz_samples = range(-abs(ss_kz_max),abs(ss_kz_max); length=ss_kz_num)
+            else
                 @assert (sample_t_intv[1] < sample_t_intv[2]) "[ADKSampler] Invalid sampling time interval $sample_t_intv."
                 @assert mc_kt_num>0 "[ADKSampler] Invalid sampling kt_num $mc_kt_num."
-                @assert (mc_kd_max>0 && mc_kz_max>0) "[ADKSampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max."
+                @assert (mc_kd_max>0 || mc_kz_max>0) "[ADKSampler] Invalid kd,kz sample boundaries $mc_kd_max,$mc_kz_max (cannot be zero simultaneously)."
             end
         else # dimension == 2
             if ! sample_monte_carlo
                 @assert ss_kd_num>0 "[ADKSampler] Invalid kd sample number $ss_kd_num."
                 @assert ss_kd_max>0 "[ADKSampler] Invalid kd sample boundaries $ss_kd_max."
                 ss_kz_num, ss_kz_max = 1, 0.0
+                kd_samples = range(-abs(ss_kd_max),abs(ss_kd_max); length=ss_kd_num)
+                kz_samples = range(-abs(ss_kz_max),abs(ss_kz_max); length=ss_kz_num)
             else
                 @assert (sample_t_intv[1] < sample_t_intv[2]) "[ADKSampler] Invalid sampling time interval $sample_t_intv."
                 @assert mc_kt_num>0 "[ADKSampler] Invalid sampling kt_num $mc_kt_num."
@@ -130,12 +134,11 @@ struct ADKSampler <: ElectronSampler
             new(laser,target,dimension,
                 sample_monte_carlo,
                 range(sample_t_intv[1],sample_t_intv[2];length=sample_t_num),
-                range(-abs(ss_kd_max),abs(ss_kd_max);length=ss_kd_num), range(-abs(ss_kz_max),abs(ss_kz_max);length=ss_kz_num),
+                kd_samples, kz_samples,
                 0,0,0, # for MC params. pass empty values
                 sample_cutoff_limit,traj_phase_method,rate_prefix,mol_orbit_ridx)
         else
-            seed = 1836 # seed is mp/me :D
-            t_samples = sort!(rand(MersenneTwister(seed), sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
+            t_samples = sort!(rand(sample_t_num) .* (sample_t_intv[2]-sample_t_intv[1]) .+ sample_t_intv[1])
             new(laser,target,dimension,
                 sample_monte_carlo,
                 t_samples,
@@ -263,9 +266,13 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
     jac = Ftr
     step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
     dkdt = if ! sp.monte_carlo
-        step(sp.t_samples) * step(sp.ss_kd_samples) * (sp.dimension == 3 ? step(sp.ss_kz_samples) : 1)
+        kd_step = length(sp.ss_kd_samples)>1 ? step(sp.ss_kd_samples) : 1.0
+        kz_step = (sp.dimension==3 && length(sp.ss_kz_samples)>1) ? step(sp.ss_kz_samples) : 1.0
+        step(sp.t_samples) * kd_step * kz_step
     else
-        step(sp.t_samples) * 4*sp.mc_kd_max*(sp.dimension == 3 ? sp.mc_kz_max : 1)/sp.mc_kt_num
+        kd_span = sp.mc_kd_max>0 ? 2*sp.mc_kd_max : 1.0
+        kz_span = sp.mc_kz_max>0 ? 2*sp.mc_kz_max : 1.0
+        step(sp.t_samples) * kd_span*kz_span/sp.mc_kt_num
     end
     amplitude::Function =
         if isempty(prefix)
@@ -302,6 +309,8 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         zeros(Float64, dim, nthreads(), sp.mc_kt_num)
     end
 
+    k0_cutoff_crit = 1e-4   # cutoff limit of small k0 electrons, which confuses the adaptive ODE solver.
+
     if ! sp.monte_carlo
         kd_samples = sp.ss_kd_samples
         kz_samples = sp.ss_kz_samples
@@ -309,6 +318,9 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         @threads for ikd in 1:kdNum
             for ikz in 1:kzNum
                 kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
+                if kd0^2+kz0^2 < k0_cutoff_crit^2
+                    continue
+                end
                 kx0 = kd0*-sin(φ)
                 ky0 = kd0* cos(φ)
                 r0 = (Ip+(kd0^2+kz0^2)/2)/Ftr
@@ -335,14 +347,22 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
             end
         end
     else
-        seed = 299792458 + batch_id
-        rng = Random.MersenneTwister(seed) # use a fixed seed to ensure reproducibility
         @threads for i in 1:sp.mc_kt_num
             if sp.dimension == 3
-                kd0, kz0 = gen_rand_pt_2dsq(rng, sp.mc_kd_max, sp.mc_kz_max)
+                kd0, kz0 = gen_rand_pt_2dsq(sp.mc_kd_max, sp.mc_kz_max)
+                if sp.mc_kd_max == 0
+                    kd0 = 0.0
+                    kz0 = gen_rand_pt_1d(sp.mc_kz_max)
+                elseif sp.mc_kz_max == 0
+                    kd0 = gen_rand_pt_1d(sp.mc_kd_max)
+                    kz0 = 0.0
+                end
             else
-                kd0 = gen_rand_pt_1d(rng, sp.mc_kd_max)
+                kd0 = gen_rand_pt_1d(sp.mc_kd_max)
                 kz0 = 0.0
+            end
+            if kd0^2+kz0^2 < k0_cutoff_crit^2
+                continue
             end
             kx0 = kd0*-sin(φ)
             ky0 = kd0* cos(φ)

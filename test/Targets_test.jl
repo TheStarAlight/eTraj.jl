@@ -2,6 +2,7 @@ using eTraj
 using eTraj.Targets
 using eTraj.Units
 using Test
+using ForwardDiff
 
 @info "# Testing Targets ..."
 
@@ -9,9 +10,9 @@ using Test
 
     @info "Testing HydrogenLikeAtom ..."
     @testset verbose=true "HydrogenLikeAtom" begin
-        t1 = HydrogenLikeAtom(Ip=0.5, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, soft_core=0.2, name="H")
-        t1_= HydrogenLikeAtom(Ip=13.605693123044498eV, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=90°, quan_ax_ϕ=π*rad, soft_core=0.2, name="H")
-        t2 = HydrogenLikeAtom(0.5,1,0,0,1.0, π/2,π, 0.2,"H")
+        t1 = HydrogenLikeAtom(Ip=0.5, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, soft_core=1e-10, name="H")
+        t1_= HydrogenLikeAtom(Ip=13.605693123044498eV, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=90°, quan_ax_ϕ=π*rad, soft_core=1e-10, name="H")
+        t2 = HydrogenLikeAtom(0.5,1,0,0,1.0, π/2,π, 1e-10,"H")
         t3 = get_atom("H"; quan_ax_θ=90°, quan_ax_ϕ=π*rad)
         @test t1 == t1_ == t2 == t3
         @test begin
@@ -25,17 +26,21 @@ using Test
         @test MagneticQuantumNumber(t1) == 0
         @test QuantizationAxisOrientaion(t1) == (π/2,π)
         @test AsympCoeff(t1)            == 1.0
-        @test SoftCore(t1)              == 0.2
+        @test SoftCore(t1)              == 1e-10
         @test TargetName(t1)            == "H"
-        @test TargetPotential(t1)(1.0,1.0,1.0) ≈ -1/sqrt(3.2)
-        @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (3.2)^(-1.5))
+        @test TargetPotential(t1)(1.0,1.0,1.0) ≈ -1/sqrt(3)
+        F = TargetForce(t1)
+        V = TargetPotential(t1)
+        @test reduce(*, ForwardDiff.gradient(x->V(x[1],x[2],x[3]), [0,0,1]) .≈ -1 .* F(0,0,1))
+        @test reduce(*, ForwardDiff.gradient(x->V(x[1],x[2],x[3]), [2,8,1]) .≈ -1 .* F(2,8,1))
+        @test reduce(*, ForwardDiff.gradient(x->V(x[1],x[2],x[3]), [-1,2,1]) .≈ -1 .* F(-1,2,1))
     end
 
     @info "Testing SAEAtom ..."
     @testset verbose=true "SAEAtom" begin
-        t1 = SAEAtom(Ip=0.9035698802, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
-        t1_= SAEAtom(Ip=24.58738901045456eV, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=90°, quan_ax_ϕ=π*rad, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
-        t2 = SAEAtom(0.9035698802, 1, 0, 0, 0.9124458182520485, π/2, π, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, "He")
+        t1 = SAEAtom(Ip=0.9035698802, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=π/2, quan_ax_ϕ=π, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, soft_core=1e-10, name="He")
+        t1_= SAEAtom(Ip=24.58738901045456eV, Z=1, l=0, m=0, asymp_coeff=:hartree, quan_ax_θ=90°, quan_ax_ϕ=π*rad, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, soft_core=1e-10, name="He")
+        t2 = SAEAtom(0.9035698802, 1, 0, 0, 0.9124458182520485, π/2, π, 1.230723, 0.6620055, -1.325040, 1.236224, -0.2307230, 0.4804286, 1e-10, "He")
         t3 = get_atom("He"; quan_ax_θ=π/2, quan_ax_ϕ=π)
         @test t1 == t2 == t3
         @test begin
@@ -49,9 +54,14 @@ using Test
         @test MagneticQuantumNumber(t1) == 0
         @test QuantizationAxisOrientaion(t1) == (π/2,π)
         @test AsympCoeff(t1)            == 0.9124458182520485
+        @test SoftCore(t1)              == 1e-10
         @test TargetName(t1)            == "He"
         @test TargetPotential(t1)(1.0,1.0,1.0) ≈ - (1.0 + 1.230723*exp(-0.6620055*1.73205081) + -1.325040*1.73205081*exp(-1.236224*1.73205081) + -0.2307230*exp(-0.4804286*1.73205081)) / 1.73205081
-        @test reduce(*, TargetForce(t1)(1.0,1.0,1.0) .≈ (-1.0,-1.0,-1.0) .* (1.73205081^(-3) * (1.0 + 1.230723*(1+0.6620055*1.73205081)*exp(-0.6620055*1.73205081) + -0.2307230*(1+0.4804286*1.73205081)*exp(-0.4804286*1.73205081)) + -1.325040*1.236224/1.73205081 * exp(-1.236224*1.73205081)))
+        F = TargetForce(t1)
+        V = TargetPotential(t1)
+        @test reduce(*, ForwardDiff.gradient(x->V(x[1],x[2],x[3]), [0,0,1]) .≈ -1 .* F(0,0,1))
+        @test reduce(*, ForwardDiff.gradient(x->V(x[1],x[2],x[3]), [2,8,1]) .≈ -1 .* F(2,8,1))
+        @test reduce(*, ForwardDiff.gradient(x->V(x[1],x[2],x[3]), [-1,2,1]) .≈ -1 .* F(-1,2,1))
     end
 
     @info "Testing Atom Database ..."

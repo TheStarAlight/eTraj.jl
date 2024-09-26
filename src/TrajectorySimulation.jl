@@ -53,14 +53,14 @@ Performs a semiclassical simulation with given parameters.
 - `sample_t_intv = (start,stop)`                        : Time interval in which the initial electrons are sampled (numerically in **a.u.** or `Unitful.Quantity`).
 - `sample_t_num`                                        : Number of time samples.
 - `traj_t_final`                                        : Time when every trajectory simulation ends (numerically in **a.u.** or a `Unitful.Quantity`).
-- `final_p_max = (pxMax,pyMax[,pzMax])`                 : Boundaries of final momentum spectrum collected in two/three dimensions.
-- `final_p_num = (pxNum,pyNum[,pzNum])`                 : Numbers of final momentum spectrum collected in two/three dimensions.
+- `final_p_max = (pxMax,pyMax[,pzMax])`                 : Boundaries of final momentum grid collected in two/three dimensions.
+- `final_p_num = (pxNum,pyNum[,pzNum])`                 : Numbers of final momentum grid collected in two/three dimensions (`1` indicates collecting to a single grid point).
 
 ## Required params. for step-sampling methods:
 - `ss_kd_max`   : Boundary of kd (momentum's transversal component in the polarization (xy) plane) samples (in a.u.).
 - `ss_kd_num`   : Number of kd (momentum's transversal component in the polarization (xy) plane) samples (in a.u.).
 - `ss_kz_max`   : [3D simulation] Boundary of kz (momentum's component along propagation direction (z ax.)) samples (in a.u.).
-- `ss_kz_num`   : [3D simulation] Number of kz (momentum's component along propagation direction (z ax.)) samples (an even number is required) (in a.u.).
+- `ss_kz_num`   : [3D simulation] Number of kz (momentum's component along propagation direction (z ax.)) samples (in a.u.).
 
 ## Required params. for Monte-Carlo-sampling methods:
 - `mc_kt_num`   : Number of kt (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
@@ -163,10 +163,6 @@ function TrajectorySimulationJob(; kwargs...)
     # dimension check
     @assert dimension in (2,3) "[TrajectorySimulationJob] `dimension` must be either 2 or 3."
     @assert length(final_p_max)==length(final_p_num)==dimension "[TrajectorySimulationJob] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
-    # 3D kz=0 problem
-    if dimension == 3 && !sample_monte_carlo && isodd(ss_kz_num)
-        @warn "[TrajectorySimulationJob] `ss_kz_num`=$ss_kz_num is an odd number, which may result in anomalous final electron states. Please choose an even number to avoid such problem."
-    end
     # check degenerate orbitals
     if target isa GenericMolecule
         energy_levels = MolEnergyLevels(target)
@@ -213,10 +209,10 @@ function TrajectorySimulationJob(; kwargs...)
     sp::ElectronSampler = init_sampler(;kwargs2...)
     #* prepare storage
     nthreads = Threads.nthreads()
-    px = collect(range(-final_p_max[1],final_p_max[1], length=final_p_num[1]))
-    py = collect(range(-final_p_max[2],final_p_max[2], length=final_p_num[2]))
+    px = final_p_num[1]>1 ? collect(range(-final_p_max[1],final_p_max[1], length=final_p_num[1])) : [0.0]
+    py = final_p_num[2]>1 ? collect(range(-final_p_max[2],final_p_max[2], length=final_p_num[2])) : [0.0]
     pz = if dimension == 3
-        collect(range(-final_p_max[2],final_p_max[2], length=final_p_num[2]))
+        final_p_num[3]>1 ? collect(range(-final_p_max[3],final_p_max[3], length=final_p_num[3])) : [0.0]
     else
         nothing
     end
@@ -303,7 +299,7 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
             (prob,i,repeat) -> remake(prob; u0=SVector{5}([init[k,i] for k in [1:4;7]]), tspan = (init[5,i],Float64(traj_t_final)))
         end
     ensemble_prob = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
+    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, dt=0.001, save_everystep=false)
     # collect and summarize.
     Threads.@threads for i in 1:batch_size
         threadid = Threads.threadid()
@@ -312,9 +308,9 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
         if px^2+py^2>100  # possibly anomalous electron, intercept and cancel.
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py]), whose initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1])."
+                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py]), whose initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i])."
             elseif warn_num == max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py]), whose initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]). Similar warnings in the same batch would be suppressed."
+                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py]), whose initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end
@@ -407,7 +403,7 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
             (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],Float64(traj_t_final)))
         end
     ensemble_prob = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
+    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, save_everystep=false)
     # collect and summarize.
     Threads.@threads for i in 1:batch_size
         threadid = Threads.threadid()
@@ -416,9 +412,9 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
         if px^2+py^2+pz^2>100  # possibly anomalous electron, intercept and cancel.
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1])."
+                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i])."
             elseif warn_num == max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]). Similar warnings in the same batch would be suppressed."
+                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end

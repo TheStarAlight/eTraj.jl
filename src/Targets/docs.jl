@@ -85,7 +85,7 @@ Gets the asymptotic coefficient (C_κl) of the atom.
 AsympCoeff
 
 @doc """
-    SoftCore(t::HydrogenLikeAtom)
+    SoftCore(t::SAEAtomBase)
 
 Gets the soft core parameter of the atom.
 """

@@ -1,14 +1,14 @@
 # some shared methods
 
 "Generates a 2D point inside a given area x∈[-x0,x0], y∈[-y0,y0] using the random generator `rng`."
-function gen_rand_pt_2dsq(rng, x0,y0)
-    x,y = (rand(rng)-0.5)*2*x0, (rand(rng)-0.5)*2*y0
+function gen_rand_pt_2dsq(x0,y0)
+    x,y = (rand()-0.5)*2*x0, (rand()-0.5)*2*y0
     return x,y
 end
 
 "Generates a 1D point inside x∈[-x0,x0] using the random generator `rng`."
-function gen_rand_pt_1d(rng, x0)
-    return (rand(rng)-0.5)*2*x0
+function gen_rand_pt_1d(x0)
+    return (rand()-0.5)*2*x0
 end
 
 "Generates a set of spherical harmonics Y_lm(kx,ky,kz) that evaluates in the Cartesian coordinate where k=(kx,ky,kz) satisfies the saddle-point equation k²=-κ²."
