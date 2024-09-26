@@ -42,12 +42,12 @@ Initializes a new `SAEAtom`.
 ## Examples
 ```jldoctest
 julia> t = SAEAtom(Ip=0.9035, Z=1, asymp_coeff=:hartree, a1=1.230723, b1=0.6620055, a2=-1.325040, b2=1.236224, a3=-0.2307230, b3=0.4804286, name="He")
-[SAEAtom] Atom He, Ip=0.9035, Z=1
+[SAEAtom] Atom He, Ip=0.9035 (24.59 eV), Z=1
 
 julia> using eTraj.Units
 
 julia> t = SAEAtom(Ip=12.13eV, Z=1, l=1, a1=51.35554, b1=2.111554, a2=-99.92747, b2=3.737221, a3=1.644457, b3=0.4306465, asymp_coeff=1.3, name="Xe")
-[SAEAtom] Atom Xe (p orbital, m=0), Ip=0.4458, Z=1
+[SAEAtom] Atom Xe (p orbital, m=0), Ip=0.4458 (12.13 eV), Z=1
 ```
 
 ## See Also
@@ -186,7 +186,8 @@ function TrajectoryFunction(t::SAEAtom, dimension::Integer, laserFx::Function, l
 end
 
 function Base.show(io::IO, t::SAEAtom)
-    @printf(io, "[SAEAtom] Atom %s%s, Ip=%.4f, Z=%i", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, t.nucl_charge)
+    @printf(io, "[SAEAtom] Atom %s%s, Ip=%.4f (%.2f eV), Z=%i", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, auconvert(eV, t.Ip).val, t.nucl_charge)
+    (t.quan_ax_θ!=0 || t.quan_ax_ϕ!=0) && @printf(io, ", θϕ=(%.1f°,%.1f°)", t.quan_ax_θ*180/π, t.quan_ax_ϕ*180/π)
 end
 
 function Serialize(t::SAEAtom)

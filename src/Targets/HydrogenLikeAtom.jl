@@ -35,12 +35,12 @@ Initializes a new `HydrogenLikeAtom`.
 ## Examples
 ```jldoctest
 julia> t = HydrogenLikeAtom(Ip=0.5, Z=1, name="H")
-[HydrogenLikeAtom] Atom H, Ip=0.5000, Z=1
+[HydrogenLikeAtom] Atom H, Ip=0.5000 (13.61 eV), Z=1
 
 julia> using eTraj.Units
 
 julia> t = HydrogenLikeAtom(Ip=3.4eV, Z=1, l=1, name="H")
-[HydrogenLikeAtom] Atom H (p orbital, m=0), Ip=0.1249, Z=1
+[HydrogenLikeAtom] Atom H (p orbital, m=0), Ip=0.1249 (3.40 eV), Z=1
 ```
 
 ## See Also
@@ -159,7 +159,8 @@ function TrajectoryFunction(t::HydrogenLikeAtom, dimension::Integer, laserFx::Fu
 end
 
 function Base.show(io::IO, t::HydrogenLikeAtom)
-    @printf(io, "[HydrogenLikeAtom] Atom %s%s, Ip=%.4f, Z=%i", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, t.nucl_charge)
+    @printf(io, "[HydrogenLikeAtom] Atom %s%s, Ip=%.4f (%.2f eV), Z=%i", t.name, (t.l==0 ? "" : " ($(l_info(t.l)), m=$(t.m))"), t.Ip, auconvert(eV, t.Ip).val, t.nucl_charge)
+    (t.quan_ax_θ!=0 || t.quan_ax_ϕ!=0) && @printf(io, ", θϕ=(%.1f°,%.1f°)", t.quan_ax_θ*180/π, t.quan_ax_ϕ*180/π)
 end
 
 function Serialize(t::HydrogenLikeAtom)
