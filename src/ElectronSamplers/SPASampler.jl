@@ -356,7 +356,7 @@ function gen_electron_batch(sp::SPASampler, batch_id::Integer)
                 ky0 = py+Ay(tr)
                 amp = amplitude(px,py,kd0,kz0,ti)
                 rate = abs2(amp)
-                if rate < cutoff_limit
+                if isnan(rate) || rate < cutoff_limit
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1
@@ -405,7 +405,7 @@ function gen_electron_batch(sp::SPASampler, batch_id::Integer)
             ky0 = py+Ay(tr)
             amp = amplitude(px,py,kd0,kz0,ti)
             rate = abs2(amp)
-            if rate < cutoff_limit
+            if isnan(rate) || rate < cutoff_limit
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1

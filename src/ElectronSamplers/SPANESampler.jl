@@ -263,7 +263,7 @@ function gen_electron_batch(sp::SPANESampler, batch_id::Integer)
     end
     pre_cc(kx,ky,kz,ts) = begin
         kts = k_ts(kx,ky,kz,ts)
-        c * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / ((kx^2+ky^2+kz^2+2Ip)*F2eff(kx,ky))^((n+1)/4)
+        c_cc * mapreduce(((l,m,m_),) -> pre_numerator((l,m,m_),kts), +, lmm_list) / ((kx^2+ky^2+kz^2+2Ip)*F2eff(kx,ky))^((n+1)/4)
     end
     jac(kd,kz) = abs(Ftr + sqrt(kd^2+kz^2)/Ftr^2*FxdFy_FydFx)
     step(range) = (maximum(range)-minimum(range))/length(range) # gets the step length of the range
@@ -334,7 +334,7 @@ function gen_electron_batch(sp::SPANESampler, batch_id::Integer)
                 end
                 amp = amplitude(kx0,ky0,kd0,kz0,ti(kx0,ky0,kd0,kz0))
                 rate = abs2(amp)
-                if isnan(rate) || rate < cutoff_limit
+                if isnan(rate) || rate/dkdt < cutoff_limit
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1
@@ -380,7 +380,7 @@ function gen_electron_batch(sp::SPANESampler, batch_id::Integer)
             end
             amp = amplitude(kx0,ky0,kd0,kz0,ti(kx0,ky0,kd0,kz0))
             rate = abs2(amp)
-            if isnan(rate) || rate < cutoff_limit
+            if isnan(rate) || rate/dkdt < cutoff_limit
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1

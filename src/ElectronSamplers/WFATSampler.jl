@@ -195,7 +195,7 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
                 y0 = r0*sin(ϕ)
                 z0 = 0.0
                 rate_ = rate(kd0,kz0)
-                if rate_ < cutoff_limit
+                if isnan(rate_) || rate_ < cutoff_limit
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1
@@ -231,7 +231,7 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
             y0 = r0*sin(ϕ)
             z0 = 0.0
             rate_ = rate(kd0,kz0)
-            if rate_ < cutoff_limit
+            if isnan(rate_) || rate_ < cutoff_limit
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1

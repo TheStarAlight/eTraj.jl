@@ -329,7 +329,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
                 z0 = 0.0
                 amp = amplitude(kx0,ky0,kd0,kz0,ti(kd0,kz0))
                 rate = abs2(amp)
-                if rate/dkdt < cutoff_limit
+                if isnan(rate) || rate < cutoff_limit
                     continue    # discard the sample
                 end
                 sample_count_thread[threadid()] += 1
@@ -372,7 +372,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
             z0 = 0.0
             amp = amplitude(kx0,ky0,kd0,kz0,ti(kd0,kz0))
             rate = abs2(amp)
-            if rate/dkdt < cutoff_limit
+            if isnan(rate) || rate < cutoff_limit
                 continue    # discard the sample
             end
             sample_count_thread[threadid()] += 1

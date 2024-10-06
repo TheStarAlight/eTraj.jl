@@ -317,9 +317,9 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
         if sol.u[i].retcode != ReturnCode.Success
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.retcode[i])`), the electron's initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[6,i])."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[6,i])."
             elseif warn_num == max_warn_num
-                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.retcode[i])`), the electron's condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[6,i]). Similar warnings in the same batch would be suppressed."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[6,i]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end
@@ -421,9 +421,9 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
         if sol.u[i].retcode != ReturnCode.Success
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.retcode[i])`), the electron's initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i])."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i])."
             elseif warn_num == max_warn_num
-                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.retcode[i])`), the electron's condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i]). Similar warnings in the same batch would be suppressed."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end
