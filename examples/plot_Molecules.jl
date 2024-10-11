@@ -16,12 +16,14 @@ path = [
 
 orbitals = [
     raw"H₂ HOMO ($1sσ_g$)" * "\n" * raw" (mol. axis $x$)",
-    raw"CO HOMO ($2pσ_g$)" * "\n" * raw" (mol. axis $x$ (C→O))",
+    raw"CO HOMO ($3σ_g$)" * "\n" * raw" (mol. axis $x$ (C→O))",
     raw"O₂ α-HOMO ($2pπ_u$)" * "\n" * raw" (nodal planes $xz$ & $yz$)",
     raw"O₂ α-HOMO ($2pπ_u$)" * "\n" * raw" (nodal planes $xy$ & $yz$)",
-    raw"C₆H₆ HOMO ($2pπ_3$)" * "\n" * raw" (nodal planes $xy$ & $xz$)",
-    raw"C₆H₆ HOMO ($2pπ_2$)" * "\n" * raw" (nodal planes $xz$ & $yz$)",
+    raw"C₆H₆ ⌬ HOMO ($2pπ_3$)" * "\n" * raw" (nodal planes $xz$ & $yz$)",
+    raw"C₆H₆ ⌬ HOMO ($2pπ_2$)" * "\n" * raw" (nodal planes $xy$ & $yz$)",
 ]
+
+number = ["(a) ", "(b) ", "(c1) ", "(c2) ", "(d1) ", "(d2) "]
 
 files = jldopen.(path)
 
@@ -45,7 +47,7 @@ for i in eachindex(files)
     figs[i] = heatmap(px, py, log10.(spec[i])', c=:ice)
     plot!(figs[i], xlim=xylim, ylim=xylim, clim=clim, size=(fig_x_size,fig_y_size), aspectratio=:equal, tickdirection=:out, colorbar=iseven(i))
     plot!(figs[i], xlabel=raw"$p_x$ / a.u.", ylabel=raw"$p_y$ / a.u.")
-    annotate!(figs[i], xylim[1]*0.95,xylim[2]*0.95, text(raw"6-cyc $xy$-CP ↺", :white, :top, :left, 10))
+    annotate!(figs[i], xylim[1]*0.95,xylim[2]*0.95, text(number[i] * raw"6-cyc $xy$-CP ↺", :white, :top, :left, 10))
     annotate!(figs[i], xylim[2]*0.95,xylim[2]*0.95, text("WFAT-CTMC", :white, :top, :right, 12))
     annotate!(figs[i], xylim[2]*0.95,xylim[1]*0.95, text(orbitals[i], :white, :bottom, :right, 9))
     annotate!(figs[i], xylim[1]*0.95,xylim[1]*0.95, text(@sprintf("rel. prob.\n=%.1e", prob[i]), :white, :bottom, :left, 9))

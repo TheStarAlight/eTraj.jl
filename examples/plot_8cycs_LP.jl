@@ -1,5 +1,5 @@
 using Plots
-# using PyPlot # also needs to install the PyPlot.jl package
+# using PyPlot  # PyPlot is implicitly required
 using JLD2
 using CodecZlib
 using eTraj
