@@ -97,7 +97,7 @@ Calculates the data used in WFAT structure factor calculation of the given molec
 - `sf_nξMax`    : The maximum number of nξ used in calculation (*default `3`*).
 - `sf_mMax`     : The maximum number of |m| used in calculation (*default `3`*).
 - `sf_lMax`     : The maximum angular quantum number l used in calculation (*default `6`*).
-- `swap_HOMO_LUMO=false` : If the HOMO & LUMO share the same energy level (but different symmetries), set `swap_HOMO_LUMO=true` when calculating LUMO (`ridx=1`). The program would swap the coefficients of HOMO and LUMO.
+- `swap_HOMO_LUMO=false` : If the HOMO & LUMO are degenerate, set `swap_HOMO_LUMO=true` when calculating LUMO (`ridx=1`). The program would swap the coefficients of HOMO and LUMO.
 """
 function calc_WFAT_data(;
             mc::PySCFMolecularCalculator,
@@ -600,7 +600,7 @@ function calc_asymp_coeff(;
                 if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
                     @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg`."
                 elseif err > 0.2   # the error is too large
-                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction (%.2f for l=%d, m=%d) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg`." err l m
+                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction is unsuccessful due to unacceptable error (%.2f for l=%d, m=%d), try a more precise basis set or adjust the `grid_rReg`." err l m
                 else
                     C_lm[l+1,m+l+1] += coeff
                 end
@@ -614,7 +614,7 @@ function calc_asymp_coeff(;
                 if coeff == 0.0   # returning the original guess means the fit is unsuccessful.
                     @warn "[PySCFMolecularCalculator] The fit of molecular wavefunction (l=$l, m=$m) is unsuccessful, try a more precise basis set or adjust the `grid_rReg`."
                 elseif err > 0.2   # the error is too large
-                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction (%.2f for l=%d, m=%d) is unsuccessful due to unacceptable error, try a more precise basis set or adjust the `grid_rReg`." err l m
+                    @warn @sprintf "[PySCFMolecularCalculator] The fit result of molecular wavefunction is unsuccessful due to unacceptable error (%.2f for l=%d, m=%d), try a more precise basis set or adjust the `grid_rReg`." err l m
                 else
                     C_lm[l+1,m+l+1] += coeff * 1im
                 end

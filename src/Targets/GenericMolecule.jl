@@ -233,7 +233,7 @@ function MolWFATData(mol::GenericMolecule, orbit_ridx)
     return mol.wfat_μ[orbit_ridx], mol.wfat_intdata[orbit_ridx]
 end
 
-function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, β::Real, γ::Real)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, θ::Real, χ::Real)
     if ! mol.energy_data_available || ! mol.wfat_data_available || !(orbit_ridx in mol.wfat_indices)
         error("[GenericMolecule] The WFAT data is not available, calculate first.")
     end
@@ -250,19 +250,19 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer
         @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
-    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
+    @inline μz(θ,χ) = (RotZYZ(χ,θ,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
 
     sum = zero(ComplexF64)
     for l in abs(m):lMax, m_ in -l:l
-        sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * wignerdjmn(l,m,m_,θ) * exp(-1im*m_*χ)
     end
-    return sum * exp(-sqrt(2IonPotential(mol,orbit_ridx))*μz(β,γ))
+    return sum * exp(-sqrt(2IonPotential(mol,orbit_ridx))*μz(θ,χ))
 end
-function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, β::AbstractVector{T} where T<:Real, γ::AbstractVector{T} where T<:Real)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, θ::AbstractVector{T} where T<:Real, χ::AbstractVector{T} where T<:Real)
     if ! mol.energy_data_available || ! mol.wfat_data_available || !(orbit_ridx in mol.wfat_indices)
         error("[GenericMolecule] The WFAT data is not available, calculate first.")
     end
-    @assert size(β,1)==size(γ,1) "[GenericMolecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
+    @assert size(θ,1)==size(χ,1) "[GenericMolecule] Invalid input (θ,χ), should be both `Real` values or two `Vector`s of `Real` and of same length."
     @assert nξ≥0 "[GenericMolecule] nξ should be non-negative."
     intdata = mol.wfat_intdata[orbit_ridx]
     nξMax = size(intdata,1) - 1
@@ -276,14 +276,14 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer
         @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
-    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
+    @inline μz(θ,χ) = (RotZYZ(χ,θ,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
 
-    sum = zeros(ComplexF64,size(β))
+    sum = zeros(ComplexF64,size(θ))
     for l in abs(m):lMax, m_ in -l:l
-        sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. wignerdjmn(l,m,m_,θ) * exp(-1im*m_*χ)
     end
     κ = sqrt(2IonPotential(mol,orbit_ridx))
-    return @. sum * exp(-κ*μz(β,γ))
+    return @. sum * exp(-κ*μz(θ,χ))
 end
 
 function MolWFATMaxChannels(mol::GenericMolecule, orbit_ridx)
