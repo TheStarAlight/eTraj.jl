@@ -19,7 +19,7 @@ mols = Dict(
 "Ammonia"           => GenericMolecule(atoms=["N","H","H","H"], atom_coords=[0 0 0; 0.9375 0 0.3810; -0.4688 0.8119 0.3810; -0.4688 -0.8119 0.3810]*u"Å", charge=0, name="Ammonia (NH₃)"),    # N is in the origin, with the symmetric axis towards +z, and an H atom on xz plane. r(NH) = 1.012 Å, ∠HNH = 106.7°.
 "Acetylene"         => GenericMolecule(atoms=["H","C","C","H"], atom_coords=[0 0 -1.6615; 0 0 -0.6015; 0 0 0.6015; 0 0 1.6615]*u"Å", charge=0, name="Acetylene (C₂H₂)"), # r(CC) = 1.203 Å, r(CH) = 1.060 Å
 "Methane"           => GenericMolecule(atoms=["C","H","H","H","H"], atom_coords=[0 0 0; 0 0 1.0870; 1.0250 0 -0.36182; -0.51251 -0.88769 -0.36182; -0.51251 0.88769 -0.36182]*u"Å", charge=0, name="Methane (CH₄)"), # C is in the origin, with one C-H bond towards +z, and another H atom on xz plane. r(CH) = 1.0870 Å, ∠HNH = 109.5°.
-"Benzene"           => GenericMolecule(atoms=["C","C","C","C","C","C","H","H","H","H","H","H"], atom_coords=[-0.700 0 1.2124; 0.700 0 1.2124; -0.700 0 -1.2124; 0.700 0 -1.2124; 1.399 0 0; -1.399 0 0; -1.24 0 1.2124; 1.24 0 1.2124; -1.24 0 -1.2124; 1.24 0 -1.2124; -2.48 0 0; 2.48 0 0]*u"Å", charge=0, name="Benzene (C₆H₆)") # on xz plane, with two opposite C-H bonds on x axis. r(CC) = 1.399 Å, r(CH) = 1.101 Å
+"Benzene"           => GenericMolecule(atoms=["C","C","C","C","C","C","H","H","H","H","H","H"], atom_coords=[-0.700 0 1.2124; 0.700 0 1.2124; -0.700 0 -1.2124; 0.700 0 -1.2124; 1.399 0 0; -1.399 0 0; -1.25 0 2.165; 1.25 0 2.165; -1.25 0 -2.165; 1.25 0 -2.165; -2.50 0 0; 2.50 0 0]*u"Å", charge=0, name="Benzene (C₆H₆)") # on xz plane, with two opposite C-H bonds on x axis. r(CC) = 1.399 Å, r(CH) = 1.101 Å
 )
 
 param_prec3 = Dict(:grid_rNum=>400, :grid_θNum=>90, :grid_ϕNum=>90, :sf_nξMax=>6, :sf_mMax=>6, :sf_lMax=>6)
@@ -135,12 +135,11 @@ MolInitCalculator!(molCH4, basis="cc-pVDZ")
 MolSaveDataAs!(molCH4, "Molecule_Methane.jld2")
 
 molC6H6 = mols["Benzene"]
-MolInitCalculator!(molC6H6, basis="cc-pVTZ")
+MolInitCalculator!(molC6H6, basis="cc-pVDZ")
 @time MolCalcAsympCoeff!(molC6H6, 0; merge(param_prec2, Dict(:grid_rReg=>(3,10)))...)
 @time MolCalcAsympCoeff!(molC6H6,-1; merge(param_prec2, Dict(:grid_rReg=>(3,10)))...)
-@time MolCalcAsympCoeff!(molC6H6,-2; merge(param_prec2, Dict(:grid_rReg=>(3,10)))...)
+@time MolCalcAsympCoeff!(molC6H6,-2; merge(param_prec2, Dict(:grid_rReg=>(5,10)))...)
 @time MolCalcWFATData!(molC6H6, 0; param_prec1...)
 @time MolCalcWFATData!(molC6H6,-1; param_prec1...)
 @time MolCalcWFATData!(molC6H6,-2; param_prec1...)
 MolSaveDataAs!(molC6H6, "Molecule_Benzene.jld2")
-
