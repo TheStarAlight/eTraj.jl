@@ -10,7 +10,7 @@ using Test
 
     t = get_atom("H")
     tmol = get_mol("Hydrogen")
-    tmol_rot = get_mol("Hydrogen"; rot_β=π/2)
+    tmol_rot = get_mol("Hydrogen"; rot_β=π/2, rot_γ=π/2)
     l = Cos4Laser(peak_int=1e15, wave_len=800.0, cyc_num=2, ellip=1.0)
     params = Dict{Symbol,Any}(
         :init_cond_method   => :ADK,
@@ -53,81 +53,79 @@ using Test
     @testset verbose=true "ADKSampler" begin
         @test begin
             sp = init_sampler(; params...)
-            f(sp) == (6,640)
+            f(sp) == (6,590)
         end
         @test begin
             sp = init_sampler(; merge(params, qtmc)...)
-            f(sp) == (7,640)
+            f(sp) == (7,590)
         end
         @test begin
             sp = init_sampler(; merge(params, scts)...)
-            f(sp) == (7,640)
+            f(sp) == (7,590)
         end
         @test begin
             sp = init_sampler(; merge(params, _3d)...)
-            f(sp) == (8,432)
+            f(sp) == (8,376)
         end
         @test begin
             sp = init_sampler(; merge(params, qtmc, _3d)...)
-            f(sp) == (9,432)
+            f(sp) == (9,376)
         end
         @test begin
             sp = init_sampler(; merge(params, scts, _3d)...)
-            f(sp) == (9,432)
+            f(sp) == (9,376)
         end
         @test begin
             sp = init_sampler(; merge(params, mol)...)
-            f(sp) == (6,618)
+            f(sp) == (6,562)
         end
         @test begin
             sp = init_sampler(; merge(params, mol, qtmc)...)
-            f(sp) == (7,618)
+            f(sp) == (7,562)
         end
         @test begin
             sp = init_sampler(; merge(params, mol, scts)...)
-            f(sp) == (7,618)
+            f(sp) == (7,562)
         end
         @test begin
             sp = init_sampler(; merge(params, mol, _3d)...)
-            f(sp) == (8,392)
+            f(sp) == (8,332)
         end
         @test begin
             sp = init_sampler(; merge(params, mol, _3d, qtmc)...)
-            f(sp) == (9,392)
+            f(sp) == (9,332)
         end
         @test begin
             sp = init_sampler(; merge(params, mol, _3d, scts)...)
-            f(sp) == (9,392)
+            f(sp) == (9,332)
         end
         @test begin
             sp = init_sampler(; merge(params, mc2d)...)
-            # f(sp) == (6,623)
             !isnothing(f(sp))
         end
         @test begin
             sp = init_sampler(; merge(params, mc3d)...)
-            # f(sp) == (8,387)
             !isnothing(f(sp))
         end
         @test begin
             sp = init_sampler(; merge(params, exp_)...)
-            f(sp) == (6,594)
+            f(sp) == (6,536)
         end
         @test begin
             sp = init_sampler(; merge(params, pre)...)
-            f(sp) == (6,616)
+            f(sp) == (6,562)
         end
         @test begin
             sp = init_sampler(; merge(params, precc)...)
-            f(sp) == (6,656)
+            f(sp) == (6,610)
         end
         @test begin
             sp = init_sampler(; merge(params, jac)...)
-            f(sp) == (6,576)
+            f(sp) == (6,514)
         end
         @test begin
             sp = init_sampler(; merge(params, prejac)...)
-            f(sp) == (6,598)
+            f(sp) == (6,540)
         end
     end
 
@@ -136,81 +134,79 @@ using Test
     @testset verbose=true "SPANESampler" begin
         @test begin
             sp = init_sampler(; merge(params, spane)...)
-            f(sp) == (6,528)
+            f(sp) == (6,617)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, qtmc)...)
-            f(sp) == (7,528)
+            f(sp) == (7,617)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, scts)...)
-            f(sp) == (7,528)
+            f(sp) == (7,617)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, _3d)...)
-            f(sp) == (8,320)
+            f(sp) == (8,424)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, _3d, qtmc)...)
-            f(sp) == (9,320)
+            f(sp) == (9,424)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, _3d, scts)...)
-            f(sp) == (9,320)
+            f(sp) == (9,424)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, mol)...)
-            f(sp) == (6,506)
+            f(sp) == (6,608)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, mol, qtmc)...)
-            f(sp) == (7,506)
+            f(sp) == (7,608)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, mol, scts)...)
-            f(sp) == (7,506)
+            f(sp) == (7,608)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, mol, _3d)...)
-            f(sp) == (8,286)
+            f(sp) == (8,400)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, _3d, mol, qtmc)...)
-            f(sp) == (9,286)
+            f(sp) == (9,400)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, _3d, mol, scts)...)
-            f(sp) == (9,286)
+            f(sp) == (9,400)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, mc2d)...)
-            # f(sp) == (6,502)
             !isnothing(f(sp))
         end
         @test begin
             sp = init_sampler(; merge(params, spane, mc3d)...)
-            # f(sp) == (8,294)
             !isnothing(f(sp))
         end
         @test begin
             sp = init_sampler(; merge(params, spane, exp_)...)
-            f(sp) == (6,521)
+            f(sp) == (6,573)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, pre)...)
-            f(sp) == (6,542)
+            f(sp) == (6,590)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, precc)...)
-            f(sp) == (6,542)
+            f(sp) == (6,627)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, jac)...)
-            f(sp) == (6,505)
+            f(sp) == (6,561)
         end
         @test begin
             sp = init_sampler(; merge(params, spane, prejac)...)
-            f(sp) == (6,528)
+            f(sp) == (6,579)
         end
     end
 
@@ -242,15 +238,15 @@ using Test
         end
         @test begin
             sp = init_sampler(; merge(params, spa, mol)...)
-            f(sp) == (6,621)
+            f(sp) == (6,619)
         end
         @test begin
             sp = init_sampler(; merge(params, spa, mol, qtmc)...)
-            f(sp) == (7,621)
+            f(sp) == (7,619)
         end
         @test begin
             sp = init_sampler(; merge(params, spa, mol, scts)...)
-            f(sp) == (7,621)
+            f(sp) == (7,619)
         end
         @test begin
             sp = init_sampler(; merge(params, spa, mol, _3d)...)
@@ -304,7 +300,7 @@ using Test
         end
         @test begin
             sp = init_sampler(; merge(params, wfat, mol_rot)...)
-            f(sp) == (6,568)
+            f(sp) == (6,566)
         end
         @test begin
             sp = init_sampler(; merge(params, wfat, _3d, mol)...)

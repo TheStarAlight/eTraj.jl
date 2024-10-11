@@ -20,14 +20,14 @@ end
 Initializes a new monochromatic elliptically polarized laser field with Cos2-shape envelope.
 
 ## Parameters
-- `peak_int`    : Peak intensity of the laser field (numerically in **W/cm²** or a `Unitful.Quantity`).
-- `wave_len`    : Wavelength of the laser field (numerically in **nm** or a `Unitful.Quantity`).
-- `ang_freq`    : Angular frequency of the laser field (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
-- `cyc_num`     : Number of cycles of the laser field.
-- `duration`    : Duration of the laser field (numerically in **a.u.** or a `Unitful.Quantity`).
-- `ellip`       : Ellipticity of the laser field [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
+- `peak_int`    : Peak intensity of the laser (numerically in **W/cm²** or a `Unitful.Quantity`).
+- `wave_len`    : Wavelength of the laser (numerically in **nm** or a `Unitful.Quantity`).
+- `ang_freq`    : Angular frequency of the laser (numerically in **a.u.** or a `Unitful.Quantity` of single-photon energy).
+- `cyc_num`     : Number of cycles of the laser.
+- `duration`    : Duration of the laser (numerically in **a.u.** or a `Unitful.Quantity`).
+- `ellip`       : Ellipticity of the laser [-1≤ε≤1, 0 indicates linear polarization and ±1 indicates circular polarization].
 - `azi`         : Azimuth angle of the laser's polarization's principle axis relative to x axis (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
-- `cep`         : Carrier-Envelope-Phase of the laser field (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
+- `cep`         : Carrier-Envelope-Phase of the laser (numerically in radian or a `Unitful.Quantity`) *(optional, default 0)*.
 - `t_shift`     : Time shift of the laser (numerically in **a.u.** or a `Unitful.Quantity`) relative to the peak *(optional, default 0)*.
 
 ## Examples
@@ -87,10 +87,10 @@ LaserA0(l::Cos2Laser) = LaserF0(l) / AngFreq(l)
 KeldyshParameter(l::Cos2Laser, Ip) = AngFreq(l) * sqrt(2Ip) / LaserF0(l)
 
 function UnitEnvelope(l::Cos2Laser)
-    local ω = AngFreq(l); local N = CycNum(l); local Δt = l.t_shift;
+    local ω = AngFreq(l); local N = CycNum(l); local Δt = l.t_shift; local k = 200/Period(l)
     function (t)
         t -= Δt
-        cos(ω*t/(2N))^2 * (abs(ω*real(t))<N*π)
+        cos(ω*t/(2N))^2 * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω)))
     end
 end
 
@@ -99,12 +99,12 @@ function LaserAx(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * cos(ω*t+φ)
+            A0 * cos(ω*t/(2N))^2 * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * cos(ω*t+φ)
         end
     else
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * (cos(ω*t+φ)*cos(ϕ)+sin(ω*t+φ)*ε*sin(ϕ))
+            A0 * cos(ω*t/(2N))^2 * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * (cos(ω*t+φ)*cos(ϕ)+sin(ω*t+φ)*ε*sin(ϕ))
         end
     end
 end
@@ -113,12 +113,12 @@ function LaserAy(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * sin(ω*t+φ) * ε
+            A0 * cos(ω*t/(2N))^2 * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * sin(ω*t+φ) * ε
         end
     else
         function(t)
             t -= Δt
-            A0 * cos(ω*t/(2N))^2 * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * (cos(ω*t+φ)*-sin(ϕ)+sin(ω*t+φ)*ε*cos(ϕ))
+            A0 * cos(ω*t/(2N))^2 * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * (cos(ω*t+φ)*-sin(ϕ)+sin(ω*t+φ)*ε*cos(ϕ))
         end
     end
 end
@@ -127,12 +127,12 @@ function LaserFx(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))
+            F0 * cos(ω*t/(2N)) * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * ( cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))
         end
     else
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*cos(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*sin(ϕ) )
+            F0 * cos(ω*t/(2N)) * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*cos(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*sin(ϕ) )
         end
     end
 end
@@ -141,12 +141,12 @@ function LaserFy(l::Cos2Laser)
     return if ϕ==0
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * ( -cos(ω*t/(2N))*cos(ω*t+φ) + 1/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
+            F0 * cos(ω*t/(2N)) * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * ( -cos(ω*t/(2N))*cos(ω*t+φ) + 1/N*sin(ω*t/(2N))*sin(ω*t+φ)) * ε
         end
     else
         function(t)
             t -= Δt
-            F0 * cos(ω*t/(2N)) * tanh(k*(real(t)-N*π/ω)) * tanh(-k*(real(t)+N*π/ω)) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*-sin(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*cos(ϕ) )
+            F0 * cos(ω*t/(2N)) * (0.5+0.5*tanh(k*(real(t)+N*π/ω))) * (0.5+0.5*tanh(-k*(real(t)-N*π/ω))) * ( (cos(ω*t/(2N))*sin(ω*t+φ) + 1/N*sin(ω*t/(2N))*cos(ω*t+φ))*-sin(ϕ) - (cos(ω*t/(2N))*cos(ω*t+φ) - 1/N*sin(ω*t/(2N))*sin(ω*t+φ))*ε*cos(ϕ) )
         end
     end
 end

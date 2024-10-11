@@ -102,7 +102,7 @@ using Test
                 sample_t_num        = 600,
                 traj_t_final        = 120,
                 final_p_max         = (2.5,2.5,1.0),
-                final_p_num         = (250,250,100),
+                final_p_num         = (250,250,10),
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 80,
                 ss_kz_max           = 1.0,
@@ -164,6 +164,33 @@ using Test
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-CTMC (Oxygen) ..."
+    @testset "ADK-CTMC (Oxygen)" begin
+        t = get_mol("Oxygen"; rot_β=90°)
+        l = Cos4Laser(peak_int=4e14, wave_len=800.0, cyc_num=3, ellip=1.0)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 2,
+                sample_t_intv       = (-165,165),
+                sample_t_num        = 3000,
+                traj_t_final        = 200,
+                final_p_max         = (2.5,2.5),
+                final_p_num         = (250,250),
+                ss_kd_max           = 2.0,
+                ss_kd_num           = 1000,
+                output_path         = "$tmpdir/test_ADK-CTMC_Oxygen_4e14_800nm_3cyc_CP.jld2",
+                traj_phase_method   = :CTMC,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full,
+                mol_orbit_ridx      = (1,0)
             )
             true
         end
@@ -294,6 +321,34 @@ using Test
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 800,
                 output_path         = "$tmpdir/test_ADK-SCTS_4e14_800nm_2cyc_CP.jld2",
+                traj_phase_method   = :SCTS,
+                traj_rtol           = 1e-6,
+                rate_prefix         = :Full
+            )
+            true
+        end
+    end
+
+    @info "Testing ADK-SCTS (Single-cycle) ..."
+    @testset "ADK-SCTS (Single-cycle pulse)" begin
+        t = get_atom("H")
+        l = Cos2Laser(peak_int=9e13, wave_len=800.0, cyc_num=1, ellip=0.0, cep=π/2)
+        @test begin
+            perform_traj_simulation(
+                init_cond_method    = :ADK,
+                laser               = l,
+                target              = t,
+                dimension           = 3,
+                sample_t_intv       = (-55,55),
+                sample_t_num        = 3000,
+                traj_t_final        = 70,
+                final_p_max         = (0.8,0.0,0.8),
+                final_p_num         = (300,1,300),
+                ss_kd_max           = 0.0,
+                ss_kd_num           = 1,
+                ss_kz_max           = 1.5,
+                ss_kz_num           = 2000,
+                output_path         = "$tmpdir/test_ADK-SCTS_Single-cycle_9e13_800nm_1cyc_LP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full

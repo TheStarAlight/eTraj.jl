@@ -85,7 +85,7 @@ Gets the asymptotic coefficient (C_κl) of the atom.
 AsympCoeff
 
 @doc """
-    SoftCore(t::HydrogenLikeAtom)
+    SoftCore(t::SAEAtomBase)
 
 Gets the soft core parameter of the atom.
 """
@@ -193,18 +193,18 @@ Gets the WFAT data in format `(μ, int_data)`.
 MolWFATData
 
 @doc """
-    MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ, m, β, γ)
+    MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ, m, θ, χ)
 
-Gets the WFAT structure factor ``G_{n_ξ m}`` according to the given Euler angles `β` and `γ` (ZYZ convention).
+Gets the WFAT structure factor ``G_{n_ξ m}`` according to the given Euler angles `θ` and `χ` (z-y'-z'' convention).
 Note: the rotational Euler angles of the molecule would not be applied.
 
 ## Parameters
 - `orbit_ridx`: Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
-                For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals `spin=1` and for β orbitals `spin=2`.
+                For open-shell molecules, according to α/θ spins, should be passed in format `(spin, idx)` where for α orbitals `spin=1` and for β orbitals `spin=2`.
 - `nξ`  : Parabolic quantum number nξ=0,1,2,⋯ (nξ up to 5 is calculated by default).
 - `m`   : Parabolic quantum number m=⋯,-1,0,1,⋯ (|m| up to 5 is calculated by default).
-- `β`   : Euler angle β, passed as a `Real` value or an `AbstractVector` of `Real`.
-- `γ`   : Euler angle γ, passed as a `Real` value or an `AbstractVector` of `Real`.
+- `θ`   : Euler angle θ, passed as a `Real` value or an `AbstractVector` of `Real`.
+- `χ`   : Euler angle χ, passed as a `Real` value or an `AbstractVector` of `Real`.
 """
 MolWFATStructureFactor_G
 
@@ -248,7 +248,7 @@ MolAsympCoeff_lMax
 @doc """
     MolRotation(mol::GenericMolecule) -> (α,β,γ)
 
-Gets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ) (in radian).
+Gets the Euler angles (z-y'-z'' convention) specifying the molecule's orientation in format (α,β,γ) (in radian).
 """
 MolRotation
 
@@ -256,7 +256,7 @@ MolRotation
     SetMolRotation!(mol::GenericMolecule, α,β,γ)
     SetMolRotation!(mol::GenericMolecule, (α,β,γ))
 
-Sets the Euler angles (ZYZ convention) specifying the molecule's orientation in format (α,β,γ) (numerically in radian or a `Unitful.Quantity`).
+Sets the Euler angles (z-y'-z'' convention) specifying the molecule's orientation in format (α,β,γ) (numerically in radian or a `Unitful.Quantity`).
 """
 SetMolRotation!
 

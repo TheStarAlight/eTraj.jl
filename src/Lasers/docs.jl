@@ -131,21 +131,21 @@ CycNum
 @doc """
     SpreadCycNum(l::GaussianLaser)
 
-Gets the half-temporal width of the laser, namely σ (converted to cycle numbers).
+Gets the temporal width of the laser, namely σ (converted to cycle numbers).
 """
 SpreadCycNum
 
 @doc """
     SpreadDuration(l::GaussianLaser)
 
-Gets the half-temporal width of the laser, namely σ (in a.u.).
+Gets the temporal width of the laser, namely σ (in a.u.).
 """
 SpreadDuration
 
 @doc """
     FWHM_Duration(l::GaussianLaser)
 
-Gets the temporal FWHM (Full Width at Half Maxima) of the laser (in a.u.).
+Gets the temporal FWHM (Full Width at Half Maxima) of the intensity profile of the laser (in a.u.).
 """
 FWHM_Duration
 

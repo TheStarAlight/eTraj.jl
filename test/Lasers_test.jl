@@ -105,9 +105,9 @@ using Test
         l1 = GaussianLaser(peak_int=4e14, wave_len=800., spread_cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
         l2 = GaussianLaser(peak_int=4e14, ang_freq=0.05695419065625, spread_cyc_num=2., ellip=1., azi=π/2, cep=π, t_shift=10.)
         l3 = GaussianLaser(peak_int=4e14, wave_len=800., spread_duration=220.63996467273427, ellip=1., azi=π/2, cep=π, t_shift=10.)
-        l4 = GaussianLaser(peak_int=4e14, wave_len=800., FWHM_duration=519.5674115462751, ellip=1., azi=π/2, cep=π, t_shift=10.)
+        l4 = GaussianLaser(peak_int=4e14, wave_len=800., FWHM_duration=367.38963998791286, ellip=1., azi=π/2, cep=π, t_shift=10.)
         l5 = GaussianLaser(peak_int=4e14W/cm^2, wave_len=800.0nm, spread_duration=5.337025523633234fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
-        l6 = GaussianLaser(peak_int=4e14W/cm^2, wave_len=800.0nm, FWHM_duration=12.567734683893338fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
+        l6 = GaussianLaser(peak_int=4e14W/cm^2, wave_len=800.0nm, FWHM_duration=8.88673041913435fs, ellip=1., azi=90°, cep=π*rad, t_shift=241.88843265767443as)
         l = GaussianLaser(4e14, 800., 2., 1., π/2, π, 10.)
         @test l == l1
         @test l == l2
@@ -124,7 +124,7 @@ using Test
         @test WaveLen(l1)       == 800.
         @test SpreadCycNum(l1)  == 2.
         @test SpreadDuration(l1)== SpreadCycNum(l1) * Period(l1)
-        @test FWHM_Duration(l1) == SpreadDuration(l1) * (2*sqrt(2*log(2)))
+        @test FWHM_Duration(l1) == SpreadDuration(l1) * (2*sqrt(log(2)))
         @test Ellipticity(l1)   == 1.
         @test Azimuth(l1)       == π/2
         @test AngFreq(l1)       == 45.563352525 / WaveLen(l1)

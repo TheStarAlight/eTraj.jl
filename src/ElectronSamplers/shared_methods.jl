@@ -1,14 +1,14 @@
 # some shared methods
 
 "Generates a 2D point inside a given area x∈[-x0,x0], y∈[-y0,y0] using the random generator `rng`."
-function gen_rand_pt_2dsq(rng, x0,y0)
-    x,y = (rand(rng)-0.5)*2*x0, (rand(rng)-0.5)*2*y0
+function gen_rand_pt_2dsq(x0,y0)
+    x,y = (rand()-0.5)*2*x0, (rand()-0.5)*2*y0
     return x,y
 end
 
 "Generates a 1D point inside x∈[-x0,x0] using the random generator `rng`."
-function gen_rand_pt_1d(rng, x0)
-    return (rand(rng)-0.5)*2*x0
+function gen_rand_pt_1d(x0)
+    return (rand()-0.5)*2*x0
 end
 
 "Generates a set of spherical harmonics Y_lm(kx,ky,kz) that evaluates in the Cartesian coordinate where k=(kx,ky,kz) satisfies the saddle-point equation k²=-κ²."
@@ -23,27 +23,26 @@ end
     return SHfunc
 end
 
-using StaticArrays
-using Rotations
 """
 Obtains the rotational Euler angles `(α,β,γ)` from FF to the MF.
-The FF is defined as the frame where the field F is aligned with the z axis.
+The FF is defined as the frame where the field F_vec is aligned with the z axis.
+This transform is only valid under the case when F_vec is in xy plane in LF.
 """
-function obtain_FF_MF_Euler(mol_rot, F)
+function obtain_FF_MF_Euler(mol_rot, F_vec)
     mα, mβ, mγ = mol_rot
-    # note: in the definition of RotZYZ(t1,t2,t3), the rot consists of Z(t3)->Y(t2)->Z(t1), while is extrinsic, but in our definition the rot is intrinsic, thus we reversed the order of angles
-    RotMFLF = inv(RotZYZ(mα, mβ, mγ)) # MF → LF, inversed because it is initially an active rotation (rot of vector) but a passive rot is needed
-    RotLFFF = RotZYZ(atan(F[2],F[1]), π/2, 0) # LF → FF
-    α,β,γ = Rotations.params(RotZYZ(inv(RotLFFF*RotMFLF)))
+    Fx = F_vec[1]; Fy = F_vec[2]; F = hypot(Fx,Fy)
+    FF_LFrep = [0 Fy/F Fx/F; 0 -Fx/F Fy/F; 1 0 0]
+    MF_LFrep = RotZYZ(mα,mβ,mγ)
+    α,β,γ = params(RotZYZ(MF_LFrep\FF_LFrep)) # basis transformation is a column transformation, the transition matrix is multiplied on the right side.
     return α,β,γ
 end
 """
 Obtains the rotated axes `(x_axis,y_axis,z_axis)` in FF represented in LF.
 """
 function obtain_xyz_FF_LF(Fx, Fy)
-    LFFFRotMat = RotZYZ(atan(Fy,Fx), π/2, 0.0) # active rot from Lf to FF
-    new_x_axis = LFFFRotMat * @SVector [1.0,0.0,0.0]
-    new_y_axis = LFFFRotMat * @SVector [0.0,1.0,0.0]
-    new_z_axis = LFFFRotMat * @SVector [0.0,0.0,1.0]
+    F = hypot(Fx,Fy)
+    new_x_axis = @SVector [ 0.0 ,  0.0, 1.0]
+    new_y_axis = @SVector [ Fy/F,-Fx/F, 0.0]
+    new_z_axis = @SVector [ Fx/F, Fy/F, 0.0]
     return new_x_axis, new_y_axis, new_z_axis
 end

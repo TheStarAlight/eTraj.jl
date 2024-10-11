@@ -9,7 +9,7 @@ using Parameters: @pack!, @unpack
 using Base.Threads
 using LinearAlgebra: norm, ×
 using StaticArrays: SVector, @SVector
-using OrdinaryDiffEq: ODEProblem, remake, solve, Tsit5, EnsembleProblem, EnsembleThreads
+using OrdinaryDiffEq: ODEProblem, remake, solve, Tsit5, EnsembleProblem, EnsembleThreads, ReturnCode
 using ProgressMeter: Progress, ProgressUnknown, BarGlyphs, next!, finish!
 
 mutable struct TrajectorySimulationJob
@@ -41,51 +41,60 @@ mutable struct TrajectorySimulationJob
 end
 
 """
-Performs a semiclassical simulation with given parameters.
+Performs a semiclassical trajectory simulation with given parameters.
 
 # Parameters
 
-## Required params. for all:
-- `init_cond_method = :ADK|:SPA|:SPANE|:WFAT`           : Method of electrons' initial conditions. Currently supports `:ADK`, `:SPA` (SFA-SPA), `:SPANE` (SFA-SPANE) for atoms and molecules, and `:WFAT` for molecules only.
-- `laser::Laser`                                        : Parameters of the laser field.
-- `target::Target`                                      : Parameters of the target.
-- `dimension = 2|3`                                     : Dimension of simulation which indicates 2D/3D simulation, 2D simulation is carried out in the xy plane.
-- `sample_t_intv = (start,stop)`                        : Time interval in which the initial electrons are sampled (numerically in **a.u.** or `Unitful.Quantity`).
-- `sample_t_num`                                        : Number of time samples.
-- `traj_t_final`                                        : Time when every trajectory simulation ends (numerically in **a.u.** or a `Unitful.Quantity`).
-- `final_p_max = (pxMax,pyMax[,pzMax])`                 : Boundaries of final momentum spectrum collected in two/three dimensions.
-- `final_p_num = (pxNum,pyNum[,pzNum])`                 : Numbers of final momentum spectrum collected in two/three dimensions.
+## Required parameters:
+- `init_cond_method`    : Method used to determine the initial conditions of electrons.
+    - Candidates: `:ADK`, `:SPA` (SFA-SPA), `:SPANE` (SFA-SPANE) for targets of type `SAEAtom` or `MoleculeBase`; `:WFAT` for `MoleculeBase` targets.
+- `laser::Laser`        : Parameters of the laser field. See the [Laser](@ref) module for details.
+- `target::Target`      : Parameters of the target. See the [Targets](@ref) module for details.
+- `dimension = 2|3`     : Dimensionality of simulation.
+    - 2D simulation is carried out in the xy plane.
+- `sample_t_intv`       : Time interval for sampling initial electrons.
+    - Format: `(start,stop)`
+    - Unit: pass numerically in **a.u.** or pass as a `Unitful.Quantity`.
+- `sample_t_num`        : Number of time samples.
+- `traj_t_final`        : Final time of each trajectory simulation
+    - Unit: numerically in **a.u.** or pass as a `Unitful.Quantity`.
+- `final_p_max`         : Boundaries of final momentum grid. Grid ranges from `-pxMax` to `+pxMax` in the x direction, and the same for y and z directions.
+    - Format: `(pxMax,pyMax[,pzMax])`
+- `final_p_num`         : Numbers of final momentum grid points. If a value is `1`, electrons will be collected regardless of the momentum on that dimension.
+    - Format: `(pxNum,pyNum[,pzNum])`
 
-## Required params. for step-sampling methods:
-- `ss_kd_max`   : Boundary of kd (momentum's transversal component in the polarization (xy) plane) samples (in a.u.).
-- `ss_kd_num`   : Number of kd (momentum's transversal component in the polarization (xy) plane) samples (in a.u.).
-- `ss_kz_max`   : [3D simulation] Boundary of kz (momentum's component along propagation direction (z ax.)) samples (in a.u.).
-- `ss_kz_num`   : [3D simulation] Number of kz (momentum's component along propagation direction (z ax.)) samples (an even number is required) (in a.u.).
+## Required parameters for step-sampling methods:
+- `ss_kd_max`   : Boundary of k⟂ samples (in a.u.). k⟂ ranges from `-ss_kd_max` to `+ss_kd_max`.
+- `ss_kd_num`   : Number of k⟂ samples (in a.u.).
+- `ss_kz_max`   : [3D only] Boundary of kz samples (in a.u.). kz ranges from `-ss_kz_max` to `+ss_kz_max`.
+- `ss_kz_num`   : [3D only] Number of kz samples (in a.u.).
 
-## Required params. for Monte-Carlo-sampling methods:
-- `mc_kt_num`   : Number of kt (initial momentum which is perpendicular to field direction, two dimensional) samples in a single time sample.
-- `mc_kd_max`   : Boundary of kd.
-- `mc_kz_max`   : [3D simulation] Boundary of kz.
+## Required parameters for Monte-Carlo sampling methods:
+- `mc_kt_num`   : Number of kt samples in a single time sample.
+- `mc_kd_max`   : Boundary of kd. kd ranges from `-mc_kd_max` to `+mc_kd_max`.
+- `mc_kz_max`   : [3D only] Boundary of kz. kz ranges from `-mc_kz_max` to `+mc_kz_max`.
 
-## Optional params. for all:
-- `traj_phase_method = :CTMC|:QTMC|:SCTS`           : Method of classical trajectories' phase (default `CTMC`).
-- `traj_rtol = 1e-6`                                : Relative error tolerance when solving classical trajectories using adaptive methods (default `1e-6`).
-- `output_fmt = :jld2|:h5`                          : Output format, two options are JLD2 (`:jld2`) and HDF5 (`:h5`) (Default `:jld2`).
-- `output_path`                                     : Output file path.
-- `sample_cutoff_limit = 1e-16`                     : The cut-off limit of the probability of the sampled electron, electrons with probabilities lower than the limit would be discarded (Default `1e-16`).
-- `sample_monte_carlo = false`                      : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`).
+## Optional parameters:
+- `traj_phase_method`   : Method used to determine classical trajectories' phase.
+    - Candidates: `:CTMC` (default), `:QTMC`, and `:SCTS`.
+- `traj_rtol`           : Relative error tolerance for solving classical trajectories (default `1e-6`).
+- `output_fmt`          : Output file format.
+    - Candidates: `:jld2` (JLD2, default) and `:h5` (HDF5).
+- `output_path`         : Path to output file.
+- `sample_cutoff_limit` : Probability cutoff limit for sampled electrons (default `1e-16`). Electrons with probabilities lower than the limit would be discarded.
+- `sample_monte_carlo`  : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`).
 
-## Optional params. for atomic SFA-SPA, SFA-SPANE and ADK methods:
-- `rate_prefix = :Full | Set([:Pre|:PreCC,:Jac]) | :Exp`    : Prefix of the exponential term in the ionization rate (default `:Full`).
-                                                              `:Exp` indicates no prefix; `:Pre` and `:PreCC` indicates inclusion of the prefactor with/without Coulomb correction; `:Jac` indicates inclusion of the Jacobian factor which is related to the sampling method; `:Full` is equivalent to `Set([:PreCC,:Jac])`.
-                                                              To combine the prefactor and Jacobian factor, pass a `Set` containing `:Pre` OR `:PreCC`, as well as `:Jac`.
+## Optional parameter for atomic SFA-SPA, SFA-SPANE and ADK methods:
+- `rate_prefix` : Prefix of the exponential term in the ionization rate (default `:Full`).
+    - `:Exp` indicates no prefix; `:Pre` and `:PreCC` indicates inclusion of the prefactor with/without Coulomb correction; `:Jac` indicates inclusion of the Jacobian factor which is related to the sampling method; `:Full` is equivalent to `Set([:PreCC,:Jac])`.
+        To combine `:Pre` and `:Jac`, pass `Set([:Pre,:Jac])`.
 
-## Optional params. for target `Molecule`:
-- `mol_orbit_ridx = 0`  : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
-                          For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
+## Optional parameter for target `MoleculeBase`:
+- `mol_orbit_ridx`  : Index of selected orbital relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1.)
+    - For open-shell molecules, according to α/β spins, should be passed in format `(spin, idx)` where for α orbitals spin=`1` and for β orbitals spin=`2`.
 
-## Optional params. for interface:
-- `show_progress = true`    : Indicates whether to show the progressbar (Default `true`).
+## Optional parameter for interface:
+- `show_progress`   : Whether to display progress bar (default `true`).
 
 """
 function perform_traj_simulation(;
@@ -119,7 +128,7 @@ function perform_traj_simulation(;
         #* opt. params. for SFA, SFA-AE and ADK methods
     rate_prefix         ::Union{Symbol,AbstractVector{Symbol},AbstractSet{Symbol}} = :Full,
         #* opt. params. for target `MoleculeBase`
-    mol_orbit_ridx       ::Integer   = 0,
+    mol_orbit_ridx                  = 0,
         #* params. for interface
     show_progress       ::Bool      = true
     )
@@ -162,11 +171,16 @@ function TrajectorySimulationJob(; kwargs...)
     ((sample_t_intv[1] isa Quantity) || (sample_t_intv[2] isa Quantity)) && (sample_t_intv = ((uconvert(u"fs", sample_t_intv[1])|>auconvert).val, (uconvert(u"fs", sample_t_intv[2])|>auconvert).val))
     # dimension check
     @assert dimension in (2,3) "[TrajectorySimulationJob] `dimension` must be either 2 or 3."
-    @assert length(final_p_max)==length(final_p_num)==dimension "[perform_traj_simulation] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
-    # 3D kz=0 problem
-    if dimension == 3 && !sample_monte_carlo && isodd(ss_kz_num)
-        @warn "[TrajectorySimulationJob] `ss_kz_num`=$ss_kz_num is an odd number, which may result in anomalous final electron states. Please choose an even number to avoid such problem."
+    @assert length(final_p_max)==length(final_p_num)==dimension "[TrajectorySimulationJob] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
+    # check degenerate orbitals
+    if target isa GenericMolecule
+        energy_levels = MolEnergyLevels(target)
+        deg_orb = Targets._lookup_degenerate_orbital(target, mol_orbit_ridx)
+        if !isempty(deg_orb)
+            @info "[TrajectorySimulationJob] Target `$(TargetName(target))` has degenerate orbitals $(join(deg_orb, ", ", " and "))."
+        end
     end
+
     # check the path in the first
     if isfile(output_path)
         @warn "[TrajectorySimulationJob] File `$output_path` already exists, will save at `$(default_filename())`."
@@ -204,10 +218,10 @@ function TrajectorySimulationJob(; kwargs...)
     sp::ElectronSampler = init_sampler(;kwargs2...)
     #* prepare storage
     nthreads = Threads.nthreads()
-    px = collect(range(-final_p_max[1],final_p_max[1], length=final_p_num[1]))
-    py = collect(range(-final_p_max[2],final_p_max[2], length=final_p_num[2]))
+    px = final_p_num[1]>1 ? collect(range(-final_p_max[1],final_p_max[1], length=final_p_num[1])) : [0.0]
+    py = final_p_num[2]>1 ? collect(range(-final_p_max[2],final_p_max[2], length=final_p_num[2])) : [0.0]
     pz = if dimension == 3
-        collect(range(-final_p_max[2],final_p_max[2], length=final_p_num[2]))
+        final_p_num[3]>1 ? collect(range(-final_p_max[3],final_p_max[3], length=final_p_num[3])) : [0.0]
     else
         nothing
     end
@@ -294,24 +308,26 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
             (prob,i,repeat) -> remake(prob; u0=SVector{5}([init[k,i] for k in [1:4;7]]), tspan = (init[5,i],Float64(traj_t_final)))
         end
     ensemble_prob = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
+    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, save_everystep=false)
     # collect and summarize.
     Threads.@threads for i in 1:batch_size
         threadid = Threads.threadid()
         x0,y0,px0,py0 = sol.u[i].u[ 1 ][1:4]
         x, y, px, py  = sol.u[i].u[end][1:4]
-        if px^2+py^2>100  # possibly anomalous electron, intercept and cancel.
+        if sol.u[i].retcode != ReturnCode.Success
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py]), whose initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1])."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[6,i])."
             elseif warn_num == max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py]), whose initial condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]). Similar warnings in the same batch would be suppressed."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's condition is r0=$([x0,y0]), k0=$([px0,py0]), t0=$(sol.u[i].t[1]), rate=$(init[6,i]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i].u[end][5])
         prob = init[6,i]
-        if traj_phase_method == :SCTS # asymptotic Coulomb phase correction term in SCTS
+        if traj_phase_method == :SCTS
+            phase += Ip * init[5,i] # Ip*tr
+            # asymptotic Coulomb phase correction term in SCTS
             sqrtb = (2Ip)^(-0.5)
             g = sqrt(1+2Ip*(x*py-y*px)^2)
             phase -= px0*x0+py0*y0 + nucl_charge*sqrtb*(log(g)+asinh((x*px+y*py)/(g*sqrtb)))
@@ -396,27 +412,29 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
             (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],Float64(traj_t_final)))
         end
     ensemble_prob = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, dt=0.01, reltol=traj_rtol, save_everystep=false)
+    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, save_everystep=false)
     # collect and summarize.
     Threads.@threads for i in 1:batch_size
         threadid = Threads.threadid()
         x0,y0,z0,px0,py0,pz0 = sol.u[i].u[ 1 ][1:6]
         x, y, z, px, py, pz  = sol.u[i].u[end][1:6]
-        if px^2+py^2+pz^2>100  # possibly anomalous electron, intercept and cancel.
+        if sol.u[i].retcode != ReturnCode.Success
             warn_num += 1
             if warn_num < max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1])."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i])."
             elseif warn_num == max_warn_num
-                @warn "[launch_and_collect!] Found electron with anomalously large momentum $([px,py,pz]), whose initial condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]). Similar warnings in the same batch would be suppressed."
+                @warn "[launch_and_collect!] ODE solver failed (retcode `$(sol.u[i].retcode)`), the electron's condition is r0=$([x0,y0,z0]), k0=$([px0,py0,pz0]), t0=$(sol.u[i].t[1]), rate=$(init[8,i]). Similar warnings in the same batch would be suppressed."
             end
             continue
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i].u[end][7])
         prob = init[8,i]
-        if traj_phase_method == :SCTS # asymptotic Coulomb phase correction term in SCTS
+        if traj_phase_method == :SCTS
+            phase += Ip * init[7,i] # Ip*tr
+            # asymptotic Coulomb phase correction term in SCTS
             sqrtb = (2Ip)^(-0.5)
             g = sqrt(1+2Ip*((y*pz-z*py)^2+(z*px-x*pz)^2+(x*py-y*px)^2))
-            phase -= px0*x0+py0*y0+pz0*z0 + nucl_charge*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
+            phase -= nucl_charge*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
         end
         E_inf = (px^2+py^2+pz^2)/2 + targetP(x,y,z)
         r_vec = [x, y, z ]
@@ -431,7 +449,7 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
             if final_p_num[1]>1
                 pxIdx = round(Int, (p_inf_vec[1]+final_p_max[1])/(final_p_max[1]/final_p_num[1]*2))
             else
-                pxIdx = 1   # without this step, only electrons with positive p_x component would be collected, the same for p_y and p_z.
+                pxIdx = 1   # we need to unconditionally collect if final_p_max[i]==1, without this step, only electrons with positive p_x component would be collected, the same for p_y and p_z.
             end
             if final_p_num[2]>1
                 pyIdx = round(Int, (p_inf_vec[2]+final_p_max[2])/(final_p_max[2]/final_p_num[2]*2))

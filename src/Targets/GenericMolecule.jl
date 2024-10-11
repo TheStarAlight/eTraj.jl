@@ -54,7 +54,7 @@ Initializes a new `GenericMolecule` with given parameters.
 - `charge`      : Total charge of the molecule (ion) (*optional, default `0`*).
 - `spin`        : Total spin of the molecule (*optional, default `0`*). Note that each unpaired electron contributes 1/2.
 - `name`        : Name of the molecule (*optional*).
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (z-y'-z'' convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
 
 ## Example
 ```
@@ -94,7 +94,7 @@ Initializes a new `GenericMolecule` with the data stored in `ext_data_path`.
 
 ## Parameters
 - `ext_data_path`           : Path to the molecule's data stored externally.
-- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (ZYZ convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
+- `rot_α`,`rot_β`,`rot_γ`   : Euler angles (z-y'-z'' convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
 """
 function LoadMolecule(ext_data_path::String; rot_α=0.,rot_β=0.,rot_γ=0.)
     file = jldopen(ext_data_path ,"r")
@@ -197,6 +197,26 @@ function _get_LUMO_idx(orbit_occ)
     # gets the index of LUMO according to orbit_occ
     findfirst(iszero, orbit_occ)
 end
+function _lookup_degenerate_orbital(mol::GenericMolecule, orbit_ridx)
+    # finds other degenerate orbitals of `orbit_ridx`
+    ΔE = 0.0001
+    E_orb = MolEnergyLevel(mol, orbit_ridx)
+    idx = findall(E->abs(E-E_orb)<ΔE, mol.energy_levels)
+    if length(idx) == 1
+        return []
+    end
+    if mol.spin == 0
+        idx .-= _get_HOMO_idx(mol.orbit_occ)
+        # deleteat!(idx, findfirst(isequal(orbit_ridx), idx))
+    else
+        idx = map(cidx->cidx.I, idx)
+        HOMO_alp_idx = _get_HOMO_idx(MolOrbitalOccupation(mol,1))
+        HOMO_bet_idx = _get_HOMO_idx(MolOrbitalOccupation(mol,2))
+        idx = map(i->(i[1], i[2]-(i[1]==1 ? HOMO_alp_idx : HOMO_bet_idx)), idx)
+        # deleteat!(idx, findfirst(isequal(orbit_ridx), idx))
+    end
+    return idx
+end
 
 function MolWFATAvailableIndices(mol::GenericMolecule)
     return if mol.wfat_data_available
@@ -213,7 +233,7 @@ function MolWFATData(mol::GenericMolecule, orbit_ridx)
     return mol.wfat_μ[orbit_ridx], mol.wfat_intdata[orbit_ridx]
 end
 
-function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, β::Real, γ::Real)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, θ::Real, χ::Real)
     if ! mol.energy_data_available || ! mol.wfat_data_available || !(orbit_ridx in mol.wfat_indices)
         error("[GenericMolecule] The WFAT data is not available, calculate first.")
     end
@@ -230,19 +250,19 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer
         @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
-    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
+    @inline μz(θ,χ) = (RotZYZ(χ,θ,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
 
     sum = zero(ComplexF64)
     for l in abs(m):lMax, m_ in -l:l
-        sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        sum += intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * wignerdjmn(l,m,m_,θ) * exp(-1im*m_*χ)
     end
-    return sum * exp(-sqrt(2IonPotential(mol,orbit_ridx))*μz(β,γ))
+    return sum * exp(-sqrt(2IonPotential(mol,orbit_ridx))*μz(θ,χ))
 end
-function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, β::AbstractVector{T} where T<:Real, γ::AbstractVector{T} where T<:Real)
+function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer, m::Integer, θ::AbstractVector{T} where T<:Real, χ::AbstractVector{T} where T<:Real)
     if ! mol.energy_data_available || ! mol.wfat_data_available || !(orbit_ridx in mol.wfat_indices)
         error("[GenericMolecule] The WFAT data is not available, calculate first.")
     end
-    @assert size(β,1)==size(γ,1) "[GenericMolecule] Invalid input (β,γ), should be both `Real` values or two `Vector`s of `Real` and of same length."
+    @assert size(θ,1)==size(χ,1) "[GenericMolecule] Invalid input (θ,χ), should be both `Real` values or two `Vector`s of `Real` and of same length."
     @assert nξ≥0 "[GenericMolecule] nξ should be non-negative."
     intdata = mol.wfat_intdata[orbit_ridx]
     nξMax = size(intdata,1) - 1
@@ -256,14 +276,14 @@ function MolWFATStructureFactor_G(mol::GenericMolecule, orbit_ridx, nξ::Integer
         @error "[GenericMolecule] The given |m|=$(abs(m)) is larger than the maximum value $mMax, zero value would be returned."
         return 0.0
     end
-    @inline μz(β,γ) = (RotZYZ(γ,β,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
+    @inline μz(θ,χ) = (RotZYZ(χ,θ,0.0)*mol.wfat_μ[orbit_ridx])[3]   # the result is independent of α
 
-    sum = zeros(ComplexF64,size(β))
+    sum = zeros(ComplexF64,size(θ))
     for l in abs(m):lMax, m_ in -l:l
-        sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. wignerdjmn(l,m,m_,β) * exp(-1im*m_*γ)
+        sum .+= intdata[nξ+1,m+mMax+1,l+1,m_+l+1] * @. wignerdjmn(l,m,m_,θ) * exp(-1im*m_*χ)
     end
     κ = sqrt(2IonPotential(mol,orbit_ridx))
-    return @. sum * exp(-κ*μz(β,γ))
+    return @. sum * exp(-κ*μz(θ,χ))
 end
 
 function MolWFATMaxChannels(mol::GenericMolecule, orbit_ridx)
@@ -464,8 +484,8 @@ function TrajectoryFunction(mol::GenericMolecule, dimension::Integer, laserFx::F
                 du2 = u[4]
                 du3 = tFx-laserFx(t)
                 du4 = tFy-laserFy(t)
-                # du5 = -(Ip + (du1^2+du2^2)/2 + targetP(u[1],u[2]) + (u[1]*tFx+u[2]*tFy))
-                du5 = -(Ip + (du1^2+du2^2)/2 - Z*(u[1]^2+u[2]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy))
+                # du5 = -((du1^2+du2^2)/2 + targetP(u[1],u[2]) + (u[1]*tFx+u[2]*tFy))
+                du5 = -((du1^2+du2^2)/2 - Z*(u[1]^2+u[2]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy))
                 @SVector [du1,du2,du3,du4,du5]
             end
         end
@@ -506,8 +526,8 @@ function TrajectoryFunction(mol::GenericMolecule, dimension::Integer, laserFx::F
                 du4 = tFx-laserFx(t)
                 du5 = tFy-laserFy(t)
                 du6 = tFz
-                # du7 = -(Ip + (du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
-                du7 = -(Ip + (du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                # du7 = -((du1^2+du2^2+du3^2)/2 + targetP(u[1],u[2],u[3]) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
+                du7 = -((du1^2+du2^2+du3^2)/2 - Z*(u[1]^2+u[2]^2+u[3]^2+1.0)^(-0.5) + (u[1]*tFx+u[2]*tFy+u[3]*tFz))
                 @SVector [du1,du2,du3,du4,du5,du6,du7]
             end
         end
@@ -536,14 +556,14 @@ function Base.show(io::IO, mol::GenericMolecule)
             #        %-3s  %-7s    %7f__ %4s
             #        11122222223333333__4444
             @printf "#          E (Ha)  occp\n"
-            @printf "⋮  ⋮         ⋮      ⋮⋮\n"
+            @printf "⋮    ⋮       ⋮      ⋮⋮\n"
             @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+2 "LUMO+1" mol.energy_levels[HOMO_idx+2] spin00
             @printf "%-3s%-7s%7.3f  %4s\n" HOMO_idx+1 "LUMO"   mol.energy_levels[HOMO_idx+1] spin00
             @printf "%-3s%-7s%7.3f  %4s"   HOMO_idx   "HOMO"   mol.energy_levels[HOMO_idx  ] spin11
             HOMO_idx>1 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-1 "HOMO-1" mol.energy_levels[HOMO_idx-1] spin11)
             HOMO_idx>2 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-2 "HOMO-2" mol.energy_levels[HOMO_idx-2] spin11)
             HOMO_idx>3 && (@printf "\n%-3s%-7s%7.3f  %4s" HOMO_idx-3 "HOMO-3" mol.energy_levels[HOMO_idx-3] spin11)
-            HOMO_idx>4 && (@printf "\n⋮    ⋮        ⋮     ⋮⋮")
+            HOMO_idx>4 && (@printf "\n⋮    ⋮       ⋮      ⋮⋮")
         else
             HOMO_alp_idx = _get_HOMO_idx(mol.orbit_occ[1,:])
             HOMO_bet_idx = _get_HOMO_idx(mol.orbit_occ[2,:])
