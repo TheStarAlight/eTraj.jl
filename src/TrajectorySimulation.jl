@@ -175,12 +175,15 @@ function TrajectorySimulationJob(; kwargs...)
     # dimension check
     @assert dimension in (2,3) "[TrajectorySimulationJob] `dimension` must be either 2 or 3."
     @assert length(final_p_max)==length(final_p_num)==dimension "[TrajectorySimulationJob] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
-    # check degenerate orbitals
+    # check degenerate orbitals && molecule size
     if target isa GenericMolecule
         energy_levels = MolEnergyLevels(target)
         deg_orb = Targets._lookup_degenerate_orbital(target, mol_orbit_ridx)
         if !isempty(deg_orb)
             @info "[TrajectorySimulationJob] Target `$(TargetName(target))` has degenerate orbitals $(join(deg_orb, ", ", " and "))."
+        end
+        if length(MolAtoms(target)) > 5 && init_cond_method in [:SPA, :SPANE, :ADK, :SFA, :SFAAE, :MOSPA, :MOSPANE, :MOADK, :MOSFA, :MOSFAAE]
+            @warn "[TrajectorySimulationJob] Target `$(TargetName(target))` is a large molecule, the SFA-based methods may not produce accurate results and are much slower. Please consider using the WFAT-CTMC method by setting `init_cond_method = :WFAT` and `phase_method = :CTMC`."
         end
     end
     # check the path in the first
