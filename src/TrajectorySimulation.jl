@@ -11,6 +11,7 @@ using LinearAlgebra: norm, ×
 using StaticArrays: SVector, @SVector
 using OrdinaryDiffEq: ODEProblem, remake, solve, Tsit5, EnsembleProblem, EnsembleThreads, ReturnCode
 using ProgressMeter: Progress, ProgressUnknown, BarGlyphs, next!, finish!
+using Pkg
 
 mutable struct TrajectorySimulationJob
     sp::ElectronSampler;
@@ -36,6 +37,7 @@ mutable struct TrajectorySimulationJob
 
     file;
     output_fmt;
+    output_compress;
     output_path;
     params;
 end
@@ -122,6 +124,7 @@ function perform_traj_simulation(;
     traj_phase_method   ::Symbol    = :CTMC,
     traj_rtol           ::Real      = 1e-6,
     output_fmt          ::Symbol    = :jld2,
+    output_compress     ::Bool      = true,
     output_path         ::String    = default_filename(),
     sample_monte_carlo  ::Bool      = false,
     sample_cutoff_limit ::Real      = 1e-16,
@@ -139,7 +142,7 @@ function perform_traj_simulation(;
         ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
         mc_kt_num, mc_kd_max, mc_kz_max,
         traj_phase_method, traj_rtol, sample_cutoff_limit, sample_monte_carlo, rate_prefix,
-        output_fmt, output_path,
+        output_fmt, output_compress, output_path,
         mol_orbit_ridx
         )   # pack up all parameters
     job = TrajectorySimulationJob(;kwargs...)
@@ -160,7 +163,7 @@ function TrajectorySimulationJob(; kwargs...)
     #* unpack from kwargs
     @unpack init_cond_method, laser, target, dimension,
         sample_t_intv, sample_t_num, traj_t_final, final_p_max, final_p_num,
-        output_fmt, output_path,
+        output_fmt, output_compress, output_path,
         ss_kd_max, ss_kd_num, ss_kz_max, ss_kz_num,
         mc_kt_num, mc_kd_max, mc_kz_max,
         traj_phase_method, traj_rtol, sample_cutoff_limit, sample_monte_carlo, rate_prefix,
@@ -180,7 +183,6 @@ function TrajectorySimulationJob(; kwargs...)
             @info "[TrajectorySimulationJob] Target `$(TargetName(target))` has degenerate orbitals $(join(deg_orb, ", ", " and "))."
         end
     end
-
     # check the path in the first
     if isfile(output_path)
         @warn "[TrajectorySimulationJob] File `$output_path` already exists, will save at `$(default_filename())`."
@@ -194,6 +196,21 @@ function TrajectorySimulationJob(; kwargs...)
     elseif output_fmt == :jld2
         if !endswith(output_path,".jld2")
             output_path *= ".jld2"
+        end
+    end
+    # check output compression
+    if output_fmt == :jld2 && output_compress
+        CodecZlib_installed = false
+        for (k,v::Pkg.API.PackageInfo) in Pkg.dependencies()
+            v.is_direct_dep || continue
+            if v.name == "CodecZlib"
+                CodecZlib_installed = true
+                break
+            end
+        end
+        if !CodecZlib_installed
+            @warn "[TrajectorySimulationJob] JLD2 output compression is enabled (`output_compress==true`) but `CodecZlib` is not explicitly installed. Will disable compression."
+            output_compress = false
         end
     end
     # create the file, try to write (and lock it)
@@ -259,7 +276,7 @@ function TrajectorySimulationJob(; kwargs...)
         @pack! params = (mol_orbit_ridx)
     end
     #* initialize job
-    return TrajectorySimulationJob(sp,laser,target,dimension,traj_phase_method,traj_t_final,traj_rtol,final_p_max,final_p_num,px,py,pz,nthreads,0,0,ion_prob_sum_temp,ion_prob_collect,classical_prob,ion_prob_final,file,output_fmt,output_path,params)
+    return TrajectorySimulationJob(sp,laser,target,dimension,traj_phase_method,traj_t_final,traj_rtol,final_p_max,final_p_num,px,py,pz,nthreads,0,0,ion_prob_sum_temp,ion_prob_collect,classical_prob,ion_prob_final,file,output_fmt,output_compress,output_path,params)
 end
 
 function launch_and_collect!(job::TrajectorySimulationJob)
@@ -503,11 +520,23 @@ function write_output!(job::TrajectorySimulationJob)
         file["pz"] = job.pz
     end
     if job.traj_phase_method == :CTMC
-        fmt == :jld2 && write(file, "momentum_spec", job.ion_prob_final; compress=true)
-        fmt == :h5 && (file["momentum_spec", shuffle=true, deflate=6] = job.ion_prob_final)
+        fmt == :jld2 && write(file, "momentum_spec", job.ion_prob_final; compress=job.output_compress)
+        if fmt == :h5
+            if job.output_compress
+                file["momentum_spec", shuffle=true, deflate=6] = job.ion_prob_final
+            else
+                file["momentum_spec"] = job.ion_prob_final
+            end
+        end
     else
-        fmt == :jld2 && write(file, "momentum_spec", job.ion_prob_final .|> abs2; compress=true)
-        fmt == :h5 && (file["momentum_spec", shuffle=true, deflate=6] = job.ion_prob_final .|> abs2)
+        fmt == :jld2 && write(file, "momentum_spec", job.ion_prob_final .|> abs2; compress=job.output_compress)
+        if fmt == :h5
+            if job.output_compress
+                file["momentum_spec", shuffle=true, deflate=6] = job.ion_prob_final .|> abs2
+            else
+                file["momentum_spec"] = job.ion_prob_final .|> abs2
+            end
+        end
     end
     file["ion_prob"] = job.classical_prob[:ion]
     file["ion_prob_uncollected"] = job.classical_prob[:ion_uncollected]
