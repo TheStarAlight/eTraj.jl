@@ -49,7 +49,7 @@ Performs a semiclassical trajectory simulation with given parameters.
 
 ## Required parameters:
 - `init_cond_method`    : Method used to determine the initial conditions of electrons.
-    - Candidates: `:ADK`, `:SPA` (SFA-SPA), `:SPANE` (SFA-SPANE) for targets of type `SAEAtom` or `MoleculeBase`; `:WFAT` for `MoleculeBase` targets.
+    - Candidates: `:ADK`, `:SPA` (SFA-SPA), `:SPANE` (SFA-SPANE) for targets of type `SAEAtomBase` or `MoleculeBase`; `:WFAT` for `MoleculeBase` targets.
 - `laser::Laser`        : Parameters of the laser field. See the [Laser](@ref) module for details.
 - `target::Target`      : Parameters of the target. See the [Targets](@ref) module for details.
 - `dimension = 2|3`     : Dimensionality of simulation.
@@ -82,6 +82,8 @@ Performs a semiclassical trajectory simulation with given parameters.
 - `traj_rtol`           : Relative error tolerance for solving classical trajectories (default `1e-6`).
 - `output_fmt`          : Output file format.
     - Candidates: `:jld2` (JLD2, default) and `:h5` (HDF5).
+- `output_compress`     : Determines whether output files are compressed or not (default `true`).
+    - Note: For JLD2 output format, compression requires explicit installation of the `CodecZlib` package.
 - `output_path`         : Path to output file.
 - `sample_cutoff_limit` : Probability cutoff limit for sampled electrons (default `1e-16`). Electrons with probabilities lower than the limit would be discarded.
 - `sample_monte_carlo`  : Determines whether Monte-Carlo sampling is used when generating electron samples (default `false`).
