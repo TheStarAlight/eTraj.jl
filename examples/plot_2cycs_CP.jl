@@ -41,8 +41,8 @@ fig_y_size = 300
 begin
     fig_ADK = heatmap(px, py, log10.(spec_ADK)', c=:ice)
     plot!(fig_ADK, xlim=xylim, ylim=xylim, clim=clim, size=(fig_x_size,fig_y_size), aspectratio=:equal, tickdirection=:out, colorbar=false)
-    plot!(fig_ADK, xlabel=raw"$p_x$ / a.u.", ylabel=raw"$p_y$ / a.u.")
-    annotate!(fig_ADK, xylim[1]*0.95,xylim[2]*0.95, text(raw"800↺nm 2-cyc $xy$-CP", :white, :top, :left, 10))
+    plot!(fig_ADK, xlabel=raw"$p_x$ (a.u.)", ylabel=raw"$p_y$ (a.u.)")
+    annotate!(fig_ADK, xylim[1]*0.95,xylim[2]*0.95, text(raw"800nm 2-cyc $xy$-CP ↺", :white, :top, :left, 10))
     annotate!(fig_ADK, xylim[1]*0.95,xylim[1]*0.95, text("ADK-CTMC", :white, :bottom, :left, 12))
     annotate!(fig_ADK, xylim[2]*0.95,xylim[1]*0.95, text(@sprintf("rel. prob.\n=%.2f", prob_ADK), :white, :bottom, :right, 9))
     plot!(fig_ADK, -1 .* Axt, -1 .* Ayt, linecolor=RGBA(0.0,0.0,0.0,0.5), legend=false)
@@ -52,8 +52,8 @@ end
 begin
     fig_SPANE = heatmap(px, py, log10.(spec_SPANE)', c=:ice)
     plot!(fig_SPANE, xlim=xylim, ylim=xylim, clim=clim, size=(fig_x_size,fig_y_size), aspectratio=:equal, tickdirection=:out, colorbar=false)
-    plot!(fig_SPANE, xlabel=raw"$p_x$ / a.u.", ylabel=raw"$p_y$ / a.u.")
-    annotate!(fig_SPANE, xylim[1]*0.95,xylim[2]*0.95, text(raw"800↺nm 2-cyc $xy$-CP", :white, :top, :left, 10))
+    plot!(fig_SPANE, xlabel=raw"$p_x$ (a.u.)", ylabel=raw"$p_y$ (a.u.)")
+    annotate!(fig_SPANE, xylim[1]*0.95,xylim[2]*0.95, text(raw"800nm 2-cyc $xy$-CP ↺", :white, :top, :left, 10))
     annotate!(fig_SPANE, xylim[1]*0.95,xylim[1]*0.95, text("SPANE-CTMC", :white, :bottom, :left, 12))
     annotate!(fig_SPANE, xylim[2]*0.95,xylim[1]*0.95, text(@sprintf("rel. prob.\n=%.2f", prob_SPANE), :white, :bottom, :right, 9))
     plot!(fig_SPANE, -1 .* Axt, -1 .* Ayt, linecolor=RGBA(0.0,0.0,0.0,0.5), legend=false)
@@ -63,8 +63,8 @@ end
 begin
     fig_SPA = heatmap(px, py, log10.(spec_SPA)', c=:ice)
     plot!(fig_SPA, xlim=xylim, ylim=xylim, clim=clim, size=(fig_x_size,fig_y_size), aspectratio=:equal, tickdirection=:out, colorbar=true)
-    plot!(fig_SPA, xlabel=raw"$p_x$ / a.u.", ylabel=raw"$p_y$ / a.u.")
-    annotate!(fig_SPA, xylim[1]*0.95,xylim[2]*0.95, text(raw"800↺nm 2-cyc $xy$-CP", :white, :top, :left, 10))
+    plot!(fig_SPA, xlabel=raw"$p_x$ (a.u.)", ylabel=raw"$p_y$ (a.u.)")
+    annotate!(fig_SPA, xylim[1]*0.95,xylim[2]*0.95, text(raw"800nm 2-cyc $xy$-CP ↺", :white, :top, :left, 10))
     annotate!(fig_SPA, xylim[1]*0.95,xylim[1]*0.95, text("SPA-CTMC", :white, :bottom, :left, 12))
     annotate!(fig_SPA, xylim[2]*0.95,xylim[1]*0.95, text(@sprintf("rel. prob.\n=%.2f", prob_SPA), :white, :bottom, :right, 9))
     plot!(fig_SPA, -1 .* Axt, -1 .* Ayt, linecolor=RGBA(0.0,0.0,0.0,0.5), legend=false)
