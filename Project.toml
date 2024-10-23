@@ -1,7 +1,7 @@
 name = "eTraj"
 uuid = "e84e9fd6-fb60-4a95-a359-99d9c5aa2ce0"
 authors = ["Mingyu Zhu <myzhu@stu.ecnu.edu.cn> and contributors"]
-version = "1.0.0-rc1"
+version = "1.0.0-rc2"
 
 [deps]
 Einsum = "b7d42ee7-0b51-5a75-98ca-779d3107e4c0"
