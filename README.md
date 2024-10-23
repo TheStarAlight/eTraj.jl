@@ -1,7 +1,7 @@
 # <p align="center"> 🎆eTraj.jl </p>
 
 <p align="center">
-    Implementation of Classical/Semiclassical Trajectory-based Methods in Strong-Field Ionization
+    Implementation of classical/semiclassical trajectory-based methods in strong-field ionization of atoms and molecules.
 </p>
 
 <p align="center">
@@ -93,13 +93,13 @@ Written in a clear and concise manner, this library features versatility, extens
 
 ### Installing the package
 
-This package is in julia's general registry, which can be added through the repository URL:
+This package is currently not in julia's general registry, but can be added through the repository URL:
 
 ```julia
 using Pkg
-Pkg.add("eTraj")
+Pkg.add("https://github.com/TheStarAlight/eTraj.jl.git")
 # In pkg mode of REPL:
-# (@v1.9) pkg> add eTraj
+# (@v1.9) pkg> add https://github.com/TheStarAlight/eTraj.jl.git
 ```
 
 To enter the pkg mode of REPL, type <kbd>]</kbd> in REPL, and the `pkg>` prompt will appear, replacing the `julia>`.
