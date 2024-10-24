@@ -1,5 +1,9 @@
 
-"An interface of molecular calculation using PySCF."
+@doc """
+    struct PySCFMolecularCalculator <: MolecularCalculatorBase
+
+An interface of molecular calculation using PySCF.
+"""
 mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     "The molecule to be calculated."
     mol::MoleculeBase; # linter reported error when specifying type.
@@ -21,47 +25,49 @@ mutable struct PySCFMolecularCalculator <: MolecularCalculatorBase
     orbit_occ;
     "Total dipole momentum vector in the MF."
     dip_momentum;
+end
 
-    """
-    Initializes an instance of `PySCFMolecularCalculator` with given parameter.
+"""
+    PySCFMolecularCalculator(; mol::MoleculeBase, basis::String="cc-pVDZ", kwargs...)
 
-    ## Parameters
-    - `mol::MoleculeBase` : The molecule to be calculated.
-    - `basis="cc-pVDZ"` : Basis set used for calculation (*default `"cc-pVDZ"`*).
-    """
-    function PySCFMolecularCalculator(; mol::MoleculeBase, basis::String="cc-pVDZ", kwargs...)
-        mc::PySCFMolecularCalculator = new(mol,MolSpin(mol),basis)
-        @info "[PySCFMolecularCalculator] Running molecular calculation..."
-        time = [0.0]
-        try
-            mc._pyscf  = pyimport("pyscf")
-            mc._pymol  = mc._pyscf.gto.M(atom=MolExportAtomInfo(mol), charge=MolCharge(mol), spin=Int(2*MolSpin(mol)), basis=basis, symmetry=true, verbose=0)
-            mc._pytask =
-                if MolSpin(mol)==0  # For `spin=0`, the RHF method would be invoked, and the UHF otherwise.
-                    mc._pyscf.scf.RHF(mc._pymol)
-                else
-                    mc._pyscf.scf.UHF(mc._pymol)
-                end
-            mc._pytask.chkfile = nothing
-            time[1] = @elapsed mc._pytask.run()
-        catch
-            @error "[PySCFMolecularCalculator] Encountered error when calling pyscf."
-            rethrow()
-        end
-        if ! mc._pytask.converged
-            @warn "[PySCFMolecularCalculator] SCF calculation unable to converge, the result might be inaccurate."
-        end
-        if MolSpin(mol) == 0
-            mc.energy_levels = mc._pytask.mo_energy
-            mc.orbit_occ = mc._pytask.mo_occ
-        else
-            mc.energy_levels = vcat(mc._pytask.mo_energy[1]',mc._pytask.mo_energy[2]')
-            mc.orbit_occ = vcat(mc._pytask.mo_occ[1]',mc._pytask.mo_occ[2]')
-        end
-        mc.dip_momentum = mc._pytask.dip_moment(unit="AU", verbose=0)
-        @info "Finished initialization [taking $(time[1]) second(s)]."
-        return mc
+Initializes an instance of `PySCFMolecularCalculator` with given parameter.
+
+## Parameters
+- `mol::MoleculeBase` : The molecule to be calculated.
+- `basis="cc-pVDZ"` : Basis set used for calculation (*default `"cc-pVDZ"`*).
+"""
+function PySCFMolecularCalculator(; mol::MoleculeBase, basis::String="cc-pVDZ", kwargs...)
+    mc::PySCFMolecularCalculator = new(mol,MolSpin(mol),basis)
+    @info "[PySCFMolecularCalculator] Running molecular calculation..."
+    time = [0.0]
+    try
+        mc._pyscf  = pyimport("pyscf")
+        mc._pymol  = mc._pyscf.gto.M(atom=MolExportAtomInfo(mol), charge=MolCharge(mol), spin=Int(2*MolSpin(mol)), basis=basis, symmetry=true, verbose=0)
+        mc._pytask =
+            if MolSpin(mol)==0  # For `spin=0`, the RHF method would be invoked, and the UHF otherwise.
+                mc._pyscf.scf.RHF(mc._pymol)
+            else
+                mc._pyscf.scf.UHF(mc._pymol)
+            end
+        mc._pytask.chkfile = nothing
+        time[1] = @elapsed mc._pytask.run()
+    catch
+        @error "[PySCFMolecularCalculator] Encountered error when calling pyscf."
+        rethrow()
     end
+    if ! mc._pytask.converged
+        @warn "[PySCFMolecularCalculator] SCF calculation unable to converge, the result might be inaccurate."
+    end
+    if MolSpin(mol) == 0
+        mc.energy_levels = mc._pytask.mo_energy
+        mc.orbit_occ = mc._pytask.mo_occ
+    else
+        mc.energy_levels = vcat(mc._pytask.mo_energy[1]',mc._pytask.mo_energy[2]')
+        mc.orbit_occ = vcat(mc._pytask.mo_occ[1]',mc._pytask.mo_occ[2]')
+    end
+    mc.dip_momentum = mc._pytask.dip_moment(unit="AU", verbose=0)
+    @info "Finished initialization [taking $(time[1]) second(s)]."
+    return mc
 end
 
 "Gets the energy levels of all the molecular orbitals (MO) of the molecule (*in a.u.*)."

@@ -57,7 +57,7 @@ Initializes a new `GenericMolecule` with given parameters.
 - `rot_α`,`rot_β`,`rot_γ`   : Euler angles (z-y'-z'' convention) specifying the molecule's orientation (numerically in radian or a `Unitful.Quantity`) (*optional, default `0`*).
 
 ## Example
-```
+```jldoctest
 julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0 0.375], name="Hydrogen")
 [GenericMolecule] Hydrogen
 

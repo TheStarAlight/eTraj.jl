@@ -102,7 +102,7 @@ Pkg.add("https://github.com/TheStarAlight/eTraj.jl.git")
 # (@v1.9) pkg> add https://github.com/TheStarAlight/eTraj.jl.git
 ```
 
-To enter the pkg mode of REPL, type <kbd>]</kbd> in REPL, and the `pkg>` prompt will appear, replacing the `julia>`.
+To enter the pkg mode of REPL, type `]` in REPL, and the `pkg>` prompt will appear, replacing the `julia>`.
 
 For offline installation:
 
@@ -123,16 +123,16 @@ Pkg.test("eTraj")
 
 ### Configuring Python and PySCF
 
-Currently, the calculation of molecules' asymptotic coefficients (for MO-ADK/MO-SFA) and WFAT coefficients rely on the [PySCF](https://github.com/pyscf/pyscf) python package. eTraj calls the PySCF using the [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) package.
+Currently, the calculation of molecules' asymptotic coefficients (for MO-ADK/MO-SFA) and WFAT coefficients rely on the [`PySCF`](https://github.com/pyscf/pyscf) python package. eTraj calls the PySCF using the [`PyCall.jl`](https://github.com/JuliaPy/PyCall.jl) package.
 
-There are two ways to set up the Python environment used by PyCall:
+There are two ways to set up the Python environment used by `PyCall`:
 
 1. using your local Python environment by specifying the path of your Python executable in `ENV["PYTHON"]` and build the PyCall package.
-2. using a private Python environment managed by the [Conda.jl](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the PyCall package by default;
+2. using a private Python environment managed by the [`Conda.jl`](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the `PyCall` package by default;
 
 #### Using the local Python environment
 
-To correctly set up the configuration of PyCall, first, set the `PYTHON` environment variable to the path your Python executable, and build the PyCall package:
+To correctly set up the configuration of `PyCall`, first, set the `PYTHON` environment variable to the path your Python executable, and build the `PyCall` package:
 
 ```julia
 ENV["PYTHON"] = "path/to/python_exec"
@@ -142,7 +142,7 @@ Pkg.build("PyCall")
 # (@v1.9) pkg> build PyCall
 ```
 
-And don't forget to install PySCF via pip in your system shell:
+And don't forget to install `PySCF` via pip in your system shell:
 
 ```bash
 pip install pyscf
@@ -150,14 +150,14 @@ pip install pyscf
 
 #### Using Conda.jl
 
-Before installing eTraj, install Conda first:
+Before installing `eTraj`, install `Conda` first:
 
 ```julia
 using Pkg
 Pkg.add("Conda")
 ```
 
-Then call pip within Conda to install PySCF:
+Then call `pip` within `Conda` to install `PySCF`:
 
 ```julia
 using Conda
@@ -166,8 +166,8 @@ Conda.pip("install", "pyscf")
 ```
 
 **Note**:
-Since the PySCF does not support the Windows, the molecular calculation must be performed on a Linux or macOS platform.
-However, for Windows users, they may install the [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Windows Subsystem for Linux), which supports the PySCF.
+Since the `PySCF` does not support the Windows platform, the molecular calculation must be performed on a Linux or macOS platform.
+However, for Windows users, they may install the [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Windows Subsystem for Linux), which supports the `PySCF`.
 
 ## Usage
 

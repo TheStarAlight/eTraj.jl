@@ -50,7 +50,7 @@ Performs a semiclassical trajectory simulation with given parameters.
 ## Required parameters:
 - `init_cond_method`    : Method used to determine the initial conditions of electrons.
     - Candidates: `:ADK`, `:SPA` (SFA-SPA), `:SPANE` (SFA-SPANE) for targets of type `SAEAtomBase` or `MoleculeBase`; `:WFAT` for `MoleculeBase` targets.
-- `laser::Laser`        : Parameters of the laser field. See the [Laser](@ref) module for details.
+- `laser::Laser`        : Parameters of the laser field. See the [Lasers](@ref) module for details.
 - `target::Target`      : Parameters of the target. See the [Targets](@ref) module for details.
 - `dimension = 2|3`     : Dimensionality of simulation.
     - 2D simulation is carried out in the xy plane.
