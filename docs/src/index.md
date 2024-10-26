@@ -28,8 +28,8 @@ These two approximations simplify the problem to some extent, which allows one t
 However, such approximations are not always appropriate for some cases when the Coulomb potential's role becomes significant,
 which may lead to incorrect predictions.
 
-To overcome the shortcomings of TDSE, Corkum *et al.* proposed a scheme, where the electron is first ionized from the target through the tunneling mechanism, then acts as a classical electron in the laser field, and finally the photoelectron spectra is obtained by statistics on the ensemble of the electron trajectories [^Corkum_1989] [^Corkum_1993].
-This scheme was further developed by Hu *et al.*, in which the initial conditions of the classical electrons and the Coulomb potential of the parent ion are more appropriately taken account [^Hu_1997].
+To overcome the shortcomings of TDSE, a classical simulation scheme was proposed, where the electron is first ionized from the target through the tunneling mechanism, then acts as a classical electron in the laser field, and finally the photoelectron spectra is obtained by statistics on the ensemble of the electron trajectories [^Corkum_1989] [^Corkum_1993].
+This scheme was further developed, in which the initial conditions of the classical electrons and the Coulomb potential of the parent ion are more appropriately taken account [^Hu_1997].
 The scheme is named after the Classical-Trajectory Monte-Carlo (CTMC) method, which has been widely adopted.
 Further developments of the trajectory-based methods added a phase property to the electron orbits, and utilized the SFA for preparation of the initial conditions,
 for example, the Trajectory-based Coulomb-SFA (TC-SFA) [^Yan_2010] [^Yan_2012], the Quantum-Trajectory Monte Carlo (QTMC) [^Li_2014] [^Liu_2016], the Semiclassical Two-Step Model (SCTS) [^ShvetsovShilovski_2016] [^ShvetsovShilovski_2021],

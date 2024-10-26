@@ -1,4 +1,5 @@
-# code to generate plots used in manual2_lasers.md
+# doc_plot_lasers.jl
+# This code generates plots of lasers used in the documentation.
 
 using eTraj
 using eTraj.Lasers

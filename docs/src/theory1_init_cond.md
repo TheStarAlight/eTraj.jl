@@ -208,10 +208,11 @@ The beginning of the trajectory, i.e., the tunneling entrance, has a real part o
 In this way we obtain the expression of the initial position:
 ```math
 \begin{equation}
-    \rr_0^{\rm{SFA-SPA}} = \Re \int_{\ts}^{\tr} \AA(\tau) \dd\tau = \Im \int_0^{\ti} \AA(\tr+\ii\tau) \dd\tau,
+    \rr_0^{\rm{SFA-SPA}} = \Re \int_{\ts}^{\tr} [\pp+\AA(\tau)] \dd\tau = \Im \int_0^{\ti} [\pp+\AA(\tr+\ii\tau)] \dd\tau = \Im \int_0^{\ti} \AA(\tr+\ii\tau) \dd\tau,
 \end{equation}
 ```
-here ``\Re`` and ``\Im`` are the real and imaginary part notation, respectively.
+here ``\Re`` and ``\Im`` are the real and imaginary part notation, respectively,
+and the real ``\pp`` does not come into play in the integral.
 
 The probability density (in the final momentum space ``\pp``) carried by the electron sample is
 ```math
