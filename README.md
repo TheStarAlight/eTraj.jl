@@ -13,15 +13,13 @@
     <a href="#license">License</a>
 </p>
 
-<!-- <p align="center">
-    • Documentation available at [TheStarAlight.github.io/eTraj.jl](https://TheStarAlight.github.io/eTraj.jl) •
-</p> -->
+<p align="center">
+    • Documentation available at <a href="https://TheStarAlight.github.io/eTraj.jl">TheStarAlight.github.io/eTraj.jl</a> •
+</p>
 
 <p align="center">
-    Last updated: Oct 23, 2024
-</p>
-<p align="center">
-    Version 1.0.0-rc2
+    <img src="https://img.shields.io/github/v/tag/TheStarAlight/eTraj.jl?include_prereleases&sort=semver&style=for-the-badge&label=version"/>
+    <img src="https://img.shields.io/github/actions/workflow/status/TheStarAlight/eTraj.jl/ci.yml?branch=master&style=for-the-badge&label=test"/>
 </p>
 
 ---------------------------
