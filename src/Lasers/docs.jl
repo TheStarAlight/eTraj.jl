@@ -41,7 +41,7 @@ PeakInt
 @doc """
     WaveLen(l::MonochromaticLaser)
 
-Gets the wave length of the laser (in nm).
+Gets the wavelength of the laser (in nm).
 """
 WaveLen
 

@@ -33,22 +33,22 @@ Gets the name of the target.
 TargetName
 
 @doc """
-    TargetPotential(t::SAEAtomBase)
+    TargetPotential(t::SAEAtomBase) -> V(x,y,z)
 
 Gets the potential function of the atom.
 
-    TargetPotential(mol::GenericMolecule)
+    TargetPotential(mol::GenericMolecule) -> V(x,y,z)
 
 Gets the asymptotic Coulomb potential function of the molecule.
 """
 TargetPotential
 
 @doc """
-    TargetForce(t::SAEAtomBase)
+    TargetForce(t::SAEAtomBase) -> F(x,y,z) -> (Fx,Fy,Fz)
 
 Gets the Coulomb force exerted on the electron from the atom.
 
-    TargetForce(mol::GenericMolecule)
+    TargetForce(mol::GenericMolecule) -> F(x,y,z) -> (Fx,Fy,Fz)
 
 Gets the asymptotic Coulomb force exerted on the electron from the molecular ion.
 """
@@ -272,7 +272,7 @@ MolExportAtomInfo
 
 Initializes the `MolecularCalculator` of `mol` with given parameters.
 - `MCType`      : Type of `MolecularCalculator` if it is not initialized (default is `PySCFMolecularCalculator`).
-- `kwargs...`   : Keyword arguments to pass to the initializer of [`MolecularCalculator`](@ref), e.g., `basis`, ...
+- `kwargs...`   : Keyword arguments to pass to the initializer of `MolecularCalculator` of `MCType`, e.g., `basis`, ...
 """
 MolInitCalculator!
 

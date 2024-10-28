@@ -10,18 +10,17 @@ The available keys can be found by invoking [`get_available_atoms`](@ref).
 ## Examples
 
 ```jldoctest
-
 julia> get_atom("H")
-[HydrogenLikeAtom] Atom H, Ip=0.5000, Z=1, soft_core=0.2000
+[HydrogenLikeAtom] Atom H, Ip=0.5000 (13.61 eV), Z=1
 
 julia> get_atom("He")
-[SAEAtom] Atom He, Ip=0.9036, Z=1
+[SAEAtom] Atom He, Ip=0.9036 (24.59 eV), Z=1
 
 julia> get_atom("Ar"; m=1, asymp_coeff=0.950) # asymp_coeff from [Phys.-Uspekhi 47, 855 (2004)] (l=0 case)
-[SAEAtom] Atom Ar, Ip=0.5792, Z=1
+[SAEAtom] Atom Ar (p orbital, m=1), Ip=0.5792 (15.76 eV), Z=1
 
 julia> get_atom("Xe", 1)
-[SAEAtom] Atom Xe⁺, Ip=0.7708, Z=2
+[SAEAtom] Atom Xe⁺ (p orbital, m=0), Ip=0.7708 (20.97 eV), Z=2
 
 julia> get_atom("Xe", 2)
 ERROR: [get_atom] Atom name key `Xe2p` not found in database.

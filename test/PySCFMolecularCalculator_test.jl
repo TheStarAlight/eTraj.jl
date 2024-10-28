@@ -11,6 +11,11 @@ if Sys.iswindows()
     @testset verbose=true "PySCFMolecularCalculator" begin
         @test_skip 0==0
     end
+elseif "no-pyscf" in ARGS
+    @warn "Skipping PySCFMolecularCalculator tests."
+    @testset verbose=true "PySCFMolecularCalculator" begin
+        @test_skip 0==0
+    end
 else
     @testset verbose=true "PySCFMolecularCalculator" begin
         @testset verbose=true "RHF" begin

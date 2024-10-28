@@ -18,6 +18,16 @@ Initializes a new `BichromaticLaser` with two `MonochromaticLaser`s.
 ## Parameters
 - `l1, l2::MonochromaticLaser`  : Two `MonochromaticLaser`s.
 - `delay`                       : Time delay of `l2` respective to `l1` (numerically in **a.u.** or a `Unitful.Quantity`).
+
+## Examples
+```julia-repl
+julia> using eTraj.Units
+
+julia> l = BichromaticLaser(l1=Cos4Laser(peak_int=1.0PW/cm^2, wave_len=800nm, cyc_num=10, ellip=1), l2=Cos4Laser(peak_int=1.0PW/cm^2, wave_len=400nm, cyc_num=20, ellip=-1), delay=0.5fs)
+[BichromaticLaser] delay Δt = 20.67 a.u. (0.50 fs)
+├ [MonochromaticLaser] Envelope cos⁴, peak intensity 1.0e+15 W/cm², wavelen=800 nm, 10 cycle(s), ε=1 [circularly polarized]
+└ [MonochromaticLaser] Envelope cos⁴, peak intensity 1.0e+15 W/cm², wavelen=400 nm, 20 cycle(s), ε=-1 [circularly polarized]
+```
 """
 function BichromaticLaser(;l1::MonochromaticLaser, l2::MonochromaticLaser, delay=0.0)
     (delay isa Quantity) && (delay = auconvert(delay).val)
