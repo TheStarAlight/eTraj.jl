@@ -129,7 +129,7 @@ Pkg.build("PyCall")
 And don't forget to install `PySCF` via pip in your system shell:
 
 ```bash
-pip install pyscf
+pip install pyscf==2.3.0
 ```
 
 #### Using Conda.jl
@@ -146,7 +146,7 @@ Then call `pip` within `Conda` to install `PySCF`:
 ```julia
 using Conda
 Conda.pip_interop(true)
-Conda.pip("install", "pyscf")
+Conda.pip("install", "pyscf==2.3.0")
 ```
 
 **Note**:
