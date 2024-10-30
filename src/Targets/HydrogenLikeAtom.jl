@@ -51,7 +51,7 @@ function HydrogenLikeAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coe
     (quan_ax_θ isa Quantity) && (quan_ax_θ=uconvert(u"rad",quan_ax_θ).val)
     (quan_ax_ϕ isa Quantity) && (quan_ax_ϕ=uconvert(u"rad",quan_ax_ϕ).val)
     @assert Ip>0 "[HydrogenLikeAtom] `Ip` should be positive."
-    @assert l≥0 && m≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
+    @assert l≥0 && l≥abs(m) "[HydrogenLikeAtom] Invalid (l,m)."
     @assert soft_core≥0 "[HydrogenLikeAtom] `soft_core` should be non-negative."
     @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[HydrogenLikeAtom] asymp_coeff should be either `:hartree` or a positive number."
     C = 0.0

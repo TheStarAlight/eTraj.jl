@@ -58,7 +58,7 @@ function SAEAtom(;Ip, Z::Integer, l::Integer=0, m::Integer=0, asymp_coeff=:hartr
     (quan_ax_θ isa Quantity) && (quan_ax_θ=uconvert(u"rad",quan_ax_θ).val)
     (quan_ax_ϕ isa Quantity) && (quan_ax_ϕ=uconvert(u"rad",quan_ax_ϕ).val)
     @assert Ip>0 "[SAEAtom] Ip should be positive."
-    @assert l≥0 && m≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
+    @assert l≥0 && l≥abs(m) "[SAEAtom] Invalid (l,m)."
     @assert b1≥0 && b2≥0 && b3≥0 "[SAEAtom] b1,b2,b3 should be non-negative."
     @assert asymp_coeff in [:hartree] || asymp_coeff > 0 "[SAEAtom] asymp_coeff should be either `:hartree` or a positive number."
     @assert soft_core>0 "[SAEAtom] soft_core should be positive."
