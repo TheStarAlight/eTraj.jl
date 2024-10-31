@@ -14,7 +14,6 @@ This structure is contributed mainly by electrons with an angular momentum close
 The following two pieces of code performs a trajectory simulation which employs an 8-cycle and an ultra-short single-cycle linearly-polarized NIR pulse,
 with the PMD showing up in the two figures below.
 To be faithful to the original work where the ADK initial condition was used with no prefactor included (``\mathcal{P}=1``), we used the ADK-QTMC and ADK-SCTS schemes and set `rate_prefix = :Exp`.
-We also highlighted the lines in the code which restrict the simulation to be only in the $x-z$ plane, which reduces the computational cost.
 Comparison between the PMD obtained with the QTMC and SCTS phase methods reveals underestimation of the Coulomb interaction's influence on the phase by the QTMC method, which is observed in the number of nodal lines in the low-energy structures.
 
 ```julia
@@ -31,17 +30,14 @@ for phase_method in [:QTMC, :SCTS]
         init_cond_method    = :ADK,
         laser               = l,
         target              = t,
-        dimension           = 3,
+        dimension           = 2,
         sample_t_intv       = (-350,350),
         sample_t_num        = 50000,
         traj_t_final        = 500,
-        # perform the simulation only in the x-z plane
-        final_p_max         = (1.0,0.0,1.0),
-        final_p_num         = (500,1,500),
-        ss_kd_max           = 0.0,
-        ss_kd_num           = 1,
-        ss_kz_max           = 1.0,
-        ss_kz_num           = 20000,
+        final_p_max         = (1.0,1.0),
+        final_p_num         = (500,500),
+        ss_kd_max           = 1.0,
+        ss_kd_num           = 20000,
         output_path         = "ADK-$(phase_method)_9e13_800nm_8cyc_LP_ExpRate.jld2",
         traj_phase_method   = phase_method,
         rate_prefix         = :Exp
@@ -63,16 +59,14 @@ for phase_method in [:QTMC, :SCTS]
         init_cond_method    = :ADK,
         laser               = l,
         target              = t,
-        dimension           = 3,
+        dimension           = 2,
         sample_t_intv       = (-50,50),
         sample_t_num        = 30000,
         traj_t_final        = 100,
-        final_p_max         = (1.0,0.0,1.0),
-        final_p_num         = (500,1,500),
-        ss_kd_max           = 0,
-        ss_kd_num           = 1,
-        ss_kz_max           = 1.5,
-        ss_kz_num           = 10000,
+        final_p_max         = (1.0,1.0),
+        final_p_num         = (500,500),
+        ss_kd_max           = 1.5,
+        ss_kd_num           = 10000,
         output_path         = "ADK-$(phase_method)_9e13_800nm_1cyc_LP_ExpRate.jld2",
         traj_phase_method   = phase_method,
         rate_prefix         = :Exp
