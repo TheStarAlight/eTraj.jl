@@ -17,8 +17,6 @@ With the advent of laser technology, the intensity of light and the precision of
 which allows us to explore the physics of light-matter interaction under extreme conditions with unprecedented precision and accuracy.
 At a high laser intensity above TW/cm², the interaction between light and atoms or molecules can no longer be described by the perturbation theory and a series of novel strong-field phenomena emerges, such as the above-threshold ionization (ATI), tunneling ionization, high-harmonic generation (HHG) and non-sequential double ionization (NSDI).
 
-
-
 Theoretical studies of these non-perturbative phenomena have been extensively investigated in the past decades.
 Usually, in order to obtain a precise result, a time-dependent Schrödinger equation (TDSE) is solved numerically.
 However, solving the TDSE is computationally expensive and resource-demanding, which limits its application to few-dimensional problems.

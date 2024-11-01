@@ -5,28 +5,29 @@
 </p>
 
 <p align="center">
-    <a href="#background">Background</a> •
+    • <a href="#background">Background</a> •
     <a href="#installation">Installation</a> •
     <a href="#usage">Usage</a> •
     <a href="#examples">Examples</a> •
     <a href="#contributors">Contributors</a> •
-    <a href="#license">License</a>
+    <a href="#license">License</a> •
 </p>
 
 <p align="center">
-    • Documentation available at <a href="https://TheStarAlight.github.io/eTraj.jl">TheStarAlight.github.io/eTraj.jl</a> •
+    • Documentation available at <a href="https://TheStarAlight.github.io/eTraj.jl">https://TheStarAlight.github.io/eTraj.jl</a> •
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/github/v/tag/TheStarAlight/eTraj.jl?include_prereleases&sort=semver&style=for-the-badge&label=version"/>
-    <img src="https://img.shields.io/github/actions/workflow/status/TheStarAlight/eTraj.jl/ci.yml?branch=master&style=for-the-badge&label=test"/>
+    <img src="https://img.shields.io/github/v/tag/TheStarAlight/eTraj.jl?include_prereleases&sort=semver&style=for-the-badge&label=latest-version"/>
+    <img src="https://img.shields.io/github/actions/workflow/status/TheStarAlight/eTraj.jl/ci.yml?branch=master&style=for-the-badge&label=master-test"/>
+    <img src="https://img.shields.io/github/actions/workflow/status/TheStarAlight/eTraj.jl/ci.yml?branch=dev&style=for-the-badge&label=dev-test"/>
 </p>
 
 ---------------------------
 
 ## Background
 
-The interaction between light and matter has attracted widespread interest since the early days of quantum mechanics in the early twentieth century.
+The interaction between light and matter has attracted widespread interest since the early days of quantum mechanics.
 With the advent of laser technology, the intensity of light and the precision of spectroscopy has dramatically increased,
 which allows us to explore the physics of light-matter interaction under extreme conditions with unprecedented precision and accuracy.
 At a high laser intensity above TW/cm², the interaction between light and atoms or molecules can no longer be described by the perturbation theory and a series of novel strong-field phenomena emerges, such as the above-threshold ionization (ATI), tunneling ionization, high-harmonic generation (HHG) and non-sequential double ionization (NSDI).
@@ -34,26 +35,30 @@ At a high laser intensity above TW/cm², the interaction between light and atoms
 Theoretical studies of these non-perturbative phenomena have been extensively investigated in the past decades.
 Usually, in order to obtain a precise result, a time-dependent Schrödinger equation (TDSE) is solved numerically.
 However, solving the TDSE is computationally expensive and resource-demanding, which limits its application to few-dimensional problems.
-Moreover, the TDSE is like a black box, and therefore non-transparent for interpretation of the underlying physics.
+Moreover, the TDSE is like a black box, offering limited transparency for interpreting the underlying physics.
 Apart from TDSE, the strong-field approximation (SFA) is also widely applied to study these problems,
 which is based on the assumptions that: (1) the initial state is not affected by the laser field until ionization;
 (2) after ionization, the photoelectron is not influenced by the trapping potential (i.e., assuming a short-range potential).
-These two approximations simplify the problem to some extent, which allows one to obtain analytical results and unravel the physical pictures of these phenomena.
-However, such approximations are not always appropriate for some cases when the Coulomb potential's role becomes significant,
+These two approximations simplify the problem, which allows one to obtain analytical results and unravel the physical pictures of these phenomena.
+However, such approximations are not always applicable, especially when the Coulomb potential's role becomes significant,
 which may lead to incorrect predictions.
 
-To overcome the shortcomings of TDSE, Corkum *et al.* proposed a scheme, where the electron is first ionized from the target through the tunneling mechanism, then acts as a classical electron in the laser field, and finally the photoelectron spectra is obtained by statistics on the ensemble of the electron trajectories [^Corkum_1989] [^Corkum_1993].
-This scheme was further developed by Hu *et al.*, in which the initial conditions of the classical electrons and the Coulomb potential of the parent ion are more appropriately taken account [^Hu_1997].
-The scheme is named after the Classical-Trajectory Monte-Carlo (CTMC) method, which has been widely adopted.
-Further developments of the trajectory-based methods added a phase property to the electron orbits, and utilized the SFA for preparation of the initial conditions,
-for example, the Trajectory-based Coulomb-SFA (TC-SFA) [^Yan_2010] [^Yan_2012], the Quantum-Trajectory Monte Carlo (QTMC) [^Li_2014] [^Liu_2016], the Semiclassical Two-Step Model (SCTS) [^Shvetsov-Shilovski_2016] [^Shvetsov-Shilovski_2021],
-another approach which is named after the Coulomb Quantum-orbit SFA (CQSFA) [^Lai_2015] [^Maxwell_2017], chose the inverse problem by searching for all trajectories that arrived at the same final momenta.
-Such trajectory-based semiclassical methods have a notable advantage over the TDSE and direct SFA methods due to their low demand on computational resources, comparable accuracy to the TDSE, as well as the transparency of the physical picture.
+To address these limitations, the scheme of *Classical-Trajectory Monte-Carlo* (CTMC) method [^Abrines_1966] [^Olson_1977] can be adopted, where a microcanonical ensemble of classical electrons is prepared and evolved under the laser interaction or charged-particle impact.
+This scheme has been further developed to account for the initial stage of tunneling ionization by setting the initial conditions of the classical electrons at the tunnel exit [^Corkum_1989] [^Corkum_1993] [^Hu_1997].
+The final photoelectron momentum distribution (PMD) is obtained through statistical analysis of the electron trajectories.
+While CTMC relies on purely classical electron trajectories, quantum effects can be largely retained by incorporating a phase into the electron trajectories.
+Examples include  the Trajectory-based Coulomb-SFA (TC-SFA) [^Yan_2010] [^Yan_2012], the Quantum-Trajectory Monte Carlo (QTMC) [^Li_2014] [^Liu_2016], and the Semiclassical Two-Step Model (SCTS) [^ShvetsovShilovski_2016] [^ShvetsovShilovski_2021].
+Another approach, the Coulomb Quantum-orbit SFA (CQSFA) [^Lai_2015] [^Maxwell_2017], addresses the inverse problem by identifying all trajectories that result in the same final momenta.
+These trajectory-based semiclassical methods offer notable advantages over the TDSE and direct SFA methods due to their lower demand on computational resources, as well as the clarity they provide in understanding the physical picture.
 
-After years of development, various trajectory-based classical/semiclassical methods have flourished, but a unified theoretical framework has yet to be established.
+After years of development, various trajectory-based classical/semiclassical methods have emerged, yet a unified theoretical framework remains to be established.
 Besides, developing a library that implements existing methods, which is efficient in calculations and is easy to maintain, would greatly facilitate further research on strong-field ionization.
-With this aim, we present `eTraj.jl`, a program package written in the Julia language, which provides a general, efficient, and out-of-the-box solution for performing classical/semiclassical trajectory simulations.
-Written in a clear and concise manner, this library features versatility, extensibility, and usability.
+With this goal in mind, we introduce `eTraj.jl`, a program package written in the Julia language, which provides a general, efficient, and out-of-the-box solution for performing classical/semiclassical trajectory simulations.
+This library is written in a clear and concise manner, ensuring versatility, extensibility, and usability.
+
+[^Abrines_1966]: R. Abrines and I. C. Percival, Classical theory of charge transfer and ionization of hydrogen atoms by protons, *Proc. Phys. Soc.* **88**, 861 (1966). DOI: [10.1088/0370-1328/88/4/306](https://doi.org/10.1088/0370-1328/88/4/306)
+
+[^Olson_1977]: R. E. Olson and A. Salop, Charge-transfer and impact-ionization cross sections for fully and partially stripped positive ions colliding with atomic hydrogen, *Phys. Rev. A* **16**, 531 (1977). DOI: [10.1103/PhysRevA.16.531](https://doi.org/10.1103/PhysRevA.16.531)
 
 [^Corkum_1989]: P. B. Corkum, N. H. Burnett, and F. Brunel, Above-threshold ionization in the long-wavelength limit, *Phys. Rev. Lett.* **62**, 1259 (1989). DOI: [10.1103/PhysRevLett.62.1259](https://dx.doi.org/10.1103/PhysRevLett.62.1259)
 
@@ -69,9 +74,9 @@ Written in a clear and concise manner, this library features versatility, extens
 
 [^Liu_2016]: M.-M. Liu, M. Li, C. Wu, Q. Gong, A. Staudte, and Y. Liu, Phase structure of strong-field tunneling wave packets from molecules, *Phys. Rev. Lett.* **116**, 163004 (2016). DOI: [10.1103/PhysRevLett.116.163004](https://doi.org/10.1103/PhysRevLett.116.163004)
 
-[^Shvetsov-Shilovski_2016]: N. I. Shvetsov-Shilovski, M. Lein, L. B. Madsen, E. Räsänen, C. Lemell, J. Burgdörfer, D. G. Arbó, and K. Tőkési, Semiclassical two-step model for strong-field ionization, *Phys. Rev. A* **94**, 013415 (2016). DOI: [10.1103/PhysRevA.94.013415](https://doi.org/10.1103/PhysRevA.94.013415)
+[^ShvetsovShilovski_2016]: N. I. Shvetsov-Shilovski, M. Lein, L. B. Madsen, E. Räsänen, C. Lemell, J. Burgdörfer, D. G. Arbó, and K. Tőkési, Semiclassical two-step model for strong-field ionization, *Phys. Rev. A* **94**, 013415 (2016). DOI: [10.1103/PhysRevA.94.013415](https://doi.org/10.1103/PhysRevA.94.013415)
 
-[^Shvetsov-Shilovski_2021]: N. I. Shvetsov-Shilovski, Semiclassical two-step model for ionization by a strong laser pulse: Further developments and applications, *Eur. Phys. J. D* **75**, 130 (2021). DOI: [10.1140/epjd/s10053-021-00095-8](https://doi.org/10.1140/epjd/s10053-021-00095-8)
+[^ShvetsovShilovski_2021]: N. I. Shvetsov-Shilovski, Semiclassical two-step model for ionization by a strong laser pulse: Further developments and applications, *Eur. Phys. J. D* **75**, 130 (2021). DOI: [10.1140/epjd/s10053-021-00095-8](https://doi.org/10.1140/epjd/s10053-021-00095-8)
 
 [^Lai_2015]: X.-Y. Lai, C. Poli, H. Schomerus, and C. F. D. M. Faria, Influence of the coulomb potential on above-threshold ionization: A quantum-orbit analysis beyond the strong-field approximation, *Phys. Rev. A* **92**, 043407 (2015). DOI: [10.1103/PhysRevA.92.043407](https://doi.org/10.1103/PhysRevA.92.043407)
 
