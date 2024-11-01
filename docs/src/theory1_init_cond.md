@@ -3,7 +3,7 @@
 Several theories on strong-field ionization can be utilized to provide the initial conditions of the classical electrons in the trajectory simulation scheme.
 The initial condition consists of three properties:
 
-- Initial position ``\rr_0``, i.e., the tunneling exit position;
+- Initial position ``\rr_0``, i.e., the tunnel exit position;
 - Initial momentum ``\kk_0`` [^note1];
 - The corresponding ionization probability ``W`` carried by each electron sample, which depends on the time-dependent laser field and properties of the target atom/molecule.
 
@@ -22,7 +22,7 @@ Depth = 2
 ## [Strong-Field Approximation with Saddle-Point Approximation (SFA-SPA)](@id SFA)
 
 The *Strong-Field Approximation (SFA)* is originated from the Keldysh theory of strong-field ionization [^Keldysh_1965] [^Faisal_1973] [^Reiss_1980].
-Compared with the perturbative methods and adiabatic tunneling theories, the SFA is able to predict both the multi-photon and the tunneling process during the laser-atom interaction, as well as high-order non-perturbative phenomena such as the ATI because it fully includes the non-adiabatic effect of the laser-atom interaction.
+Compared with the perturbative methods and adiabatic tunneling theories, the SFA is applicable to both the multi-photon and the tunneling processes during the laser-atom interaction, because it fully includes the non-adiabatic effect of the laser-atom interaction.
 The broad scope of SFA has contributed to its widespread application in theoretical investigations of strong-field ionization.
 
 [^Keldysh_1965]: L. V. Keldysh, Ionization in the field of a strong electromagnetic wave, *Sov. Phys. JETP* **20**, 1307 (1965).
@@ -31,7 +31,7 @@ The broad scope of SFA has contributed to its widespread application in theoreti
 
 [^Reiss_1980]:  H. R. Reiss, Effect of an intense electromagnetic field on a weakly bound system, *Phys. Rev. A* **22**, 1786 (1980). DOI: [10.1103/PhysRevA.22.1786](https://doi.org/10.1103/PhysRevA.22.1786)
 
-Consider the electron evolving under a combined field of the Coulomb field ``V(\rr)`` of the parent ion and the laser field ``\FF(t)=-\pd_t \AA(t)``.
+We consider an electron evolving under a combined field of the Coulomb field ``V(\rr)`` of the parent ion and the laser field ``\FF(t)=-\pd_t \AA(t)``.
 Under the length gauge (LG), its Hamiltonian reads
 ```math
 \begin{equation}
@@ -96,14 +96,14 @@ into the above expression of ``M_{\pp}`` [Eq. (6)], after integration by parts, 
 ```
 
 An additional saddle-point approximation (SPA) facilitates preparation of initial conditions of the electron trajectories.
-The variation of phase factor ``\ee^{\ii\Sp(t)}`` is much more sensitive than that of the prefactor as ``t`` varies, which leads to a fact that the whole integrand in Eq. (9) oscillates in its complex phase and its values cancel out in most cases, except when the variation of the phase ``\Sp(t)`` becomes stable, i.e., at the saddle points.
+The variation of phase factor ``\ee^{\ii\Sp(t)}`` is much more sensitive than that of the prefactor as ``t`` varies, which leads to the fact that the whole integrand in Eq. (9) oscillates in its complex phase and its values cancel out in most cases, except when the variation of the phase ``\Sp(t)`` becomes stable, i.e., at the saddle points.
 The saddle points ``\ts=\tr+\ii\ti`` are the zeroes of the derivative of the complex function ``\Sp(t)``, which satisfy
 ```math
 \begin{equation}
     -\Sp'(\ts) = \frac12 [\pp+\AA(\ts)]^2 + \Ip = 0.
 \end{equation}
 ```
-The second term of the r.h.s. of Eq. (9), i.e., the integral, has significant contribution only in the vicinities of the two end points ``t_0, \tf`` and the saddle points ``\ts``,
+The second term of the r.h.s. of Eq. (9), i.e., the integral, has significant contribution only in the vicinity of the two end points ``t_0, \tf`` and the saddle points ``\ts``,
 while the contribution near the two end points cancels out the first term.
 Therefore, the ``M_{\pp}`` is now approximated with the integration around the saddle points:
 ```math
@@ -114,19 +114,19 @@ Therefore, the ``M_{\pp}`` is now approximated with the integration around the s
 with ``C_{\ts}`` the integration contour following the steepest-descent path related to ``\ts``.
 
 Further evaluation of the prefactor ``\tilde{\psi}_0(\kk) \rvert_{\kk=\pp+\AA(t)} = \braket{\pp+\AA(t)}{\psi_0}`` (i.e., the momentum-space wavefunction) in the vicinity of the saddle points in Eq. (11) is essential before applying the SPA.
-We assume the field points towards the ``+ z`` axis, for an atom target at ``(l,m)`` state with ionization potential ``\Ip``, its wavefunction behaves asymptotically as
+We assume the field points towards the ``+ z`` axis, for an atom target at the ``(l,m)`` state with ionization potential ``\Ip``, its wavefunction behaves asymptotically as [^Perelomov_1966]
 ```math
 \begin{equation}
     \psi_0(\rr) \sim 2 C_{\kappa l} \kappa^{3/2} (\kappa r)^{n^*-1} \ee^{-\kappa r} Y_{lm}(\hat{\rr})
 \end{equation}
 ```
-[^Perelomov_1966] for ``\kappa r \gg 1``, with ``\kappa=\sqrt{2\Ip}``, ``n^*=Z/\kappa`` the effective principal quantum number, ``Z`` the charge of the residual ion, ``Y_{lm}`` the spherical harmonics, and ``C_{\kappa l}`` the asymptotic coefficient for atoms, which can be approximated using the Hartree approximation formula [^Hartree_1928]
+for ``\kappa r \gg 1``, with ``\kappa=\sqrt{2\Ip}``, ``n^*=Z/\kappa`` the effective principal quantum number, ``Z`` the charge of the residual ion, ``Y_{lm}`` the spherical harmonics, and ``C_{\kappa l}`` the asymptotic coefficient for atoms, which can be approximated using the Hartree approximation formula [^Hartree_1928]
 ```math
 \begin{equation}
     C_{\kappa l}^2 = \frac{2^{2n^*-2}}{n^* (n^*+l)! (n^*-l-1)!}.
 \end{equation}
 ```
-For atomic hydrogen at ground state we have ``C_{\kappa l} = 1``.
+For atomic hydrogen at the ground state we have ``C_{\kappa l} = 1``.
 Moreover, for non-integer ``n^*``, the formula can be naturally extended by replacing the factorials ``x!`` with Gamma functions ``\Gamma(x+1)``, i.e.,
 ```math
 \begin{equation}
@@ -158,7 +158,7 @@ A modified version of SPA can be carried out to handle the case when the integra
 \end{aligned}
 \end{equation}
 ```
-In this way we find the expression of transition amplitude:
+In this way we find the expression of the transition amplitude:
 ```math
 \begin{equation}
     M_{\pp} = c_{n^*} C_{\kappa l} \sum_{\ts} \frac{Y_{lm}(\hat{\kk}(\ts))}{[\Sp''(\ts)]^{(n^*+1)/2}} \ee^{-\ii\Sp(\ts)},
@@ -191,11 +191,11 @@ The SFA phase ``\Sp(\ts)`` is obtained by solving the integral
 \end{aligned}
 \end{equation}
 ```
-where the ``S_{\pp,\rm{tun}}`` and ``S_{\pp,\rm{traj}}`` represent the complex phase accumulated during the tunneling process and the trajectory motion in the continuum, respectively.
-The ``S_{\pp,\rm{tun}}`` is accumulated during an imaginary period of time (from time ``\ts`` to ``\tr``), in which the electron passes through the potential barrier with an "imaginary" momentum,
+where the temrs ``S_{\pp,\rm{tun}}`` and ``S_{\pp,\rm{traj}}`` represent the complex phase accumulated during the tunneling process and the trajectory motion in the continuum, respectively.
+The phase ``S_{\pp,\rm{tun}}`` is accumulated during an imaginary period of time (from time ``\ts`` to ``\tr``), in which the electron passes through the potential barrier with an "imaginary" momentum,
 its real part denotes the quantum phase, while its imaginary part is related to the ionization probability.
 
-To utilize the SFA to give initial condition of the photoelectrons, we suppose that the classical electron is ejected at time ``\tr`` at tunneling exit ``\rr_0`` with momentum ``\kk_0=\kk(\tr)``.
+To utilize the SFA to prepare initial conditions of the photoelectrons, we suppose that the electron is released at time ``\tr`` at the tunnel exit ``\rr_0`` with momentum ``\kk_0=\kk(\tr)``.
 The initial momentum ``\kk_0``, neglecting the Coulomb interaction with the nucleus, is related to the final momentum ``\pp`` through
 ```math
 \begin{equation}
@@ -203,16 +203,15 @@ The initial momentum ``\kk_0``, neglecting the Coulomb interaction with the nucl
 \end{equation}
 ```
 
-The initial position ``\rr_0``, i.e., the tunneling exit, is found by constructing a quantum tunneling trajectory.
-The beginning of the trajectory, i.e., the tunneling entrance, has a real part of zero; the electron tunnels through the barrier during the time interval ``\ts`` to ``\tr`` and emerges as a classical electron at the tunneling exit ``\rr_0`` with real position and momentum.
+The initial position ``\rr_0``, i.e., the tunnel exit, is found by constructing a quantum tunneling trajectory.
+The beginning of the trajectory, i.e., the tunnel entrance, has a vanishing real part; the electron tunnels through the barrier during the time interval ``\ts`` to ``\tr`` and emerges as a classical electron at the tunneling exit ``\rr_0`` with a real position and momentum.
 In this way we obtain the expression of the initial position:
 ```math
 \begin{equation}
-    \rr_0^{\rm{SFA-SPA}} = \Re \int_{\ts}^{\tr} [\pp+\AA(\tau)] \dd\tau = \Im \int_0^{\ti} [\pp+\AA(\tr+\ii\tau)] \dd\tau = \Im \int_0^{\ti} \AA(\tr+\ii\tau) \dd\tau,
+    \rr_0^{\rm{SFA-SPA}} = \Re \int_{\ts}^{\tr} [\pp+\AA(\tau)] \dd\tau = \Im \int_0^{\ti} \AA(\tr+\ii\tau) \dd\tau,
 \end{equation}
 ```
-here ``\Re`` and ``\Im`` are the real and imaginary part notation, respectively,
-and the real ``\pp`` does not come into play in the integral.
+where ``\Re`` and ``\Im`` are the real and imaginary part notation, respectively.
 
 The probability density (in the final momentum space ``\pp``) carried by the electron sample is
 ```math
@@ -231,22 +230,22 @@ where we have gathered the coefficients to the prefactor
 \end{equation}
 ```
 
-We note that the ionization probability in Eq. (22) is expressed in the coordinate of final momentum ``\pp=(p_x,p_y,p_z)``,
-however, in the trajectory simulation, the initial electrons are sampled in the ``(\kkt,\tr)`` coordinate, with ``\kkt`` the initial transversal momentum.
-Thus, adding a Jacobian in the prefix of the ionization probability is required if we sample the initial electrons within such coordinate.
+We note that the ionization probability in Eq. (22) is expressed in the coordinate of the final momentum ``\pp=(p_x,p_y,p_z)``,
+however, in the trajectory simulation, the initial electrons are sampled in the ``(\tr,\kkt)`` coordinate, with ``\kkt`` the initial transversal momentum.
+Thus, adding a Jacobian in the prefix of the ionization probability is required if we sample the initial electrons within such a coordinate.
 Suppose the laser propagates in the ``z`` axis and polarizes in the ``xy`` plane, the transformed expression reads
 ```math
 \begin{equation}
-    \dd W^{\rm{SFA-SPA}}/\dd\kkt\dd\tr = \sum_{\ts} J(\kp,\tr) \abs{\mathcal{P}_{\pp}(\ts)}^2 \exp(-2\Im S_{\pp,\rm{tun}}(\ts)),
+    \dd W^{\rm{SFA-SPA}}/\dd\tr\dd\kkt = \sum_{\ts} J(\kp,\tr) \abs{\mathcal{P}_{\pp}(\ts)}^2 \exp(-2\Im S_{\pp,\rm{tun}}(\ts)),
 \end{equation}
 ```
 where ``\kp`` is the projection of ``\kkt`` on the polarization plane (i.e., the ``xy`` plane), and the Jacobian is
 ```math
 \begin{equation}
-    J(\kp,\tr) = \abs{\frac{\pd(p_x,p_y)}{\pd(\kp,\tr)}} =
+    J(\tr,\kp) = \abs{\frac{\pd(p_x,p_y)}{\pd(\tr,\kp)}} =
     \begin{vmatrix}
-        \pd p_x/\pd\kp & \pd p_x/\pd\tr \\
-        \pd p_y/\pd\kp & \pd p_y/\pd\tr \\
+        \pd p_x/\pd\tr & \pd p_x/\pd\kp \\
+        \pd p_y/\pd\tr & \pd p_y/\pd\kp \\
     \end{vmatrix}.
 \end{equation}
 ```
@@ -255,8 +254,9 @@ where ``\kp`` is the projection of ``\kkt`` on the polarization plane (i.e., the
 
 ## [SFA-SPA with Non-adiabatic Expansion (SFA-SPANE)](@id SFAAE)
 
-For small Keldysh parameter ``\gamma=\omega\kappa/F_0`` (``\omega`` is the laser angular frequency and ``F_0`` is the peak field strength), the non-adiabatic effect is not significant, thus a non-adiabatic expansion scheme can be carried out to develop a modified theory based on the SFA-SPA, which is named after the *SFA-SPA with Non-adiabatic Expansion (SFA-SPANE)* [^Ni_2018] [^Mao_2022] [^Ma_2021] [^Ma_2024].
-It includes the non-adiabatic effect to a large extent and is capable of giving similar results compared with that given by the SFA-SPA under small Keldysh parameters.
+For a small Keldysh parameter ``\gamma=\omega\kappa/F_0`` (``\omega`` is the laser angular frequency and ``F_0`` is the peak field strength), the non-adiabatic effect is not significant, thus a non-adiabatic expansion scheme can be carried out to develop an approximate theory based on the SFA-SPA, which is named after the *SFA-SPA with Non-adiabatic Expansion (SFA-SPANE)* [^Ni_2018] [^Mao_2022] [^Ma_2021] [^Ma_2024].
+It includes the non-adiabatic effect to a large extent and is capable of giving similar results compared with that given by the SFA-SPA under relatively small Keldysh parameters.
+SFA-SPANE comes with a closed analytical form, avoiding the necessity to solve the saddle-point equation, thereby speeding up the calculation.
 
 [^Ni_2018]: H. Ni, N. Eicke, C. Ruiz, J. Cai, F. Oppermann, N. I. Shvetsov-Shilovski, and L.-W. Pi, Tunneling criteria and a nonadiabatic term for strong-field ionization, *Phys. Rev. A* **98**, 013411 (2018). DOI: [10.1103/PhysRevA.98.013411](https://doi.org/10.1103/PhysRevA.98.013411)
 
@@ -267,14 +267,14 @@ It includes the non-adiabatic effect to a large extent and is capable of giving 
 [^Ma_2024]: Y. Ma, H. Ni, and J. Wu, Attosecond ionization time delays in strong-field physics, Chin. Phys. B 33, 13201 (2024). DOI: [10.1088/1674-1056/ad0e5d](https://doi.org/10.1088/1674-1056/ad0e5d)
 
 
-The SFA-SPANE is applicable when the Keldysh parameter is small, and the non-adiabatic effect is insignificant, which corresponds to the small-``\ti`` case.
+The SFA-SPANE method is applicable when the Keldysh parameter is small, and the non-adiabatic effect is insignificant, which corresponds to the small-``\ti`` case.
 We expand the vector potential ``\AA(\ts)=\AA(\tr+\ii\ti)`` in the SFA-SPA around ``\ti=0``, up to the second order of ``\ti``:
 ```math
 \begin{equation}
     \AA(\tr+\ii\ti) = \AA(\tr) - \ii\ti\FF(\tr) + \frac12 \ti^2 \FF'(\tr) + o(\ti^2).
 \end{equation}
 ```
-Inserting Eq. (26) into the saddle-point equation in the SFA-SPA [Eq. (10)] gives
+Inserting Eq. (26) into the saddle-point equation in the SFA-SPA [Eq. (10)] leads to
 ```math
 \begin{equation}
     \kk(\tr)\cdot\FF(\tr) \approx 0
@@ -286,7 +286,7 @@ and
     \ti \approx \sqrt{\frac{k^2(\tr)+\kappa^2}{F^2(\tr)-\kk(\tr)\cdot\FF'(\tr)}},
 \end{equation}
 ```
-which allow for more specific expression of the ionization probability and other quantities.
+which allow for the derivation of analytical expressions of the ionization probability and other quantities.
 
 The initial position ``\rr_0`` in SFA-SPANE, is given by
 ```math
@@ -295,7 +295,7 @@ The initial position ``\rr_0`` in SFA-SPANE, is given by
 \end{equation}
 ```
 
-The ``\Im S_{\pp,\rm{tun}}`` which is related to the ionization probability, in the SFA-SPANE, is
+The ``\Im S_{\pp,\rm{tun}}`` term, which is related to the ionization probability, in the SFA-SPANE, is
 ```math
 \begin{equation}
 \begin{aligned}
@@ -312,8 +312,8 @@ Then follows the ionization probability
     \dd W^{\rm{SFA-SPANE}}/\dd\pp = \abs{\mathcal{P}^{\rm{SFA-SPANE}}_{\pp}(\ts)}^2 \exp \left[ -\frac23 \frac{(\kt^2+\kappa^2)^{3/2}}{\sqrt{F^2-\kk_0\cdot\FF'}} \right],
 \end{equation}
 ```
-where ``\kkt`` is actually equivalent to ``\kk(\tr)`` in the SFA-SPANE because of the zero longitudinal initial momentum condition in Eq. (27), which is derived from the saddle-point equation under adiabatic expansion.
-The prefactor, reads
+where ``\kkt`` is actually equivalent to ``\kk(\tr)`` in the SFA-SPANE because of the vanishing initial longitudinal initial momentum condition in Eq. (27), which is derived from the saddle-point equation under adiabatic expansion.
+The prefactor reads
 ```math
 \begin{equation}
     \mathcal{P}^{\rm{SFA-SPANE}}_{\pp}(\ts) = c_{n^*} \frac{C_{\kappa l} Y_{lm}(\hat{\kk}(\ts))}{\left[ (\kt^2+\kappa^2)(F^2-\kk_0\cdot\FF') \right]^{(n^*+1)/4}}.
@@ -324,7 +324,7 @@ The prefactor, reads
 
 ## [Ammosov-Delone-Krainov (ADK)](@id ADK)
 
-The *Ammosov-Delone-Krainov (ADK)* theory [^Ammosov_1986] [^Delone_1998] is used to study the adiabatic tunneling in the strong-field ionization, and is, in a sense, the adiabatic limit of the SFA.
+The *Ammosov-Delone-Krainov (ADK)* theory [^Ammosov_1986] [^Delone_1998] is used to study the scenario of adiabatic tunneling in strong-field ionization, and is, in a sense, the adiabatic limit of the SFA.
 
 [^Ammosov_1986]: M. Ammosov, N. Delone, and V. Krainov, Tunnel ionization of complex atoms and of atomic ions in an alternating electromagnetic field, *Sov. Phys. JETP* **64**, 1191 (1986).
 
@@ -353,20 +353,22 @@ If we expand Eq. (33) under the small-``\kt`` limit, we obtain
 ```
 which is actually the exponential term of the well-known ADK rate.
 However, we note that the result of our approach, i.e., applying the adiabatic limit of the SFA-SPA, is slightly different from the actual ADK rate in the prefactor.
-As a remedy, adding an additional Coulomb-correction (CC) factor to Eq. (33) fills the gap between them:
+This is because the SFA framework neglects Coulomb potential in the final state, which has been shown to result in a lower ionization rate.
+As a remedy, introducing an additional Coulomb-correction (CC) factor to Eq. (33) bridges the gap:
 ```math
 \begin{equation}
     C^{\rm{CC}} = \left(\frac{2\kappa^3}{F}\right)^{n^*} \!\!\!\! \left(1+2\gamma/e\right)^{-2n^*} \left[\Gamma\left(\frac{n^*}{2}+1\right)\right]^{-2}.
 \end{equation}
 ```
+We note that this CC factor is implemented in all initial-condition methods that are derived from the SFA.
 
-The tunneling exit is found with the same approach:
+The tunnel exit is found with the same approach:
 ```math
 \begin{equation}
     \rr_0^{\rm{ADK}} = \Im \int_0^{\ti} \AA(\tr+\ii\tau) \dd\tau = - \frac{\FF}{2} \frac{\kt^2+\kappa^2}{F^2},
 \end{equation}
 ```
-which we refer to as the "``\Ip/F``" model, but is slightly different from the original version because we replaced the ionization potential ``\Ip=\kappa^2/2`` with the effective one ``\Ip'=(\kappa^2+\kt^2)/2`` to account for the initial kinetic energy, which suits the adiabatic tunneling scenario better.
+which we refer to as the "``\Ip/F``" model, but with a slight difference in that we have replaced the ionization potential ``\Ip=\kappa^2/2`` with the effective one ``\tilde{\Ip}=(\kappa^2+\kt^2)/2`` to account for the initial kinetic energy, which ensures adiabatic tunneling better.
 
 
 ---------------------------
@@ -374,7 +376,7 @@ which we refer to as the "``\Ip/F``" model, but is slightly different from the o
 ## [Molecular SFA-SPA/SFA-SPANE/ADK](@id MOSFA)
 
 The atomic SFA theory and its adiabatic versions mentioned in the previous sections can be generalized naturally to molecular cases [^Muth_2000] [^Tong_2002] [^Kjeldsen_2004] [^Kjeldsen_2005].
-Under the Born-Oppenheimer and the single-active-electron (SAE) approximation, the strong-field ionization of the molecules can be modeled as the interaction of the ionizing orbital (usually the highest occupied molecular orbital (HOMO)) ``\psi_0(\rr)`` with the effective potential of the parent ion and the laser field, which simplifies the problem.
+Under the Born-Oppenheimer and the single-active-electron (SAE) approximation, the strong-field ionization of the molecules can be modeled as the interaction of the laser field and the ionizing orbital [often the highest occupied molecular orbital (HOMO)]  ``\psi_0(\rr)`` within the effective potential of the parent ion.
 
 [^Muth_2000]: J. Muth-Böhm, A. Becker, and F. H. M. Faisal, Suppressed molecular ionization for a class of diatomics in intense femtosecond laser fields, *Phys. Rev. Lett.* **85**, 2280 (2000). DOI: [10.1103/PhysRevLett.85.2280](https://doi.org/10.1103/PhysRevLett.85.2280)
 
@@ -384,7 +386,7 @@ Under the Born-Oppenheimer and the single-active-electron (SAE) approximation, t
 
 [^Kjeldsen_2005]: T. K. Kjeldsen, C. Z. Bisgaard, L. B. Madsen, and H. Stapelfeldt, Influence of molecular symmetry on strong-field ionization: Studies on ethylene, benzene, fluorobenzene, and chlorofluorobenzene, *Phys. Rev. A* **71**, 13418 (2005). DOI: [10.1103/PhysRevA.71.042508](https://doi.org/10.1103/PhysRevA.71.042508)
 
-To generalize the atomic SFA to the molecular SFA, we start from the transition amplitude in Eq. (11).
+To generalize the atomic SFA to the molecular SFA (MO-SFA), we start from the transition amplitude in Eq. (11).
 In the molecular frame (MF), the asymptotic wavefunction can be expanded into spherical harmonics:
 ```math
 \begin{equation}
@@ -411,7 +413,7 @@ and the asymptotic behavior of the wavefunction in the FF is found by inserting 
 \end{equation}
 ```
 
-It is obvious that the molecular version of the theory differs from the atomic one only in the expression of prefactor ``\mathcal{P}_{\pp}(\ts)``, while the expression of the tunneling exit and the initial momentum are identical.
+It is obvious that the molecular version of the theory differs from the atomic one only in the expression of prefactor ``\mathcal{P}_{\pp}(\ts)``, while the expression of the tunneling exit position and the initial momentum are identical.
 Following the same procedure in the previous sections, we obtain the prefactor ``\mathcal{P}_{\pp}`` that is applicable for molecules:
 ```math
 \begin{equation}
@@ -428,14 +430,14 @@ Following the same procedure in the previous sections, we obtain the prefactor `
     \mathcal{P}^{\rm{ADK}}_{\pp}(\ts) = c_{n^*} \frac{\sum_{l,m,m'} C_{lm} D_{m'm}^l(\phi,\theta,\chi) Y_{lm'}(\hat{\kk}(\ts))}{\left[ (\kt^2+\kappa^2)F^2 \right]^{(n^*+1)/4}}.
 \end{equation}
 ```
-We also note that after applying an additional Coulomb-correction factor [Eq. (36)], the ionization rate is aligned with the original MO-ADK theory [^Tong_2002] under the adiabatic and small-``\kt`` limit.
+We also note that after applying an additional Coulomb-correction factor [Eq. (36)], the ionization rate aligns with the original MO-ADK theory [^Tong_2002] in the adiabatic and small-``\kt`` limit.
 
 ---------------------------
 
 ## [Weak-Field Asymptotic Theory (WFAT)](@id WFAT)
 
 The *Weak-Field Asymptotic Theory (WFAT)* generalizes the tunneling ionization from isotropic atomic potentials to arbitrary molecular potentials [^tolstikhin_2011] [^madsen_2013] [^madsen_2017] [^dnestryan_2018].
-Compared with the MO-ADK theory, the WFAT naturally accounts for the influence of the molecule's permanent dipole moment, and calculates the structure factors (a similar concept to the asymptotic coefficients ``C_{lm}`` in Eq. (38)) based on the wavefunction close to the core, rather than using the wavefunction in the asymptotic region, allowing for enhanced accuracy in numerical simulations.
+Compared with the MO-ADK theory, the WFAT naturally accounts for the influence of the permanent dipole moment of the molecule, and could, in its integral representation, calculate the structure factors (a similar concept to the asymptotic coefficients ``C_{lm}`` in Eq. (38)) based on the wavefunction close to the core, rather than using the wavefunction in the asymptotic region, allowing for enhanced accuracy in numerical simulations.
 
 [^tolstikhin_2011]: O. I. Tolstikhin, T. Morishita, and L. B. Madsen, Theory of tunneling ionization of molecules: Weak-field asymptotics including dipole effects, *Phys. Rev. A* **84**, 053423 (2011). DOI: [10.1103/PhysRevA.84.053423](https://doi.org/10.1103/PhysRevA.84.053423)
 
@@ -466,7 +468,7 @@ The field factor is expressed as
     \mathcal{W}_\nu (F) = \frac{\kappa}{2} \left(\frac{4\kappa^2}{F}\right)^{2n^*-2n_\xi-\abs{m}-1} \ee^{-2\kappa^3/3F}.
 \end{equation}
 ```
-The structure factor ``G_\nu(\theta,\chi)`` is found by an integral related to the ionizing orbital and a reference function, which has significant contribution only in the vicinities of the nuclei and is insensitive to the wavefunction's asymptotic behavior:
+The structure factor ``G_\nu(\theta,\chi)`` is found by an integral related to the ionizing orbital and a reference function, which has significant contribution only in the vicinity of the nuclei and is insensitive to the wavefunction's asymptotic behavior:
 ```math
 \begin{equation}
     G_\nu(\theta,\chi) = \ee^{-\kappa\mu_F} \int \dd\rr \ \Omega_\nu^*(\RRh^{-1}\rr) \hat{V}_{\rm{c}}(\rr) \psi_0(\rr),
@@ -538,11 +540,11 @@ where the ``\ee^{-\ii m \phi}`` in the expansion of ``D_{mm'}^l(\phi,\theta,\chi
 ```
 
 The original WFAT gives the instantaneous tunneling ionization rate ``w=\dd W/\dd t``, however, without the dependence of ``\kt``.
-In order to apply WFAT to give initial condition of the electron, we have to reform the original WFAT to give ``\kt``-dependent rate.
+In order to apply WFAT to prepare initial conditions of the electron samples, we have to reform the original WFAT to include ``\kt``-dependent rate.
 Here we adopt the ``\kt``-dependence in MO-ADK, which gives
 ```math
 \begin{equation}
-    \dd W/\dd \kkt \dd t \propto \kt^{2\abs{m}} \ee^{-\kappa \kt^2/F}
+    \dd W/\dd t \dd \kkt \propto \kt^{2\abs{m}} \ee^{-\kappa \kt^2/F}
 \end{equation}
 ```
 under the small-``\kt`` limit.
@@ -565,6 +567,6 @@ where we choose the normalization coefficient so that
 In this way we obtain the ``\kt``-dependent rate given by the WFAT:
 ```math
 \begin{equation}
-    \frac{\dd W^{\rm{WFAT}}}{\dd \kkt \dd t} = \sum_{\nu} \abs{G_\nu(\theta,\chi)}^2 \mathcal{W}_\nu(F,\kt).
+    \frac{\dd W^{\rm{WFAT}}}{\dd t \dd \kkt} = \sum_{\nu} \abs{G_\nu(\theta,\chi)}^2 \mathcal{W}_\nu(F,\kt).
 \end{equation}
 ```

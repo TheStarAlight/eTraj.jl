@@ -5,7 +5,7 @@ This example is adapted from [[*PRA* **94**, 013415 (2016)](https://doi.org/10.1
 When an atom is exposed to an intense linearly-polarized pulse, the atom might absorb photons more than it requires for the electron to ionize, leading to outer ring-like structures in the PMD, which we refer to as the well-known above-threshold ionization (ATI).
 The ATI is originally interpreted as excessive absorption of photons in the "multi-photon absorption" picture,
 while in the tunneling scenario, the ATI structures also have interpretable physical meanings:
-the interference of electron waves which tunneled through the potential barrier.
+the intercycle interference of electron wave packets which tunneled through the potential barrier at each peak of the laser field.
 This allows for reproduction of the ATI structures using the semiclassical trajectory-based methods.
 
 Apart from the ATI rings, the low-energy features of the PMD are also of broad interest, which usually exhibit a fan-like structure.
