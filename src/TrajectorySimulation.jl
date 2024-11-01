@@ -174,6 +174,13 @@ function TrajectorySimulationJob(; kwargs...)
     # make conversions
     (traj_t_final isa Quantity) && (traj_t_final = (uconvert(u"fs", traj_t_final) |> auconvert).val)
     ((sample_t_intv[1] isa Quantity) || (sample_t_intv[2] isa Quantity)) && (sample_t_intv = ((uconvert(u"fs", sample_t_intv[1])|>auconvert).val, (uconvert(u"fs", sample_t_intv[2])|>auconvert).val))
+    # sample time & traj final time check
+    @assert (sample_t_intv[1] < sample_t_intv[2]) "[TrajectorySimulationJob] `sample_t_intv` must be a valid interval."
+    @assert (traj_t_final > sample_t_intv[2])  "[TrajectorySimulationJob] `traj_t_final` must be greater than the last time point of `sample_t_intv`."
+    Fx_func = LaserFx(laser); Fy_func = LaserFy(laser);
+    (Fx_func(sample_t_intv[1])^2 + Fy_func(sample_t_intv[1])^2 > 0.001^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the beginning of the sampling time interval. Consider extending the sampling time interval to include the beginning of the laser pulse.")
+    (Fx_func(sample_t_intv[2])^2 + Fy_func(sample_t_intv[2])^2 > 0.001^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the end of the sampling time interval. Consider extending the sampling time interval to include the end of the laser pulse.")
+    (Fx_func(traj_t_final)^2 + Fy_func(traj_t_final)^2 > 0.001^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the end of the trajectory simulation. Consider delaying `traj_t_final`.")
     # dimension check
     @assert dimension in (2,3) "[TrajectorySimulationJob] `dimension` must be either 2 or 3."
     @assert length(final_p_max)==length(final_p_num)==dimension "[TrajectorySimulationJob] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
