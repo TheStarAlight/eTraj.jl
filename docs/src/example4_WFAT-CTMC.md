@@ -46,7 +46,7 @@ end
 ```
 
 In this code, we set the molecules' orientation such that the ``z``-axis in the MF is parallel to the ``x``-axis in the LF, which can be realized by setting `rot_β=90°` (equivalent to a 90° counterclockwise rotation of the molecule around the ``y``-axis).
-The laser is a circularly polarized 800-nm laser pulse, whose duration is set to 6 cycles to ensure the symmetry of the PMD for a homogeneous atom, which facilitates the imaging of the molecules' orbitals through the PMD: a node or a dark curve would show up in the PMD if the laser's electric field vector crosses or scans inside a nodal plane of the orbital's wavefunction.
+The laser is a circularly polarized 800-nm laser pulse, whose duration is set to 6 cycles to ensure the symmetry of the PMD for an isotropic atom, which facilitates the imaging of the molecules' orbitals through the PMD: a node or a dark curve would show up in the PMD if the laser's electric field vector crosses or scans inside a nodal plane of the orbital's wavefunction.
 
 The PMDs obtained from different molecule's HOMO orbitals are shown below.
 The structures of the PMDs reflect the geometries of the orbitals, which are also mirrored in the orientation-dependent structure factors, which are also shown in the figure.
@@ -61,7 +61,7 @@ Such a localized peak in the ring structure is observed in the PMD of CO molecul
 The HOMOs of the oxygen (``\rm{O_2}``) and benzene (``\rm{C_6H_6}``) molecules (in MF) are shown in the structure factor Figs. (c) and (d), which are degenerate orbitals of ``\pi`` symmetry.
 The oxygen's "α-HOMO" (one of 2p``\pi_{\rm{u}}``) and the benzene's "HOMO" (2p``\pi_3``), after the given rotation (`rot_β=90°`), have ``x-z`` and ``y-z`` as their nodal planes, hence the rotating electric field in the ``x-y`` plane "sees" a four-lobe structure, which is revealed in the PMDs in Figs. (c1) and (d1).
 Whereas the oxygen's "α-HOMO-1" (another one of 2p``\pi_{\rm{u}}``) and the benzene's "HOMO-1" (2p``\pi_2``), each have a nodal plane on the ``x-y`` plane, which indicates that in the zeroth order (``m=0``), the outgoing electron waves that are contributed by the "``+``" parts and the "``-``" parts of the orbital cancel out each other, leading to a net-zero ionization probability.
-For non-zero-``m`` channels we have ``\mathcal{W}_\nu(F,\kt=0)\equiv 0`` [see Eq. (57) in [WFAT](@ref WFAT)], hence a dark ring which corresponds to zero initial momenta ``\kt=0`` would appear in the PMDs of Figs. (c2) and (d2).
+For non-zero-``m`` channels we have ``\mathcal{W}_\nu(F,\kt=0)\equiv 0`` [see Eq. (57) in [WFAT](@ref WFAT)], hence a nodal ring which corresponds to zero initial momenta ``\kt=0`` would appear in the PMDs of Figs. (c2) and (d2).
 Under such circumstance, the ionization gets suppressed, and the first-order channels (``m=\pm 1``) would take dominance in the contribution of ionization probability.
 
 ![fig:example_Molecules](assets/figure_Molecules.png)

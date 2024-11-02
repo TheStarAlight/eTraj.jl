@@ -2,8 +2,8 @@
 
 A bichromatic laser which consists of a fundamental and its second harmonic frequency component, is widely used to construct a variety of specific tailored waveforms for manipulation and exploration of the ultrafast dynamics of light-matter interactions.
 
-In this example, we use a bichromatic laser pulse which combines two counter-rotating circularly-polarized of 800 nm and 400 nm wavelengths.
-By adjusting the relative intensity of the two frequency components, the waveform of the pulse can be tailored to exhibit a clover-like shape, which facilitates control of the direction of the ejected electrons. The PMD for different laser intensities is shown in the figure below.
+In this example, we use a bichromatic laser pulse which combines two counter-rotating circularly-polarized laser pulses of 800 nm and 400 nm wavelengths.
+By adjusting the relative intensity of the two frequency components, the waveform of the pulse can be tailored to exhibit a clover-like shape, which facilitates control of the emission direction of the ejected electrons. The PMD for different laser intensities is shown in the figure below.
 
 ```julia
 # examples/test_Bichromatic_CCP.jl

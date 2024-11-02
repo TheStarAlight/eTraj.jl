@@ -2,7 +2,7 @@
 
 This example is adapted from [[*JPB* **54**, 144001 (2021)](https://doi.org/10.1088/1361-6455/ac0d3e)].
 
-In the attoclock experiment, an ultra-short pulse of circular polarization is employed to explore the ultrafast attosecond dynamics such as the tunneling time delay.
+In the present example of attoclock experiment, an ultra-short pulse of circular polarization is employed to explore the ultrafast attosecond dynamics such as the tunneling time delay.
 In this example we would perform simulation of an attoclock experiment using different initial condition methods, namely ADK, SFA-SPANE and SFA-SPA, which reveals the influence of non-adiabatic effects to the attoclock signal.
 We choose CTMC as the phase method because the quantum interference effect is not significant in this example.
 In our theoretical framework, the simulation schemes are named after "ADK-CTMC", "SFA-SPANE-CTMC" and "SFA-SPA-CTMC", respectively.
@@ -38,7 +38,7 @@ end
 The momentum spectra are shown in the figure below.
 Due to the exponential dependence of ionization rate on the field strength, the PMD exhibits a crescent shape near the peak of the negative vector potential ``-\AA(t)``.
 In an adiabatic tunneling scenario, which corresponds to the ADK initial condition, the trace of ``-\AA(t)`` is expected to match the median of the crescent shape.
-While for non-adiabatic tunneling, the ``\kkt``-dependent probability distribution at the tunneling exit becomes skewed, which results in expansion of the crescent shape and the enhancement of overall ionization probability, as can be seen in the figure.
+While for non-adiabatic tunneling, the distribution of the initial transverse momentum ``\kkt`` at the tunnel exit centers at a nonzero value, which results in expansion of the crescent shape and the enhancement of overall ionization probability, as can be seen in the figure.
 Moreover, the PMD obtained with the SFA-SPANE and SFA-SPA initial conditions shows similar shape and total ionization probability, which demonstrate the SFA-SPANE's advantage of preserving the non-adiabatic effects with much less computational cost than the SFA-SPA.
 
 ![fig:example_2cycs_CP](assets/figure_2cycs_CP.png)
