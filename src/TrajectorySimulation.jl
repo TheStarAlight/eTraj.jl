@@ -50,8 +50,8 @@ Performs a semiclassical trajectory simulation with given parameters.
 ## Required parameters:
 - `init_cond_method`    : Method used to determine the initial conditions of electrons.
     - Candidates: `:ADK`, `:SPA` (SFA-SPA), `:SPANE` (SFA-SPANE) for targets of type `SAEAtomBase` or `MoleculeBase`; `:WFAT` for `MoleculeBase` targets.
-- `laser::Laser`        : Parameters of the laser field. See the [Lasers](@ref) module for details.
-- `target::Target`      : Parameters of the target. See the [Targets](@ref) module for details.
+- `laser::Laser`        : A `Lasers.Laser` object which stores parameters of the laser field. See the [Lasers](@ref) module for details.
+- `target::Target`      : A `Targets.Target` object which stores parameters of the target. See the [Targets](@ref) module for details.
 - `dimension = 2|3`     : Dimensionality of simulation.
     - 2D simulation is carried out in the xy plane.
 - `sample_t_intv`       : Time interval for sampling initial electrons.
@@ -67,14 +67,14 @@ Performs a semiclassical trajectory simulation with given parameters.
 
 ## Required parameters for step-sampling methods:
 - `ss_kd_max`   : Boundary of k⟂ samples (in a.u.). k⟂ ranges from `-ss_kd_max` to `+ss_kd_max`.
-- `ss_kd_num`   : Number of k⟂ samples (in a.u.).
+- `ss_kd_num`   : Number of k⟂ samples.
 - `ss_kz_max`   : [3D only] Boundary of kz samples (in a.u.). kz ranges from `-ss_kz_max` to `+ss_kz_max`.
-- `ss_kz_num`   : [3D only] Number of kz samples (in a.u.).
+- `ss_kz_num`   : [3D only] Number of kz samples.
 
 ## Required parameters for Monte-Carlo sampling methods:
 - `mc_kt_num`   : Number of kt samples in a single time sample.
-- `mc_kd_max`   : Boundary of kd. kd ranges from `-mc_kd_max` to `+mc_kd_max`.
-- `mc_kz_max`   : [3D only] Boundary of kz. kz ranges from `-mc_kz_max` to `+mc_kz_max`.
+- `mc_kd_max`   : Boundary of k⟂ (in a.u.). k⟂ ranges from `-mc_kd_max` to `+mc_kd_max`.
+- `mc_kz_max`   : [3D only] Boundary of kz (in a.u.). kz ranges from `-mc_kz_max` to `+mc_kz_max`.
 
 ## Optional parameters:
 - `traj_phase_method`   : Method used to determine classical trajectories' phase.
