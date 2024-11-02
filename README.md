@@ -1,3 +1,3 @@
-# 🎆SemiclassicalSFI.jl Documentation
+# 🎆eTraj.jl Documentation
 
-This is the gh-pages branch of the SemiclassicalSFI.jl package which stores the documentation.
+This is the gh-pages branch of the `eTraj.jl` package which stores the documentation.
