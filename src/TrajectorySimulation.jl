@@ -200,6 +200,10 @@ function TrajectorySimulationJob(; kwargs...)
         @warn "[TrajectorySimulationJob] File `$output_path` already exists, will save at `$(default_filename())`."
         output_path = default_filename()
     end
+    if isfile(output_path * "!")
+        @warn "[TrajectorySimulationJob] The temp file `$(output_path)!` exists (may be created by a previous session), will save at `$(default_filename())`."
+        output_path = default_filename()
+    end
     if output_fmt in (:h5, :hdf5)
         output_fmt = :h5
         if !endswith(output_path,".h5")
