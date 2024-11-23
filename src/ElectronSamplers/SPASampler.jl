@@ -164,6 +164,9 @@ function gen_electron_batch(sp::SPASampler, batch_id::Integer)
     else
         0.057 # default 800 nm for unknown Laser type
     end
+    if Ftr <= 1e-3
+        return nothing
+    end
 
     Z = AsympNuclCharge(sp.target)
     Ip =
@@ -235,6 +238,7 @@ function gen_electron_batch(sp::SPASampler, batch_id::Integer)
     end
     function solve_spe(tr,kd,kz)
         spe((ti,)) = saddle_point_equation(tr,ti,kd,kz)
+        # println("solve_spe: tr = $tr, kd = $kd, kz = $kz")
         ti_sol = nlsolve(spe, [asinh(ω/Ftr*sqrt(kd^2+kz^2+2Ip))/ω])
         ti = 0.0
         if converged(ti_sol) && (ti_sol.zero[1]>0)
