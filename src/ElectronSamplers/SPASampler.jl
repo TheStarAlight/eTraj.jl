@@ -164,6 +164,9 @@ function gen_electron_batch(sp::SPASampler, batch_id::Integer)
     else
         0.057 # default 800 nm for unknown Laser type
     end
+    if Ftr <= 1e-3
+        return nothing
+    end
 
     Z = AsympNuclCharge(sp.target)
     Ip =
