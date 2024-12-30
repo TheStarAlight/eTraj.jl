@@ -19,6 +19,7 @@ t = get_atom("H")
 for init_cond in [:ADK, :SPANE, :SPA]
     perform_traj_simulation(
         init_cond_method    = init_cond,
+        traj_phase_method   = :CTMC,
         laser               = l,
         target              = t,
         dimension           = 2,            # 2D simulation, x-y plane only
@@ -29,8 +30,7 @@ for init_cond in [:ADK, :SPANE, :SPA]
         final_p_num         = (500,500),    # the momentum spec collection grid's size (500x500)
         ss_kd_max           = 2.0,
         ss_kd_num           = 10000,        # will sample 10000 equidistant k⟂ points between -2 to +2 a.u.
-        output_path         = "$(init_cond)-CTMC_4e14_800nm_cos4_2cyc_CP.jld2",
-        traj_phase_method   = :CTMC
+        output_path         = "$(init_cond)-CTMC_4e14_800nm_cos4_2cyc_CP.jld2"
     )
 end
 ```

@@ -19,6 +19,8 @@ for int in [1e14, 3e14, 5e14, 7e14]
     t = get_atom("H")
     perform_traj_simulation(
         init_cond_method    = :ADK,
+        rate_prefix         = Set([:Pre,:Jac]),
+        traj_phase_method   = :SCTS,
         laser               = l,
         target              = t,
         dimension           = 2,
@@ -29,9 +31,7 @@ for int in [1e14, 3e14, 5e14, 7e14]
         final_p_num         = (500,500),
         ss_kd_max           = 1.0,
         ss_kd_num           = 5000,
-        output_path         = "ADK-SCTS_Bichromatic_$(int)_800+400nm_8+16cycs_CounterCP.jld2",
-        traj_phase_method   = :SCTS,
-        rate_prefix         = Set([:Pre,:Jac])
+        output_path         = "ADK-SCTS_Bichromatic_$(int)_800+400nm_8+16cycs_CounterCP.jld2"
     )
 end
 ```

@@ -7,6 +7,8 @@ t = get_atom("H"; soft_core=1e-12)
 for phase_method in [:QTMC, :SCTS]
     perform_traj_simulation(
         init_cond_method    = :ADK,
+        rate_prefix         = :Exp,
+        traj_phase_method   = phase_method,
         laser               = l,
         target              = t,
         dimension           = 2,
@@ -17,8 +19,6 @@ for phase_method in [:QTMC, :SCTS]
         final_p_num         = (500,500),
         ss_kd_max           = 1.5,
         ss_kd_num           = 10000,
-        output_path         = "ADK-$(phase_method)_9e13_800nm_1cyc_LP_ExpRate.jld2",
-        traj_phase_method   = phase_method,
-        rate_prefix         = :Exp
+        output_path         = "ADK-$(phase_method)_9e13_800nm_1cyc_LP_ExpRate.jld2"
     )
 end

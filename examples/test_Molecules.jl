@@ -20,8 +20,10 @@ path = [
 for i in eachindex(t)
     perform_traj_simulation(
         init_cond_method    = :WFAT,
+        traj_phase_method   = :CTMC,    # WFAT supports CTMC only
         laser               = l,
         target              = t[i],
+        mol_orbit_ridx      = orbit_ridx[i],
         dimension           = 2,
         sample_t_intv       = (-300,300),
         sample_t_num        = 10000,
@@ -30,8 +32,6 @@ for i in eachindex(t)
         final_p_num         = (500,500),
         ss_kd_max           = 2.0,
         ss_kd_num           = 5000,
-        output_path         = path[i],
-        traj_phase_method   = :CTMC,    # WFAT supports CTMC only
-        mol_orbit_ridx      = orbit_ridx[i]
+        output_path         = path[i]
     )
 end

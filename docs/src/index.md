@@ -85,7 +85,7 @@ This package is currently not in julia's general registry, but can be added thro
 
 ```julia
 using Pkg
-Pkg.add("https://github.com/TheStarAlight/eTraj.jl.git")
+Pkg.add(url="https://github.com/TheStarAlight/eTraj.jl.git")
 # In pkg mode of REPL:
 # (@v1.9) pkg> add https://github.com/TheStarAlight/eTraj.jl.git
 ```
@@ -133,7 +133,7 @@ Pkg.build("PyCall")
 And don't forget to install `PySCF` via pip in your system shell:
 
 ```bash
-pip install pyscf==2.3.0
+$ pip install pyscf==2.3.0
 ```
 
 #### Using Conda.jl
@@ -153,9 +153,9 @@ Conda.pip_interop(true)
 Conda.pip("install", "pyscf==2.3.0")
 ```
 
-**Note**:
-Since the `PySCF` does not support the Windows platform, the molecular calculation must be performed on a Linux or macOS platform.
-However, for Windows users, they may install the [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Windows Subsystem for Linux), which supports the `PySCF`.
+!!! warning "Note"
+    Since the `PySCF` does not support the Windows platform, the molecular calculation must be performed on a Linux or macOS platform.
+    However, for Windows users, they may install the [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Windows Subsystem for Linux), which supports the `PySCF`.
 
 ---------------------------
 

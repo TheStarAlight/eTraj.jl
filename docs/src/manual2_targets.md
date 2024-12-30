@@ -65,7 +65,7 @@ A [`GenericMolecule`](@ref) stores information about the atoms that make up the 
 as well as the asymptotic coefficients [``C_{lm}`` in Eq. (38) in [Molecular SFA](@ref MOSFA)] and WFAT's integral coefficients [Eq. (56) in [WFAT](@ref WFAT)],
 which are obtained using other quantum chemistry packages.
 
-There are two ways to initialize a [`GenericMolecule`](@ref): build from zero or from an existing file.
+There are two ways to initialize a [`GenericMolecule`](@ref): build from zero ([`GenericMolecule()`](@ref)) or from an existing file ([`LoadMolecule`](@ref)).
 
 ```@docs
 MoleculeBase

@@ -277,7 +277,7 @@ Initializes the `MolecularCalculator` of `mol` with given parameters.
 MolInitCalculator!
 
 @doc """
-    MolCalcWFATData!(mol::GenericMolecule [,orbit_ridx=0] [;kwargs...])
+    MolCalcWFATData!(mol::GenericMolecule, orbit_ridx [;kwargs...])
 
 Calculates the WFAT data of the molecule.
 - `orbit_ridx` : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
@@ -287,7 +287,7 @@ Calculates the WFAT data of the molecule.
 MolCalcWFATData!
 
 @doc """
-    MolCalcAsympCoeff!(mol::GenericMolecule, orbit_ridx; kwargs...)
+    MolCalcAsympCoeff!(mol::GenericMolecule, orbit_ridx [;kwargs...])
 
 Calculates the asymptotic coefficients of the molecule.
 - `orbit_ridx` : Index of selected orbit relative to the HOMO (e.g., `0` indicates HOMO, and `-1` indicates HOMO-1).
