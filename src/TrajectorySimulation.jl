@@ -148,11 +148,14 @@ function perform_traj_simulation(;
         )   # pack up all parameters
     job = TrajectorySimulationJob(;kwargs...)
     batch_num = ElectronSamplers.batch_num(job.sp)
+    thread_count = Threads.nthreads()
     prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true, enabled = show_progress)
     prog2 = Progress(batch_num; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1, enabled = show_progress)
-    @threads for i in 1:batch_num
-        launch_and_collect!(job, i)
-        next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$(sum(job.batch_completion))/$batch_num, $(sum(job.eff_trajs)) electrons collected]"); next!(prog2);
+    @threads :static for t in 1:thread_count
+        for i in t:thread_count:batch_num
+            launch_and_collect!(job, i)
+            next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$(sum(job.batch_completion))/$batch_num, $(sum(job.eff_trajs)) electrons collected]"); next!(prog2);
+        end
     end
     finish!(prog1); finish!(prog2); println();
     write_output!(job)
@@ -260,9 +263,9 @@ function TrajectorySimulationJob(; kwargs...)
     # ionization amplitude (spec_collect for temporary cache)
     spec_collect =
         if traj_phase_method == :CTMC
-            zeros(Float64, tuple(final_p_num...,nthreads))
+            [zeros(Float64, final_p_num...) for _ in 1:nthreads]
         else
-            zeros(ComplexF64, tuple(final_p_num...,nthreads))
+            [zeros(ComplexF64, final_p_num...) for _ in 1:nthreads]
         end
     # classical prob
     classical_prob = zeros(Float64, nthreads)
@@ -326,6 +329,7 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob, batch_id::Integer)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
     threadid = Threads.threadid()
+    spec_collect_current = spec_collect[threadid]
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 4 : 5 # x,y,px,py[,phase]
@@ -380,11 +384,11 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob, batch_id::Integer)
             else
                 pyIdx = 1
             end
-            if checkbounds(Bool, spec_collect, pxIdx,pyIdx, threadid)
+            if checkbounds(Bool, spec_collect_current, pxIdx,pyIdx)
                 if traj_phase_method == :CTMC
-                    spec_collect[pxIdx,pyIdx, threadid] += prob # prob
+                    spec_collect_current[pxIdx,pyIdx] += prob # prob
                 else
-                    spec_collect[pxIdx,pyIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
+                    spec_collect_current[pxIdx,pyIdx] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
                 classical_prob_uncollected[threadid] += prob
@@ -420,6 +424,7 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob, batch_id::Integer)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
     threadid = Threads.threadid()
+    spec_collect_current = spec_collect[threadid]
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 6 : 7 # x,y,z,px,py,pz[,phase]
@@ -479,11 +484,11 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob, batch_id::Integer)
             else
                 pzIdx = 1
             end
-            if checkbounds(Bool, spec_collect, pxIdx,pyIdx,pzIdx, threadid)
+            if checkbounds(Bool, spec_collect_current, pxIdx,pyIdx,pzIdx)
                 if traj_phase_method == :CTMC
-                    spec_collect[pxIdx,pyIdx,pzIdx, threadid] += prob # prob
+                    spec_collect_current[pxIdx,pyIdx,pzIdx] += prob # prob
                 else
-                    spec_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
+                    spec_collect_current[pxIdx,pyIdx,pzIdx] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
                 classical_prob_uncollected[threadid] += prob
@@ -515,7 +520,7 @@ function write_output!(job::TrajectorySimulationJob)
     if job.dimension == 3
         file["pz"] = job.pz
     end
-    ion_prob_final = sum(job.spec_collect, dims=ndims(job.spec_collect))
+    ion_prob_final = sum(job.spec_collect)
     if job.traj_phase_method == :CTMC
         fmt == :jld2 && write(file, "momentum_spec", ion_prob_final; compress=job.output_compress)
         if fmt == :h5
