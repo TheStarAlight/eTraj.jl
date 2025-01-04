@@ -302,11 +302,11 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         (phase_method == :CTMC) ? 6 : 7 # x,y,kx,ky,t0,rate[,phase]
     end
 
-    sample_count_thread = zeros(Int,nthreads())
-    init_thread = if ! sp.monte_carlo
-        zeros(Float64, dim, nthreads(), length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
+    sample_count = 0
+    init = if ! sp.monte_carlo
+        zeros(Float64, dim, length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition
     else
-        zeros(Float64, dim, nthreads(), sp.mc_kt_num)
+        zeros(Float64, dim, sp.mc_kt_num)
     end
 
     k0_cutoff_crit = 1e-4   # cutoff limit of small k0 electrons, which confuses the adaptive ODE solver.
@@ -315,7 +315,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         kd_samples = sp.ss_kd_samples
         kz_samples = sp.ss_kz_samples
         kdNum, kzNum = length(kd_samples), length(kz_samples)
-        @threads for ikd in 1:kdNum
+        for ikd in 1:kdNum
             for ikz in 1:kzNum
                 kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
                 if kd0^2+kz0^2 < k0_cutoff_crit^2
@@ -332,22 +332,22 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
                 if isnan(rate) || rate < cutoff_limit
                     continue    # discard the sample
                 end
-                sample_count_thread[threadid()] += 1
+                sample_count += 1
                 if sp.dimension == 3
-                    init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
+                    init[1:8,sample_count] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
                     if phase_method != :CTMC
-                        init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                        init[9,sample_count] = angle(amp)
                     end
                 else # dimension == 2
-                    init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate]
+                    init[1:6,sample_count] = [x0,y0,kx0,ky0,tr,rate]
                     if phase_method != :CTMC
-                        init_thread[7,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                        init[7,sample_count] = angle(amp)
                     end
                 end
             end
         end
     else
-        @threads for i in 1:sp.mc_kt_num
+        for i in 1:sp.mc_kt_num
             if sp.dimension == 3
                 kd0, kz0 = gen_rand_pt_2dsq(sp.mc_kd_max, sp.mc_kz_max)
                 if sp.mc_kd_max == 0
@@ -375,29 +375,22 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
             if isnan(rate) || rate < cutoff_limit
                 continue    # discard the sample
             end
-            sample_count_thread[threadid()] += 1
+            sample_count += 1
             if sp.dimension == 3
-                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
+                init[1:8,sample_count] = [x0,y0,z0,kx0,ky0,kz0,tr,rate]
                 if phase_method != :CTMC
-                    init_thread[9,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                    init[9,sample_count] = angle(amp)
                 end
             else # dimension == 2
-                init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate]
+                init[1:6,sample_count] = [x0,y0,kx0,ky0,tr,rate]
                 if phase_method != :CTMC
-                    init_thread[7,threadid(),sample_count_thread[threadid()]] = angle(amp)
+                    init[7,sample_count] = angle(amp)
                 end
             end
         end
     end
-    if sum(sample_count_thread) == 0
+    if sample_count == 0
         return nothing
     end
-    # collect electron samples from different threads.
-    init = zeros(Float64, dim, sum(sample_count_thread))
-    N = 0
-    for i in 1:nthreads()
-        init[:,N+1:N+sample_count_thread[i]] = init_thread[:,i,1:sample_count_thread[i]]
-        N += sample_count_thread[i]
-    end
-    return init
+    return init[:,1:sample_count]
 end

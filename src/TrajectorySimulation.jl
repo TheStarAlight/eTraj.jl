@@ -9,7 +9,7 @@ using Parameters: @pack!, @unpack
 using Base.Threads
 using LinearAlgebra: norm, ×
 using StaticArrays: SVector, @SVector
-using OrdinaryDiffEq: ODEProblem, remake, solve, Tsit5, EnsembleProblem, EnsembleThreads, ReturnCode
+using OrdinaryDiffEq: ODEProblem, remake, solve, Tsit5, EnsembleProblem, EnsembleSerial, ReturnCode
 using ProgressMeter: Progress, ProgressUnknown, BarGlyphs, next!, finish!
 using Pkg
 
@@ -28,12 +28,11 @@ mutable struct TrajectorySimulationJob
     pz;
 
     nthreads;
-    sample_step;
-    n_eff_traj;
-    ion_prob_sum_temp;
-    ion_prob_collect;
+    batch_completion;
+    eff_trajs;
+    spec_collect;
     classical_prob;
-    ion_prob_final;
+    classical_prob_uncollected;
 
     file;
     output_fmt;
@@ -151,9 +150,9 @@ function perform_traj_simulation(;
     batch_num = ElectronSamplers.batch_num(job.sp)
     prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true, enabled = show_progress)
     prog2 = Progress(batch_num; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1, enabled = show_progress)
-    for i in 1:batch_num
-        launch_and_collect!(job)
-        next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$i/$batch_num, $(job.n_eff_traj) electrons collected]"); next!(prog2);
+    @threads for i in 1:batch_num
+        launch_and_collect!(job, i)
+        next!(prog1,spinner=raw"-\|/",desc="Launching electrons and collecting ... [batch #$(sum(job.batch_completion))/$batch_num, $(sum(job.eff_trajs)) electrons collected]"); next!(prog2);
     end
     finish!(prog1); finish!(prog2); println();
     write_output!(job)
@@ -258,17 +257,19 @@ function TrajectorySimulationJob(; kwargs...)
     else
         nothing
     end
-    # ionization amplitude (ion_prob_final is for final data, ion_prob_sum_temp & ion_prob_collect are for temporary cache)
-    ion_prob_final, ion_prob_sum_temp, ion_prob_collect =
+    # ionization amplitude (spec_collect for temporary cache)
+    spec_collect =
         if traj_phase_method == :CTMC
-            zeros(Float64, final_p_num),     zeros(Float64, final_p_num),     zeros(Float64, tuple(final_p_num...,nthreads))
+            zeros(Float64, tuple(final_p_num...,nthreads))
         else
-            zeros(ComplexF64, final_p_num),  zeros(ComplexF64, final_p_num),  zeros(ComplexF64, tuple(final_p_num...,nthreads))
+            zeros(ComplexF64, tuple(final_p_num...,nthreads))
         end
     # classical prob
-    classical_prob = Dict{Symbol,Float64}()
-        classical_prob[:ion]                = 0.
-        classical_prob[:ion_uncollected]    = 0.
+    classical_prob = zeros(Float64, nthreads)
+    classical_prob_uncollected = zeros(Float64, nthreads)
+    # batch_completion & eff_trajs
+    batch_completion = zeros(Int, batch_num(sp))
+    eff_trajs = zeros(Int, batch_num(sp))
     #* pack up effective parameters
     params = OrderedDict{Symbol,Any}()
     @pack! params = (
@@ -292,30 +293,27 @@ function TrajectorySimulationJob(; kwargs...)
         @pack! params = (mol_orbit_ridx)
     end
     #* initialize job
-    return TrajectorySimulationJob(sp,laser,target,dimension,traj_phase_method,traj_t_final,traj_rtol,final_p_max,final_p_num,px,py,pz,nthreads,0,0,ion_prob_sum_temp,ion_prob_collect,classical_prob,ion_prob_final,file,output_fmt,output_compress,output_path,params)
+    return TrajectorySimulationJob(sp,laser,target,dimension,traj_phase_method,traj_t_final,traj_rtol,final_p_max,final_p_num,px,py,pz,nthreads,batch_completion,eff_trajs,spec_collect,classical_prob,classical_prob_uncollected,file,output_fmt,output_compress,output_path,params)
 end
 
-function launch_and_collect!(job::TrajectorySimulationJob)
+function launch_and_collect!(job::TrajectorySimulationJob, batch_id::Integer)
     if job.dimension == 2
-        launch_and_collect_2D!(job)
+        launch_and_collect_2D!(job, batch_id)
     else
-        launch_and_collect_3D!(job)
+        launch_and_collect_3D!(job, batch_id)
     end
 end
 
-function launch_and_collect_2D!(job::TrajectorySimulationJob)
+function launch_and_collect_2D!(job::TrajectorySimulationJob, batch_id::Integer)
     @assert job.dimension == 2
-    if job.sample_step >= batch_num(job.sp)
-        @warn "[launch_and_collect!] `TrajectorySimulationJob` has already finished collection of all $(job.sample_step) batches of electrons, no electrons would be launched."
-        return
-    end
-    init = gen_electron_batch(job.sp, job.sample_step+1)
-    isnothing(init) && (job.sample_step += 1; return)
+    (job.batch_completion[batch_id] == 1) && return
+    init = gen_electron_batch(job.sp, batch_id)
+    isnothing(init) && (job.batch_completion[batch_id] = 1 ; return)
     # introduce shorthands to avoid the `job.` prefix.
     dimension, target, laser, traj_phase_method, traj_t_final, traj_rtol, final_p_num, final_p_max =
         job.dimension, job.target, job.laser, job.traj_phase_method, job.traj_t_final, job.traj_rtol, job.final_p_num, job.final_p_max
-    ion_prob_sum_temp, ion_prob_collect, classical_prob, ion_prob_final =
-        job.ion_prob_sum_temp, job.ion_prob_collect, job.classical_prob, job.ion_prob_final
+    spec_collect, classical_prob, classical_prob_uncollected =
+        job.spec_collect, job.classical_prob, job.classical_prob_uncollected
 
     Ip                  = IonPotential(target)
     Fx::Function        = LaserFx(laser)
@@ -327,9 +325,7 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
     batch_size = size(init,2)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
-    nthreads = Threads.nthreads()
-    class_prob_ion              = zeros(nthreads)
-    class_prob_ion_uncollected  = zeros(nthreads)
+    threadid = Threads.threadid()
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 4 : 5 # x,y,px,py[,phase]
@@ -341,10 +337,9 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
             (prob,i,repeat) -> remake(prob; u0=SVector{5}([init[k,i] for k in [1:4;7]]), tspan = (init[5,i],Float64(traj_t_final)))
         end
     ensemble_prob = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, save_everystep=false)
+    sol = solve(ensemble_prob, Tsit5(), EnsembleSerial(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, save_everystep=false)
     # collect and summarize.
-    Threads.@threads for i in 1:batch_size
-        threadid = Threads.threadid()
+    for i in 1:batch_size
         x0,y0,px0,py0 = sol.u[i].u[ 1 ][1:4]
         x, y, px, py  = sol.u[i].u[end][1:4]
         if sol.u[i].retcode != ReturnCode.Success
@@ -371,7 +366,7 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
         if E_inf ≥ 0    # finally ionized.
-            class_prob_ion[threadid] += prob
+            classical_prob[threadid] += prob
             p_inf = sqrt(2E_inf)
             a_vec = p_vec × L_vec - nucl_charge * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
@@ -385,41 +380,34 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob)
             else
                 pyIdx = 1
             end
-            if checkbounds(Bool, ion_prob_collect, pxIdx,pyIdx, threadid)
+            if checkbounds(Bool, spec_collect, pxIdx,pyIdx, threadid)
                 if traj_phase_method == :CTMC
-                    ion_prob_collect[pxIdx,pyIdx, threadid] += prob # prob
+                    spec_collect[pxIdx,pyIdx, threadid] += prob # prob
                 else
-                    ion_prob_collect[pxIdx,pyIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
+                    spec_collect[pxIdx,pyIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
-                class_prob_ion_uncollected[threadid] += prob
+                classical_prob_uncollected[threadid] += prob
             end
         else # finally become rydberg.
             # currently does not support Rydberg collecting.
         end
     end
-    sum!(ion_prob_sum_temp, ion_prob_collect)
-    ion_prob_final .+= ion_prob_sum_temp
-    classical_prob[:ion]                += sum(class_prob_ion)
-    classical_prob[:ion_uncollected]    += sum(class_prob_ion_uncollected)
-
-    job.sample_step += 1
-    job.n_eff_traj += size(init, 2)
+    job.batch_completion[batch_id] = 1
+    job.eff_trajs[batch_id] += batch_size
+    return
 end
 
-function launch_and_collect_3D!(job::TrajectorySimulationJob)
+function launch_and_collect_3D!(job::TrajectorySimulationJob, batch_id::Integer)
     @assert job.dimension == 3
-    if job.sample_step >= batch_num(job.sp)
-        @warn "[launch_and_collect!] `TrajectorySimulationJob` has already finished collection of all $(job.sample_step) batches of electrons, no electrons would be launched."
-        return
-    end
-    init = gen_electron_batch(job.sp, job.sample_step+1)
-    isnothing(init) && (job.sample_step += 1; return)
+    (job.batch_completion[batch_id] == 1) && return
+    init = gen_electron_batch(job.sp, batch_id)
+    isnothing(init) && (job.batch_completion[batch_id] = 1 ; return)
     # introduce shorthands to avoid the `job.` prefix.
     dimension, target, laser, traj_phase_method, traj_t_final, traj_rtol, final_p_num, final_p_max =
         job.dimension, job.target, job.laser, job.traj_phase_method, job.traj_t_final, job.traj_rtol, job.final_p_num, job.final_p_max
-    ion_prob_sum_temp, ion_prob_collect, classical_prob, ion_prob_final =
-        job.ion_prob_sum_temp, job.ion_prob_collect, job.classical_prob, job.ion_prob_final
+    spec_collect, classical_prob, classical_prob_uncollected =
+        job.spec_collect, job.classical_prob, job.classical_prob_uncollected
 
     Ip                  = IonPotential(target)
     Fx::Function        = LaserFx(laser)
@@ -431,9 +419,7 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
     batch_size = size(init,2)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
-    nthreads = Threads.nthreads()
-    class_prob_ion              = zeros(nthreads)
-    class_prob_ion_uncollected  = zeros(nthreads)
+    threadid = Threads.threadid()
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 6 : 7 # x,y,z,px,py,pz[,phase]
@@ -445,10 +431,9 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
             (prob,i,repeat) -> remake(prob; u0=SVector{7}([init[k,i] for k in [1:6;9]]), tspan = (init[7,i],Float64(traj_t_final)))
         end
     ensemble_prob = EnsembleProblem(traj_ODE_prob, prob_func=init_traj, safetycopy=false)
-    sol = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, save_everystep=false)
+    sol = solve(ensemble_prob, Tsit5(), EnsembleSerial(), trajectories=batch_size, adaptive=true, reltol=traj_rtol, save_everystep=false)
     # collect and summarize.
-    Threads.@threads for i in 1:batch_size
-        threadid = Threads.threadid()
+    for i in 1:batch_size
         x0,y0,z0,px0,py0,pz0 = sol.u[i].u[ 1 ][1:6]
         x, y, z, px, py, pz  = sol.u[i].u[end][1:6]
         if sol.u[i].retcode != ReturnCode.Success
@@ -475,7 +460,7 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
         if E_inf ≥ 0    # finally ionized.
-            class_prob_ion[threadid] += prob
+            classical_prob[threadid] += prob
             p_inf = sqrt(2E_inf)
             a_vec = p_vec × L_vec - nucl_charge * r_vec ./ norm(r_vec)
             p_inf_vec = (p_inf/(1+p_inf^2*L2)) .* (p_inf .* (L_vec×a_vec) - a_vec)
@@ -494,30 +479,25 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob)
             else
                 pzIdx = 1
             end
-            if checkbounds(Bool, ion_prob_collect, pxIdx,pyIdx,pzIdx, threadid)
+            if checkbounds(Bool, spec_collect, pxIdx,pyIdx,pzIdx, threadid)
                 if traj_phase_method == :CTMC
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += prob # prob
+                    spec_collect[pxIdx,pyIdx,pzIdx, threadid] += prob # prob
                 else
-                    ion_prob_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
+                    spec_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
-                class_prob_ion_uncollected[threadid] += prob
+                classical_prob_uncollected[threadid] += prob
             end
         else # finally become rydberg.
             # currently does not support Rydberg collecting.
         end
     end
-    sum!(ion_prob_sum_temp, ion_prob_collect)
-    ion_prob_final .+= ion_prob_sum_temp
-    classical_prob[:ion]                += sum(class_prob_ion)
-    classical_prob[:ion_uncollected]    += sum(class_prob_ion_uncollected)
-
-    job.sample_step += 1
-    job.n_eff_traj += size(init, 2)
+    job.batch_completion[batch_id] = 1
+    job.eff_trajs[batch_id] += batch_size
 end
 
 function write_output!(job::TrajectorySimulationJob)
-    if job.sample_step != batch_num(job.sp)
+    if reduce(*,job.batch_completion) != 1
         @error "[write_output!] The job is not finished yet."
         return
     end
@@ -535,28 +515,29 @@ function write_output!(job::TrajectorySimulationJob)
     if job.dimension == 3
         file["pz"] = job.pz
     end
+    ion_prob_final = sum(job.spec_collect, dims=ndims(job.spec_collect))
     if job.traj_phase_method == :CTMC
-        fmt == :jld2 && write(file, "momentum_spec", job.ion_prob_final; compress=job.output_compress)
+        fmt == :jld2 && write(file, "momentum_spec", ion_prob_final; compress=job.output_compress)
         if fmt == :h5
             if job.output_compress
-                file["momentum_spec", shuffle=true, deflate=6] = job.ion_prob_final
+                file["momentum_spec", shuffle=true, deflate=6] = ion_prob_final
             else
-                file["momentum_spec"] = job.ion_prob_final
+                file["momentum_spec"] = ion_prob_final
             end
         end
     else
-        fmt == :jld2 && write(file, "momentum_spec", job.ion_prob_final .|> abs2; compress=job.output_compress)
+        fmt == :jld2 && write(file, "momentum_spec", ion_prob_final .|> abs2; compress=job.output_compress)
         if fmt == :h5
             if job.output_compress
-                file["momentum_spec", shuffle=true, deflate=6] = job.ion_prob_final .|> abs2
+                file["momentum_spec", shuffle=true, deflate=6] = ion_prob_final .|> abs2
             else
-                file["momentum_spec"] = job.ion_prob_final .|> abs2
+                file["momentum_spec"] = ion_prob_final .|> abs2
             end
         end
     end
-    file["ion_prob"] = job.classical_prob[:ion]
-    file["ion_prob_uncollected"] = job.classical_prob[:ion_uncollected]
-    file["num_effective_traj"] = job.n_eff_traj
+    file["ion_prob"] = job.classical_prob |> sum
+    file["ion_prob_uncollected"] = job.classical_prob_uncollected |> sum
+    file["num_effective_traj"] = job.eff_trajs |> sum
     close(file)
     mv(job.output_path * "!", job.output_path)
 end
