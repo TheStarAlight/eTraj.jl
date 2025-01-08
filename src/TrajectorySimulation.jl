@@ -357,18 +357,18 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob, batch_id::Integer)
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i].u[end][5])
         prob = init[6,i]
-        if traj_phase_method == :SCTS
-            phase += Ip * init[5,i] # Ip*tr
-            # asymptotic Coulomb phase correction term in SCTS
-            sqrtb = (2Ip)^(-0.5)
-            g = sqrt(1+2Ip*(x*py-y*px)^2)
-            phase -= px0*x0+py0*y0 + nucl_charge*sqrtb*(log(g)+asinh((x*px+y*py)/(g*sqrtb)))
-        end
         E_inf = (px^2+py^2)/2 + targetP(x,y,0.0)
         r_vec = [x, y, 0.0]
         p_vec = [px,py,0.0]
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
+        if E_inf > 0 && traj_phase_method == :SCTS
+            phase += Ip * init[5,i] # Ip*tr
+            # asymptotic Coulomb phase correction term in SCTS
+            sqrtb = (2E_inf)^(-0.5)
+            g = sqrt(1+2E_inf*L2)
+            phase -= nucl_charge*sqrtb*(log(g)+asinh((x*px+y*py)/(g*sqrtb)))
+        end
         if E_inf ≥ 0    # finally ionized.
             classical_prob[threadid] += prob
             p_inf = sqrt(2E_inf)
@@ -452,18 +452,18 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob, batch_id::Integer)
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i].u[end][7])
         prob = init[8,i]
-        if traj_phase_method == :SCTS
-            phase += Ip * init[7,i] # Ip*tr
-            # asymptotic Coulomb phase correction term in SCTS
-            sqrtb = (2Ip)^(-0.5)
-            g = sqrt(1+2Ip*((y*pz-z*py)^2+(z*px-x*pz)^2+(x*py-y*px)^2))
-            phase -= nucl_charge*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
-        end
         E_inf = (px^2+py^2+pz^2)/2 + targetP(x,y,z)
         r_vec = [x, y, z ]
         p_vec = [px,py,pz]
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
+        if E_inf > 0 && traj_phase_method == :SCTS
+            phase += Ip * init[7,i] # Ip*tr
+            # asymptotic Coulomb phase correction term in SCTS
+            sqrtb = (2E_inf)^(-0.5)
+            g = sqrt(1+2E_inf*L2)
+            phase -= nucl_charge*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
+        end
         if E_inf ≥ 0    # finally ionized.
             classical_prob[threadid] += prob
             p_inf = sqrt(2E_inf)
