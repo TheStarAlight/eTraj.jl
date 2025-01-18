@@ -200,12 +200,14 @@ function Serialize(t::SAEAtom)
     asymp_coeff = t.asymp_coeff
     name        = t.name
     soft_core   = t.soft_core
+    quan_ax_θ   = t.quan_ax_θ
+    quan_ax_ϕ   = t.quan_ax_ϕ
     a1 = t.a1
     b1 = t.b1
     a2 = t.a2
     b2 = t.b2
     a3 = t.a3
     b3 = t.b3
-    @pack! dict = (type, Ip, nucl_charge, l, m, asymp_coeff, a1,b1,a2,b2,a3,b3, soft_core, name)
+    @pack! dict = (type, Ip, nucl_charge, l, m, asymp_coeff, quan_ax_θ, quan_ax_ϕ, a1,b1,a2,b2,a3,b3, soft_core, name)
     return dict
 end
