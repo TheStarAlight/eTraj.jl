@@ -238,7 +238,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
     if target isa MoleculeBase
         lmm_list = [(l,m,m_) for l in 0:lMax for m in -l:l for m_ in -l:l] # this cache improves the efficiency a lot
     elseif target isa SAEAtomBase
-        lmm_list = [(l,m,m_) for m in -l:l for m_ in -l:l]
+        lmm_list = [(l,m,m_) for m_ in -l:l]
     end
     @inline function pre_numerator((l,m,m_),kts)
         if target isa MoleculeBase
@@ -309,7 +309,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         zeros(Float64, dim, sp.mc_kt_num)
     end
 
-    k0_cutoff_crit = 1e-4   # cutoff limit of small k0 electrons, which confuses the adaptive ODE solver.
+    kd_cutoff_crit = 1e-4   # cutoff limit of small k0 electrons, which confuses the adaptive ODE solver.
 
     if ! sp.monte_carlo
         kd_samples = sp.ss_kd_samples
@@ -318,7 +318,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
         for ikd in 1:kdNum
             for ikz in 1:kzNum
                 kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
-                if kd0^2+kz0^2 < k0_cutoff_crit^2
+                if abs(kd0) < kd_cutoff_crit
                     continue
                 end
                 kx0 = kd0*-sin(φ)
@@ -361,7 +361,7 @@ function gen_electron_batch(sp::ADKSampler, batch_id::Integer)
                 kd0 = gen_rand_pt_1d(sp.mc_kd_max)
                 kz0 = 0.0
             end
-            if kd0^2+kz0^2 < k0_cutoff_crit^2
+            if abs(kd0) < kd_cutoff_crit
                 continue
             end
             kx0 = kd0*-sin(φ)
