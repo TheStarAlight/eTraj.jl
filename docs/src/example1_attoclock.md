@@ -1,5 +1,17 @@
 # Example: Attoclock & Initial Condition Methods
 
+!!! note "Guide on Generating Plots"
+    We attached scripts for generating plots for each example in the `examples/` directory.
+    This script requires additional installation of the `Plots.jl` and `PyPlot.jl` packages.
+    To install the dependencies, first, follow the instructions [here](@ref config_py) to configure the `PyCall.jl` package and install the `matplotlib` python package.
+    Then, install `Plots.jl` and `PyPlot.jl` packages by running the following commands:
+    ```julia
+    using Pkg
+    Pkg.add("Plots")
+    Pkg.add("PyPlot")
+    ```
+    After installing the dependencies, you can run the plot scripts either in a Julia REPL or directly from the command line, see the ["Running Scripts" section](@ref running-scripts).
+
 This example is adapted from [[*JPB* **54**, 144001 (2021)](https://doi.org/10.1088/1361-6455/ac0d3e)].
 
 In the present example of attoclock experiment, an ultra-short pulse of circular polarization is employed to explore the ultrafast attosecond dynamics such as the tunneling time delay.
