@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Step-by-step Tutorial · eTraj.jl</title><meta name="title" content="Step-by-step Tutorial · eTraj.jl"/><meta property="og:title" content="Step-by-step Tutorial · eTraj.jl"/><meta property="twitter:title" content="Step-by-step Tutorial · eTraj.jl"/><meta name="description" content="Documentation for eTraj.jl."/><meta property="og:description" content="Documentation for eTraj.jl."/><meta property="twitter:description" content="Documentation for eTraj.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">eTraj.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Step-by-step Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Installing-Julia"><span>Installing Julia</span></a></li><li><a class="tocitem" href="#Package-Management"><span>Package Management</span></a></li><li><a class="tocitem" href="#Configuring-Python-and-PySCF-(*Optional*)"><span>Configuring Python and PySCF (<em>Optional</em>)</span></a></li><li><a class="tocitem" href="#running-scripts"><span>Running Scripts</span></a></li><li><a class="tocitem" href="#Using-eTraj"><span>Using <code>eTraj</code></span></a></li><li><a class="tocitem" href="#Viewing-and-Analyzing-the-Results"><span>Viewing and Analyzing the Results</span></a></li></ul></li><li><a class="tocitem" href="../troubleshooting/">Troubleshooting</a></li><li><span class="tocitem">Theory</span><ul><li><a class="tocitem" href="../theory1_init_cond/">Initial Conditions</a></li><li><a class="tocitem" href="../theory2_traj_simu_quant_phase/">Trajectory Simulation and Phase Methods</a></li></ul></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../manual1_lasers/">The <code>Lasers</code> Module</a></li><li><a class="tocitem" href="../manual2_targets/">The <code>Targets</code> Module</a></li><li><a class="tocitem" href="../manual3_sampling_traj_simu/">Sampling &amp; Traj Simulation</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../example1_attoclock/">Attoclock &amp; Initial Condition Methods</a></li><li><a class="tocitem" href="../example2_ShortLP_phase_methods/">Short LP Pulses &amp; Phase Methods</a></li><li><a class="tocitem" href="../example3_bichromatic_pulse/">Bichromatic ω-2ω Pulses</a></li><li><a class="tocitem" href="../example4_WFAT-CTMC/">WFAT-CTMC for Molecules</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Step-by-step Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Step-by-step Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/TheStarAlight/eTraj.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Step-by-step-Tutorial-of-Installation"><a class="docs-heading-anchor" href="#Step-by-step-Tutorial-of-Installation">Step-by-step Tutorial of Installation</a><a id="Step-by-step-Tutorial-of-Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Step-by-step-Tutorial-of-Installation" title="Permalink"></a></h1><p><em>– For beginners in julia</em></p><p>This section provides a step-by-step tutorial on how to install and use <em>eTraj</em>.</p><ul><li><a href="#Step-by-step-Tutorial-of-Installation">Step-by-step Tutorial of Installation</a></li><li class="no-marker"><ul><li><a href="#Installing-Julia">Installing Julia</a></li><li class="no-marker"><ul><li><a href="#Windows">Windows</a></li><li><a href="#Linux-and-macOS">Linux &amp; macOS</a></li></ul></li><li><a href="#Package-Management">Package Management</a></li><li><a href="#Configuring-Python-and-PySCF-(*Optional*)">Configuring Python and PySCF (<em>Optional</em>)</a></li><li class="no-marker"><ul><li><a href="#Using-the-local-Python-environment">Using the local Python environment</a></li><li><a href="#Using-Conda.jl">Using Conda.jl</a></li></ul></li><li><a href="#running-scripts">Running Scripts</a></li><li><a href="#Using-eTraj">Using <code>eTraj</code></a></li><li class="no-marker"><ul><li><a href="#Defining-Lasers">Defining Lasers</a></li><li><a href="#Defining-Targets">Defining Targets</a></li><li class="no-marker"><ul><li><a href="#Atoms">Atoms</a></li><li><a href="#Molecules">Molecules</a></li></ul></li><li><a href="#Trajectory-Simulation-Parameters">Trajectory Simulation Parameters</a></li><li class="no-marker"><ul><li><a href="#Initial-Condition-and-Phase-Methods">Initial Condition and Phase Methods</a></li><li><a href="#Detector-Configuration">Detector Configuration</a></li><li><a href="#Sampling-Parameters">Sampling Parameters</a></li></ul></li></ul></li><li><a href="#Viewing-and-Analyzing-the-Results">Viewing and Analyzing the Results</a></li></ul></li></ul><hr/><h2 id="Installing-Julia"><a class="docs-heading-anchor" href="#Installing-Julia">Installing Julia</a><a id="Installing-Julia-1"></a><a class="docs-heading-anchor-permalink" href="#Installing-Julia" title="Permalink"></a></h2><p>The manual for installation of Julia is available at the <a href="https://julialang.org/downloads/">official website</a>.</p><h3 id="Windows"><a class="docs-heading-anchor" href="#Windows">Windows</a><a id="Windows-1"></a><a class="docs-heading-anchor-permalink" href="#Windows" title="Permalink"></a></h3><p>For Windows users, install using the following command:</p><pre><code class="language-bash hljs">&gt; winget install julia -s msstore</code></pre><p>This would also install <a href="https://github.com/JuliaLang/juliaup"><code>juliaup</code></a> which helps in managing multiple versions of Julia.</p><p>The <a href="https://github.com/abelsiqueira/jill"><code>jill</code></a> is an alternative to <code>juliaup</code> which can be used for installing and managing multiple versions of Julia. It would automatically search for the fastest mirror and download the installer and is useful for users with slow internet connections.</p><p>For offline installation, an installer is available at <a href="https://julialang.org/downloads/#manual_download">here</a>. Please follow the <a href="https://julialang.org/downloads/platform/#windows">instructions</a> and make sure that julia is added to the <code>PATH</code> environment variable.</p><h3 id="Linux-and-macOS"><a class="docs-heading-anchor" href="#Linux-and-macOS">Linux &amp; macOS</a><a id="Linux-and-macOS-1"></a><a class="docs-heading-anchor-permalink" href="#Linux-and-macOS" title="Permalink"></a></h3><p>For Linux &amp; macOS users, use the following command:</p><pre><code class="language-bash hljs">$ curl -fsSL https://install.julialang.org | sh</code></pre><p>which would install <a href="https://github.com/JuliaLang/juliaup"><code>juliaup</code></a> for multiple version management.</p><p>The <a href="https://github.com/abelsiqueira/jill"><code>jill</code></a> is an alternative to <code>juliaup</code> which can be used for installing and managing multiple versions of Julia. It would automatically search for the fastest mirror and download the installer and is useful for users with slow internet connections.</p><p>For offline installation, the binaries are available at <a href="https://julialang.org/downloads/#manual_download">here</a>. Please follow the instructions for <a href="https://julialang.org/downloads/platform/#linux_and_freebsd">Linux</a> and <a href="https://julialang.org/downloads/platform/#macos">macOS</a> and make sure that julia is added to the <code>PATH</code> environment variable.</p><div class="admonition is-warning"><header class="admonition-header">Note</header><div class="admonition-body"><p>It is not recommended to install julia using Linux package managers or macOS homebrew. See this <a href="https://julialang.org/downloads/#please_do_not_use_the_version_of_julia_shipped_by_linux_or_bsd_package_managers">notice</a>.</p></div></div><hr/><h2 id="Package-Management"><a class="docs-heading-anchor" href="#Package-Management">Package Management</a><a id="Package-Management-1"></a><a class="docs-heading-anchor-permalink" href="#Package-Management" title="Permalink"></a></h2><p>Configuration files and packages are stored in <code>~/.julia/</code> directory.</p><p>The package manager is accessible through the REPL<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup> by typing <code>]</code>. This will open a new prompt (starting by <code>(@v1.x) pkg&gt;</code>) where you can install (<code>add</code>), update (<code>up</code>), or remove (<code>rm</code>) packages. To install/update/remove a package, simply type <code>add</code>/<code>up</code>/<code>rm</code> in the package mode, following the package name, and press <code>Enter</code>. For example:</p><pre><code class="nohighlight hljs">julia&gt; ]
+(@v1.9) pkg&gt; add Example
+   Resolving package versions...
+   Installed Example ─ v0.5.3
+    Updating `~/.julia/environments/v1.9/Project.toml`
+  [7876af07] + Example v0.5.3
+    Updating `~/.julia/environments/v1.9/Manifest.toml`
+  [7876af07] + Example v0.5.3</code></pre><p>To view the list of installed packages, type <code>status</code> or <code>st</code> in package mode and press <code>Enter</code>.</p><p>See the <a href="https://docs.julialang.org/en/v1/stdlib/Pkg/">documentation</a> for more details on using the package manager.</p><p>To install <code>eTraj</code>, use the following command in package mode:</p><pre><code class="nohighlight hljs">(@v1.9) pkg&gt; add https://github.com/TheStarAlight/eTraj.jl.git</code></pre><p>For offline installation, use git to clone the repository:</p><pre><code class="nohighlight hljs">$ git clone https://github.com/TheStarAlight/eTraj.jl.git</code></pre><p>and then install it in Julia by specifying the directory:</p><pre><code class="nohighlight hljs">(@v1.9) pkg&gt; add /path/to/eTraj</code></pre><hr/><h2 id="Configuring-Python-and-PySCF-(*Optional*)"><a class="docs-heading-anchor" href="#Configuring-Python-and-PySCF-(*Optional*)">Configuring Python and PySCF (<em>Optional</em>)</a><a id="Configuring-Python-and-PySCF-(*Optional*)-1"></a><a class="docs-heading-anchor-permalink" href="#Configuring-Python-and-PySCF-(*Optional*)" title="Permalink"></a></h2><p>Currently, the calculation of molecules&#39; asymptotic coefficients (for MO-ADK/MO-SFA) and WFAT coefficients rely on the <a href="https://github.com/pyscf/pyscf"><code>PySCF</code></a> python package. <code>eTraj</code> calls the PySCF using the <a href="https://github.com/JuliaPy/PyCall.jl"><code>PyCall.jl</code></a> package.</p><p>There are two ways to set up the Python environment used by <code>PyCall</code>:</p><ol><li>using your local Python environment by specifying the path of your Python executable in <code>ENV[&quot;PYTHON&quot;]</code> and build the PyCall package.</li><li>using a private Python environment managed by the <a href="https://github.com/JuliaPy/Conda.jl"><code>Conda.jl</code></a>, which is implicitly installed by the <code>PyCall</code> package by default;</li></ol><h3 id="Using-the-local-Python-environment"><a class="docs-heading-anchor" href="#Using-the-local-Python-environment">Using the local Python environment</a><a id="Using-the-local-Python-environment-1"></a><a class="docs-heading-anchor-permalink" href="#Using-the-local-Python-environment" title="Permalink"></a></h3><p>To correctly set up the configuration of <code>PyCall</code>, first, set the <code>PYTHON</code> environment variable to the path your Python executable, and build the <code>PyCall</code> package:</p><pre><code class="language-julia hljs">ENV[&quot;PYTHON&quot;] = &quot;path/to/python_exec&quot;
+using Pkg
+Pkg.build(&quot;PyCall&quot;)
+# In pkg mode of REPL:
+# (@v1.9) pkg&gt; build PyCall</code></pre><p>And don&#39;t forget to install <code>PySCF</code> via pip in your system shell:</p><pre><code class="language-bash hljs">$ pip install pyscf==2.3.0</code></pre><h3 id="Using-Conda.jl"><a class="docs-heading-anchor" href="#Using-Conda.jl">Using Conda.jl</a><a id="Using-Conda.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Using-Conda.jl" title="Permalink"></a></h3><p>Before installing <code>eTraj</code>, install <code>Conda</code> first:</p><pre><code class="language-julia hljs">using Pkg
+Pkg.add(&quot;Conda&quot;)</code></pre><p>Then call <code>pip</code> within <code>Conda</code> to install <code>PySCF</code>:</p><pre><code class="language-julia hljs">using Conda
+Conda.pip_interop(true)
+Conda.pip(&quot;install&quot;, &quot;pyscf==2.3.0&quot;)</code></pre><div class="admonition is-warning"><header class="admonition-header">Note</header><div class="admonition-body"><p>Since the <code>PySCF</code> does not support the Windows platform, the molecular calculation must be performed on a Linux or macOS platform. However, for Windows users, they may install the <a href="https://learn.microsoft.com/en-us/windows/wsl/install">WSL</a> (Windows Subsystem for Linux), which supports the <code>PySCF</code>.</p></div></div><hr/><h2 id="running-scripts"><a class="docs-heading-anchor" href="#running-scripts">Running Scripts</a><a id="running-scripts-1"></a><a class="docs-heading-anchor-permalink" href="#running-scripts" title="Permalink"></a></h2><p>To run a julia script, use the following command in your terminal:</p><pre><code class="language-bash hljs">$ julia /path/to/script.jl</code></pre><p>To enable multithreading, use the <code>-t</code> option followed by the number of threads you want to use. For example, the following command runs a script with 4 threads:</p><pre><code class="language-bash hljs">$ julia -t 4 /path/to/script.jl</code></pre><p>If you want to run a script interactively, you can start Julia in REPL mode and then load your script using the <code>include</code> function. For example:</p><pre><code class="language-julia hljs">julia&gt; include(&quot;/path/to/script.jl&quot;)</code></pre><hr/><h2 id="Using-eTraj"><a class="docs-heading-anchor" href="#Using-eTraj">Using <code>eTraj</code></a><a id="Using-eTraj-1"></a><a class="docs-heading-anchor-permalink" href="#Using-eTraj" title="Permalink"></a></h2><p>It is suggested to write the simulation task in a julia script, and then run it using julia.</p><div class="admonition is-info"><header class="admonition-header">Tips</header><div class="admonition-body"><p>It is recommended to use <a href="https://code.visualstudio.com/">vscode</a> with <a href="https://github.com/julia-vscode/julia-vscode">julia extension</a> installed for GUI or the vim editor with <a href="https://github.com/JuliaEditorSupport/julia-vim">julia-vim</a> installed for TUI in order for a better coding experience. The julia extensions provide the feature of typing special Unicode characters in a LaTeX-like syntax, e.g., if you want to type the Greek letter α, you can type <code>\alpha</code>, and press <code>Tab(⇥)</code>. This feature is also available in Julia REPL.</p></div></div><hr/><h3 id="Defining-Lasers"><a class="docs-heading-anchor" href="#Defining-Lasers">Defining Lasers</a><a id="Defining-Lasers-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-Lasers" title="Permalink"></a></h3><p>The following example initializes a 4-cycle linearly polarized 800-nm laser with its peak intensity at 0.1 PW/cm² (1.0×10¹⁴ W/cm²) (See also <a href="../manual1_lasers/#Cos2Laser"><code>Cos2Laser</code></a> &amp; <a href="../manual1_lasers/#Cos4Laser"><code>Cos4Laser</code></a>):</p><pre><code class="language-julia hljs">using eTraj.Lasers, eTraj.Units
+l = Cos2Laser(                # Cos²-shape in field strength&#39;s temporal profile
+    peak_int = 1e14W/cm^2,    # Peak intensity (`0.1PW/cm^2` also works)
+    wave_len = 800.0nm,       # wavelength at 800 nm (`0.8μm` also works)
+    cyc_num  = 4,             # 10 cycles in duration (possible substitution: `duration = 10.6fs`)
+    cep      = 0.0,           # carrier-envelope phase
+    ellip    = 0.0            # linear polarization
+)</code></pre><p>Another example for Gaussian-shaped laser (See also <a href="../manual1_lasers/#GaussianLaser"><code>GaussianLaser</code></a>):</p><pre><code class="language-julia hljs">using eTraj.Lasers, eTraj.Units
+l = GaussianLaser(
+    peak_int        = 1.0PW/cm^2,
+    ang_freq        = 40.0eV,
+    FWHM_duration   = 10.0fs,
+    ellip           = 1.0
+)</code></pre><p>It is also possible to combine two monochromatic lasers to form a <a href="../manual1_lasers/#BichromaticLaser"><code>BichromaticLaser</code></a>:</p><pre><code class="language-julia hljs">using eTraj.Lasers, eTraj.Units
+l1 = Cos4Laser(peak_int=1.0PW/cm^2, wave_len=800nm, cyc_num=10, ellip=1)
+l2 = Cos4Laser(peak_int=1.0PW/cm^2, wave_len=400nm, cyc_num=20, ellip=-1)
+l = BichromaticLaser(l1=l1, l2=l2, delay=0.5fs)</code></pre><hr/><h3 id="Defining-Targets"><a class="docs-heading-anchor" href="#Defining-Targets">Defining Targets</a><a id="Defining-Targets-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-Targets" title="Permalink"></a></h3><p><code>eTraj</code> provides flexible interfaces for defining targets.</p><h4 id="Atoms"><a class="docs-heading-anchor" href="#Atoms">Atoms</a><a id="Atoms-1"></a><a class="docs-heading-anchor-permalink" href="#Atoms" title="Permalink"></a></h4><p>For atom targets, you can use either predefined atoms or create custom ones.</p><p>A <a href="../manual2_targets/#eTraj.Targets.HydrogenLikeAtom"><code>HydrogenLikeAtom</code></a>&#39;s potential is a soft-core Coulomb potential. An <a href="../manual2_targets/#eTraj.Targets.SAEAtom"><code>SAEAtom</code></a>&#39;s potential is defined according to Tong&#39;s model [<a href="https://doi.org/10.1088/0953-4075/38/15/001"><em>JPB</em> <strong>38</strong>, 2593 (2005)</a>]. An example of initialization:</p><pre><code class="language-julia hljs">using eTraj.Targets, eTraj.Units
+t1 = HydrogenLikeAtom(
+    Ip = 0.5,           # ionization potential in atomic units (or `13.6eV`)
+    Z  = 1,             # nuclear charge
+    soft_core = 1e-10,  # soft-core parameter to avoid singularity
+    name = &quot;Custom H&quot;   # optional name
+)
+t2 = SAEAtom(
+    Ip = 12.13eV,
+    Z  = 1,
+    l  = 1,         # angular momentum quantum number
+    a1 = 51.35554,  # model parameters for effective potential
+    b1 = 2.111554,
+    a2 = -99.92747,
+    b2 = 3.737221,
+    a3 = 1.644457,
+    b3 = 0.4306465,
+    asymp_coeff = 1.3,  # asymptotic coefficient of wavefunction
+    name = &quot;Custom Xe&quot;  # optional name
+)</code></pre><p>To define a target using predefined atoms, use the <a href="../manual2_targets/#eTraj.Targets.get_atom"><code>get_atom</code></a> method:</p><pre><code class="language-julia-repl hljs">julia&gt; using eTraj.Targets, eTraj.Units
+
+julia&gt; t1 = get_atom(&quot;H&quot;)      # Hydrogen atom
+[HydrogenLikeAtom] Atom H, Ip=0.5000 (13.61 eV), Z=1
+
+julia&gt; t2 = get_atom(&quot;He1p&quot;)   # He⁺ ion
+[HydrogenLikeAtom] Atom He⁺, Ip=1.0000 (27.21 eV), Z=2
+
+julia&gt; t3 = get_atom(&quot;Xe&quot;; m=1, quan_ax_θ=π/2, quan_ax_ϕ=0.0) # Xenon atom with magnetic quantum number m=1 (quantization axis is x-axis)
+[SAEAtom] Atom Xe (p orbital, m=1), Ip=0.4458 (12.13 eV), Z=1, θϕ=(90.0°,0.0°)</code></pre><p>You can view available predefined atoms using the <a href="../manual2_targets/#eTraj.Targets.get_available_atoms"><code>get_available_atoms</code></a> method:</p><pre><code class="language-julia-repl hljs">julia&gt; using eTraj.Targets
+
+julia&gt; get_available_atoms() |&gt; print
+[&quot;H&quot;, &quot;He1p&quot;, &quot;Li2p&quot;, &quot;He&quot;, &quot;Ne&quot;, &quot;Ne1p&quot;, &quot;Ne2p&quot;, &quot;Ar&quot;, &quot;Ar1p&quot;, &quot;Ar2p&quot;, &quot;V&quot;, &quot;Ni&quot;, &quot;Kr&quot;, &quot;Kr1p&quot;, &quot;Rb&quot;, &quot;Nb&quot;, &quot;Pd&quot;, &quot;Xe&quot;, &quot;Xe1p&quot;, &quot;Ta&quot;]</code></pre><h4 id="Molecules"><a class="docs-heading-anchor" href="#Molecules">Molecules</a><a id="Molecules-1"></a><a class="docs-heading-anchor-permalink" href="#Molecules" title="Permalink"></a></h4><p>Some commonly used molecules are predefined and can be accessed using the <a href="../manual2_targets/#eTraj.Targets.get_mol"><code>get_mol</code></a> method:</p><pre><code class="language-julia-repl hljs">julia&gt; using eTraj.Targets, eTraj.Units
+
+# H₂ molecule with z-axis as the molecular axis
+julia&gt; m1 = get_mol(&quot;Hydrogen&quot;)
+[GenericMolecule] Hydrogen (H₂)
+Asymp coeff of HOMO available
+WFAT data of HOMO available
+#          E (Ha)  occp
+⋮    ⋮       ⋮      ⋮⋮
+3  LUMO+1   0.232  ----
+2  LUMO     0.148  ----
+1  HOMO    -0.594  -↿⇂-
+
+# O₂ molecule with a non-zero total spin
+julia&gt; m2 = get_mol(&quot;Oxygen&quot;)
+[GenericMolecule] Oxygen (O₂)
+Asymp coeff of α-HOMO-1 &amp; α-HOMO available
+WFAT data of α-HOMO-1 &amp; α-HOMO available
+#          Eα(Ha)  occp  Eβ(Ha)
+⋮    ⋮        ⋮     ⋮⋮      ⋮     ⋮
+11 LUMO+1   0.681  ----   0.741 LUMO+3
+10 LUMO     0.377  ----   0.431 LUMO+2
+9  HOMO    -0.554  -↿--   0.110 LUMO+1
+8  HOMO-1  -0.554  -↿--   0.110 LUMO
+7  HOMO-2  -0.763  -↿⇂-  -0.575 HOMO
+6  HOMO-3  -0.841  -↿⇂-  -0.575 HOMO-1
+5  HOMO-4  -0.841  -↿⇂-  -0.702 HOMO-2
+4  HOMO-5  -1.204  -↿⇂-  -0.993 HOMO-3
+⋮    ⋮        ⋮     ⋮⋮      ⋮     ⋮
+
+# CO molecule rotated 90° around y axis
+julia&gt; m3 = get_mol(&quot;Carbon Monoxide&quot;, rot_β=90°)
+[GenericMolecule] Carbon Monoxide (CO), αβγ=(0.0°,90.0°,0.0°)
+Asymp coeff of HOMO-2 &amp; HOMO-1 &amp; HOMO available
+WFAT data of HOMO-2 &amp; HOMO-1 &amp; HOMO available
+#          E (Ha)  occp
+⋮    ⋮       ⋮      ⋮⋮
+9  LUMO+1   0.139  ----
+8  LUMO     0.139  ----
+7  HOMO    -0.554  -↿⇂-
+6  HOMO-1  -0.639  -↿⇂-
+5  HOMO-2  -0.639  -↿⇂-
+4  HOMO-3  -0.804  -↿⇂-
+⋮    ⋮       ⋮      ⋮⋮</code></pre><p>You can view available predefined atoms and molecules using the <a href="../manual2_targets/#eTraj.Targets.get_available_mols"><code>get_available_mols</code></a> method:</p><pre><code class="language-julia-repl hljs">julia&gt; using eTraj.Targets
+
+julia&gt; get_available_mols() |&gt; print
+[&quot;Hydrogen&quot;, &quot;Nitrogen&quot;, &quot;Oxygen&quot;, &quot;Carbon Monoxide&quot;, &quot;Nitric Oxide&quot;, &quot;Hydrochloric Acid&quot;, &quot;Carbon Dioxide&quot;, &quot;Sulfur Dioxide&quot;, &quot;Water&quot;, &quot;Ammonia&quot;, &quot;Acetylene&quot;, &quot;Methane&quot;, &quot;Benzene&quot;]</code></pre><p>To create a custom molecule, use the <a href="../manual2_targets/#GenericMolecule"><code>GenericMolecule</code></a> constructor. The following example creates a carbon dioxide molecule, and runs quantum chemistry calculations to obtain the asymptotic coefficients (for MO-SFA-based initial condition methods) and WFAT coefficients:</p><pre><code class="language-julia hljs">using eTraj.Targets, eTraj.Units
+
+# Creating a custom molecule
+m = GenericMolecule(
+    atoms = [&quot;O&quot;, &quot;C&quot;, &quot;O&quot;],    # atom types
+    atom_coords = [             # atomic coordinates
+        0 0 -1.1600;
+        0 0  0.0000;
+        0 0  1.1600
+    ] * Å,
+    charge = 0,                 # total charge
+    name = &quot;Carbon Dioxide&quot;     # optional name
+)
+
+# Calculating asymptotic coefficients and WFAT data
+MolInitCalculator!(m, basis=&quot;cc-pVDZ&quot;)  # initializes the calculator backend with specified basis set
+MolCalcAsympCoeff!(m, 0)   # calculates asymptotic coefficients for HOMO (index 0)
+MolCalcWFATData!(m, 0)     # calculate WFAT data for HOMO (index 0)
+
+# Saving calculated data for future use
+MolSaveDataAs!(m, &quot;CO2_molecule.jld2&quot;)
+
+# Loading previously saved molecule data
+m_ = LoadMolecule(&quot;CO2_molecule.jld2&quot;)
+display(m_)
+# [GenericMolecule] Carbon Dioxide
+# Asymp coeff of HOMO available
+# WFAT data of HOMO available
+# #          E (Ha)  occp
+# ⋮    ⋮       ⋮      ⋮⋮
+# 13 LUMO+1   0.217  ----
+# 12 LUMO     0.217  ----
+# 11 HOMO    -0.536  -↿⇂-
+# 10 HOMO-1  -0.536  -↿⇂-
+# 9  HOMO-2  -0.709  -↿⇂-
+# 8  HOMO-3  -0.709  -↿⇂-
+# ⋮    ⋮       ⋮      ⋮⋮</code></pre><p>For advanced usages (setting customized grids for quantum chemistry calculations, dealing with non-HOMO orbitals and open-shell molecules, etc.), we suggest reading the <a href="../manual2_targets/#targets_doc">documentation</a> of the <code>Targets</code> module.</p><hr/><h3 id="Trajectory-Simulation-Parameters"><a class="docs-heading-anchor" href="#Trajectory-Simulation-Parameters">Trajectory Simulation Parameters</a><a id="Trajectory-Simulation-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Trajectory-Simulation-Parameters" title="Permalink"></a></h3><p>The trajectory simulation requires configuring several key parameters. Below we would guide you to make appropriate choices of the simulation&#39;s configuration. For a comprehensive understanding on the parameters, please refer to the <a href="../manual3_sampling_traj_simu/#traj_simu">documentation</a>.</p><h4 id="Initial-Condition-and-Phase-Methods"><a class="docs-heading-anchor" href="#Initial-Condition-and-Phase-Methods">Initial Condition and Phase Methods</a><a id="Initial-Condition-and-Phase-Methods-1"></a><a class="docs-heading-anchor-permalink" href="#Initial-Condition-and-Phase-Methods" title="Permalink"></a></h4><p>First of all, the core methods of the trajectory simulation should be selected carefully:</p><ul><li><code>init_cond_method</code>: Which theory to use for generating initial electrons?</li><li><code>traj_phase_method</code>: How quantum effects are handled?</li></ul><p>For <code>init_cond_method</code>, candidates include:</p><ul><li>SPA-based methods:<ul><li><code>ADK</code>   - Best for small Keldysh parameters (<em>γ</em>≪1) when non-adiabatic effects are negligible;</li><li><code>SPANE</code> - Recommended for most cases, which efficiently includes non-adiabatic effects;</li><li><code>SPA</code>   - For stronger non-adiabatic scenarios which require full treatment, but much more computational-intensive than <code>SPANE</code>.</li></ul></li><li><code>WFAT</code> - Specialized for molecular targets (<a href="../manual2_targets/#GenericMolecule"><code>GenericMolecule</code></a>) which accounts for the influence of permanent dipoles. However, quantum effects are not available in this method, i.e., only <code>CTMC</code> is supported for the phase method.</li></ul><p>For <code>traj_phase_method</code>:</p><ul><li><code>CTMC</code> - Pure classical trajectories, suitable for scenarios where no inter-cycle interference is involved.</li><li><code>QTMC</code> - Includes basic quantum effects through first-order perturbation.</li><li><code>SCTS</code> - Includes quantum effects beyond perturbation, more accurate than <code>QTMC</code>.</li></ul><h4 id="Detector-Configuration"><a class="docs-heading-anchor" href="#Detector-Configuration">Detector Configuration</a><a id="Detector-Configuration-1"></a><a class="docs-heading-anchor-permalink" href="#Detector-Configuration" title="Permalink"></a></h4><p>The simulation space and the final momentum grid (i.e., the electron detectors) are controlled by:</p><ul><li><code>dimension</code>: Dimension of the simulation (2 or 3). 2D simulations would be carried out in the <span>$xy$</span> plane. For most cases, 2D simulation is sufficient as the electron dynamics is mainly confined in the polarization plane.</li><li><code>final_p_max</code>: Maximum momentum range in each direction. For 2D simulation, specify as a tuple of 2 values <code>(px_max, py_max)</code>. For 3D simulation, use a tuple of 3 values <code>(px_max, py_max, pz_max)</code>. Values are in atomic units. The momentum ranges from -<code>p_max</code> to <code>p_max</code>.</li><li><code>final_p_num</code>: Grid resolution in each direction. For 2D, specify as <code>(nx, ny)</code> where <code>nx</code>, <code>ny</code> are number of grid points. For 3D, specify as <code>(nx, ny, nz)</code>. Higher resolution provides better details but requires more memory.</li></ul><p>Example usage for common scenarios:</p><pre><code class="language-julia hljs"># a 2D example
+perform_traj_simulation(
+    # ...
+    dimension = 2,
+    final_p_max = (2.0, 2.0),     # ±2 a.u. in x,y
+    final_p_num = (500, 500),     # 500×500 grid
+    # ...
+)
+
+# a 3D example
+perform_traj_simulation(
+    # ...
+    dimension = 3,
+    final_p_max = (2.5, 2.5, 1.0),  # ±2.5 a.u. in x,y, ±1 a.u. in z
+    final_p_num = (250, 250, 100),  # 250×250×100 grid
+    # ...
+)
+
+# The following example performs an effective 2D simulation in x-z plane:
+perform_traj_simulation(
+    # ...
+    dimension = 3,
+    final_p_max = (2.5, 0.0, 2.5),
+    final_p_num = (400, 1, 400),
+    # ...
+)</code></pre><div class="admonition is-success"><header class="admonition-header">Tips</header><div class="admonition-body"><p>A test run with reduced number of trajectories can help determine the optimal <code>final_p_max</code>.</p></div></div><h4 id="Sampling-Parameters"><a class="docs-heading-anchor" href="#Sampling-Parameters">Sampling Parameters</a><a id="Sampling-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Sampling-Parameters" title="Permalink"></a></h4><ul><li>Time domain:</li></ul><pre><code class="language-julia hljs">perform_traj_simulation(
+    sample_t_intv = (-10.0fs, 10.0fs),  # sampling interval (default in a.u.)
+    sample_t_num = 2000,                # number of samples in time domain
+    # ...
+)</code></pre><p>Enabling Monte Carlo sampling (<code>sample_monte_carlo=true</code>) would generate random samples in the time domain.</p><ul><li>Momentum (<span>$\kkt=(k_\perp,k_z)$</span>) domain:</li></ul><pre><code class="language-julia hljs"># Step sampling:
+perform_traj_simulation(
+    # ...
+    sample_monte_carlo = false,
+    ss_kd_max = 2.0,    # transverse momentum range
+    ss_kd_num = 200,    # number of kd points
+    ss_kz_max = 2.0,    # longitudinal momentum range (3D only)
+    ss_kz_num = 200,    # number of kz points (3D only)
+    # ...
+)
+
+# Monte Carlo sampling:
+perform_traj_simulation(
+    # ...
+    sample_monte_carlo = true,
+    mc_kt_num = 100,    # k_t samples per time point
+    mc_kd_max = 2.0,    # transverse momentum range
+    mc_kz_max = 2.0,    # longitudinal range (3D only)
+    # ...
+)</code></pre><hr/><h2 id="Viewing-and-Analyzing-the-Results"><a class="docs-heading-anchor" href="#Viewing-and-Analyzing-the-Results">Viewing and Analyzing the Results</a><a id="Viewing-and-Analyzing-the-Results-1"></a><a class="docs-heading-anchor-permalink" href="#Viewing-and-Analyzing-the-Results" title="Permalink"></a></h2><p>After running the trajectory simulation, the output file will be generated in the Julia Data Format (JLD2) or HDF5 format. This file contains the photoelectron momentum distribution (PMD) and other necessary information.</p><p>To view and analyze the result, you can use the <code>JLD2.jl</code> package in Julia. Here is an example of how to open and inspect the output file:</p><pre><code class="language-julia-repl hljs">julia&gt; using JLD2
+
+julia&gt; file = jldopen(&quot;ADK-CTMC_4e14_800nm_cos4_2cyc_CP.jld2&quot;)
+JLDFile .../ADK-CTMC_4e14_800nm_cos4_2cyc_CP.jld2 (read-only)
+    ├─🔢 info
+    ├─🔢 params_text              # parameters stored in YAML format
+    ├─🔢 params                   # parameters stored in a Julia `Dict`
+    ├─🔢 px                       # coordinates of the `momentum_spec` on x-axis
+    ├─🔢 py                       # coordinates of the `momentum_spec` on y-axis
+    ├─🔢 momentum_spec            # PMD data stored in a Julia `Array`
+    ├─🔢 ion_prob                 # total ionization probability
+    ├─🔢 ion_prob_uncollected     # ionization probability of discarded electrons
+    └─🔢 num_effective_traj       # total number of effective trajectories
+
+julia&gt; file[&quot;num_effective_traj&quot;]
+54240616
+
+julia&gt; file[&quot;params_text&quot;] |&gt; print  # equivalent to print(file[&quot;params_text&quot;])
+init_cond_method: ADK
+laser:
+  type: Cos4Laser
+  peak_int: 4.0e14
+  wave_len: 800.0
+  cyc_num: 2
+  ellip: 1.0
+  azi: 0.0
+  cep: 0.0
+  t_shift: 0.0
+target:
+  type: HydrogenLikeAtom
+  Ip: 0.5
+  nucl_charge: 1
+  l: 0
+  m: 0
+  asymp_coeff: 1.0
+  soft_core: 1.0e-10
+  name: &quot;H&quot;
+sample_t_intv: (-100, 100)
+sample_t_num: 20000
+sample_monte_carlo: false
+sample_cutoff_limit: 1.0e-16
+traj_phase_method: CTMC
+traj_rtol: 1.0e-6
+traj_t_final: 120
+output_fmt: jld2
+output_path: &quot;ADK-CTMC_4e14_800nm_cos4_2cyc_CP.jld2&quot;
+final_p_max: (2.5, 2.5)
+final_p_num: (500, 500)
+ss_kd_max: 2.0
+ss_kd_num: 10000
+rate_prefix: Full</code></pre><p>To make plots of the PMD in Julia, you can use the <a href="https://github.com/JuliaPlots/Plots.jl"><code>Plots.jl</code></a> package. We included plot scripts in the <a href="https://github.com/TheStarAlight/eTraj.jl/tree/master/examples"><code>example/</code></a> directory for reference. Note that running these scripts also requires additional dependencies such as <code>CodecZlib.jl</code> and <code>PyPlot.jl</code>. After installing these packages, you can run the plot scripts either in a Julia REPL or directly from the command line, see the <a href="#running-scripts">&quot;Running Scripts&quot; section</a>. If you encounter any issues with plotting, please open an issue in <a href="https://github.com/TheStarAlight/eTraj.jl/issues">our GitHub repository</a>.</p><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>REPL (Read–eval–print loop) is an interactive programming environment that reads user input, evaluates it, and prints the result. The Julia REPL is opened by running <code>julia</code> in your terminal.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../troubleshooting/">Troubleshooting »</a><div class="flexbox-break"></div><p class="footer-message">· <em>eTraj.jl</em> Documentation · by <em>Mingyu Zhu</em> and other contributors</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Monday 20 January 2025 11:34">Monday 20 January 2025</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
