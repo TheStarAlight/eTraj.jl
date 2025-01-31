@@ -169,11 +169,11 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
     rate(kd,kz) = sum(((nξ,m),)->abs2(G_data[nξ+1,m+mMax+1])*W(nξ,abs(m),kd,kz), [(nξ,m) for nξ in 0:nξMax, m in -mMax:mMax]) * dkdt
 
     dim = (sp.dimension==3) ? 8 : 6 # x,y,z,kx,ky,kz,t0,rate / x,y,kx,ky,t0,rate
-    sample_count_thread = zeros(Int,nthreads())
-    init_thread = if ! sp.monte_carlo
-        zeros(Float64, dim, nthreads(), length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition (support for multi-threading)
+    sample_count = 0
+    init = if ! sp.monte_carlo
+        zeros(Float64, dim, length(sp.ss_kd_samples)*length(sp.ss_kz_samples)) # initial condition
     else
-        zeros(Float64, dim, nthreads(), sp.mc_kt_num)
+        zeros(Float64, dim, sp.mc_kt_num)
     end
 
     k0_cutoff_crit = 1e-4
@@ -182,7 +182,7 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
         kd_samples = sp.ss_kd_samples
         kz_samples = sp.ss_kz_samples
         kdNum, kzNum = length(kd_samples), length(kz_samples)
-        @threads for ikd in 1:kdNum
+        for ikd in 1:kdNum
             for ikz in 1:kzNum
                 kd0, kz0 = kd_samples[ikd], kz_samples[ikz]
                 if kd0^2+kz0^2 < k0_cutoff_crit^2
@@ -198,16 +198,16 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
                 if isnan(rate_) || rate_ < cutoff_limit
                     continue    # discard the sample
                 end
-                sample_count_thread[threadid()] += 1
+                sample_count += 1
                 if sp.dimension == 3
-                    init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
+                    init[1:8,sample_count] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
                 else
-                    init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate_]
+                    init[1:6,sample_count] = [x0,y0,kx0,ky0,tr,rate_]
                 end
             end
         end
     else
-        @threads for i in 1:sp.mc_kt_num
+        for i in 1:sp.mc_kt_num
             if sp.dimension == 3
                 kd0, kz0 = gen_rand_pt_2dsq(sp.mc_kd_max, sp.mc_kz_max)
                 if sp.mc_kd_max == 0
@@ -234,24 +234,16 @@ function gen_electron_batch(sp::WFATSampler, batch_id::Integer)
             if isnan(rate_) || rate_ < cutoff_limit
                 continue    # discard the sample
             end
-            sample_count_thread[threadid()] += 1
+            sample_count += 1
             if sp.dimension == 3
-                init_thread[1:8,threadid(),sample_count_thread[threadid()]] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
+                init[1:8,sample_count] = [x0,y0,z0,kx0,ky0,kz0,tr,rate_]
             else
-                init_thread[1:6,threadid(),sample_count_thread[threadid()]] = [x0,y0,kx0,ky0,tr,rate_]
+                init[1:6,sample_count] = [x0,y0,kx0,ky0,tr,rate_]
             end
         end
     end
-    if sum(sample_count_thread) == 0
+    if sample_count == 0
         return nothing
     end
-    # collect electron samples from different threads.
-    init = zeros(Float64, dim, sum(sample_count_thread))
-    N = 0
-    for i in 1:nthreads()
-        init[:,N+1:N+sample_count_thread[i]] = init_thread[:,i,1:sample_count_thread[i]]
-        N += sample_count_thread[i]
-    end
-    return init
+    return init[:,1:sample_count]
 end
-

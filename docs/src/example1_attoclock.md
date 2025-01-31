@@ -1,5 +1,17 @@
 # Example: Attoclock & Initial Condition Methods
 
+!!! note "Guide on Generating Plots"
+    We attached scripts for generating plots for each example in the `examples/` directory.
+    This script requires additional installation of the `Plots.jl` and `PyPlot.jl` packages.
+    To install the dependencies, first, follow the instructions [here](@ref config_py) to configure the `PyCall.jl` package and install the `matplotlib` python package.
+    Then, install `Plots.jl` and `PyPlot.jl` packages by running the following commands:
+    ```julia
+    using Pkg
+    Pkg.add("Plots")
+    Pkg.add("PyPlot")
+    ```
+    After installing the dependencies, you can run the plot scripts either in a Julia REPL or directly from the command line, see the ["Running Scripts" section](@ref running-scripts).
+
 This example is adapted from [[*JPB* **54**, 144001 (2021)](https://doi.org/10.1088/1361-6455/ac0d3e)].
 
 In the present example of attoclock experiment, an ultra-short pulse of circular polarization is employed to explore the ultrafast attosecond dynamics such as the tunneling time delay.
@@ -19,6 +31,7 @@ t = get_atom("H")
 for init_cond in [:ADK, :SPANE, :SPA]
     perform_traj_simulation(
         init_cond_method    = init_cond,
+        traj_phase_method   = :CTMC,
         laser               = l,
         target              = t,
         dimension           = 2,            # 2D simulation, x-y plane only
@@ -29,8 +42,7 @@ for init_cond in [:ADK, :SPANE, :SPA]
         final_p_num         = (500,500),    # the momentum spec collection grid's size (500x500)
         ss_kd_max           = 2.0,
         ss_kd_num           = 10000,        # will sample 10000 equidistant k⟂ points between -2 to +2 a.u.
-        output_path         = "$(init_cond)-CTMC_4e14_800nm_cos4_2cyc_CP.jld2",
-        traj_phase_method   = :CTMC
+        output_path         = "$(init_cond)-CTMC_4e14_800nm_cos4_2cyc_CP.jld2"
     )
 end
 ```

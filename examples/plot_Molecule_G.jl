@@ -1,7 +1,7 @@
 using eTraj
 using eTraj.Targets
 using Plots
-# using PyPlot  # PyPlot is implicitly required
+# using PyPlot  #! Note: PyPlot is implicitly required, please install PyPlot.jl and configure PyCall.jl properly (see the eTraj doc on how to configure it) before running this script.
 pyplot()
 
 molH2 = get_mol("Hydrogen")

@@ -2,7 +2,7 @@ using eTraj
 using eTraj.Lasers, eTraj.Units
 using Plots
 using Colors
-# using PyPlot  # PyPlot is implicitly required
+# using PyPlot  #! Note: PyPlot is implicitly required, please install PyPlot.jl and configure PyCall.jl properly (see the eTraj doc on how to configure it) before running this script.
 pyplot()
 
 l1 = Cos2Laser(peak_int=1e14*W/cm^2, wave_len=800.0nm, cyc_num=8,  ellip= 1.0)

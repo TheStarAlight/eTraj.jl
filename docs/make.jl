@@ -2,8 +2,11 @@ using Documenter, eTraj, eTraj.Lasers, eTraj.Targets, eTraj.Units
 
 makedocs(
     sitename = "eTraj.jl",
+    repo = Remotes.GitHub("TheStarAlight", "eTraj.jl"),
     pages = [
         "Home"      => "index.md",
+        "Step-by-step Tutorial" => "stepbystep_tutorial.md",
+        "Troubleshooting" => "troubleshooting.md",
         "Theory"    => [
             "Initial Conditions"                        => "theory1_init_cond.md",
             "Trajectory Simulation and Phase Methods"   => "theory2_traj_simu_quant_phase.md"

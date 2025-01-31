@@ -172,7 +172,9 @@ function Serialize(t::HydrogenLikeAtom)
     m           = t.m
     asymp_coeff = t.asymp_coeff
     soft_core   = t.soft_core
+    quan_ax_θ   = t.quan_ax_θ
+    quan_ax_ϕ   = t.quan_ax_ϕ
     name        = t.name
-    @pack! dict = (type, Ip, nucl_charge, l, m, asymp_coeff, soft_core, name)
+    @pack! dict = (type, Ip, nucl_charge, l, m, asymp_coeff, soft_core, quan_ax_θ, quan_ax_ϕ, name)
     return dict
 end
