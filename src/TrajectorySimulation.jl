@@ -148,6 +148,7 @@ function perform_traj_simulation(;
         )   # pack up all parameters
     job = TrajectorySimulationJob(;kwargs...)
     batch_num = ElectronSamplers.batch_num(job.sp)
+    thread_count = Threads.nthreads()
     prog1 = ProgressUnknown(dt=0.2, desc="Launching electrons and collecting...", color = :cyan, spinner = true, enabled = show_progress)
     prog2 = Progress(batch_num; dt=0.2, color = :cyan, barlen = 25, barglyphs = BarGlyphs('[', '●', ['◔', '◑', '◕'], '○', ']'), showspeed = true, offset=1, enabled = show_progress)
     @threads for i in 1:batch_num
@@ -177,9 +178,9 @@ function TrajectorySimulationJob(; kwargs...)
     @assert (sample_t_intv[1] < sample_t_intv[2]) "[TrajectorySimulationJob] `sample_t_intv` must be a valid interval."
     @assert (traj_t_final > sample_t_intv[2])  "[TrajectorySimulationJob] `traj_t_final` must be greater than the last time point of `sample_t_intv`."
     Fx_func = LaserFx(laser); Fy_func = LaserFy(laser);
-    (Fx_func(sample_t_intv[1])^2 + Fy_func(sample_t_intv[1])^2 > 0.001^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the beginning of the sampling time interval. Consider extending the sampling time interval to include the beginning of the laser pulse.")
-    (Fx_func(sample_t_intv[2])^2 + Fy_func(sample_t_intv[2])^2 > 0.001^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the end of the sampling time interval. Consider extending the sampling time interval to include the end of the laser pulse.")
-    (Fx_func(traj_t_final)^2 + Fy_func(traj_t_final)^2 > 0.001^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the end of the trajectory simulation. Consider delaying `traj_t_final`.")
+    (Fx_func(sample_t_intv[1])^2 + Fy_func(sample_t_intv[1])^2 > 0.005^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the beginning of the sampling time interval. Consider extending the sampling time interval to include the beginning of the laser pulse.")
+    (Fx_func(sample_t_intv[2])^2 + Fy_func(sample_t_intv[2])^2 > 0.005^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the end of the sampling time interval. Consider extending the sampling time interval to include the end of the laser pulse.")
+    (Fx_func(traj_t_final)^2 + Fy_func(traj_t_final)^2 > 0.005^2) && @warn("[TrajectorySimulationJob] The laser field is not vanishingly small at the end of the trajectory simulation. Consider delaying `traj_t_final`.")
     # dimension check
     @assert dimension in (2,3) "[TrajectorySimulationJob] `dimension` must be either 2 or 3."
     @assert length(final_p_max)==length(final_p_num)==dimension "[TrajectorySimulationJob] `length(final_p_max)` and `length(final_p_num)` should match `dimension`."
@@ -260,9 +261,9 @@ function TrajectorySimulationJob(; kwargs...)
     # ionization amplitude (spec_collect for temporary cache)
     spec_collect =
         if traj_phase_method == :CTMC
-            zeros(Float64, tuple(final_p_num...,nthreads))
+            [zeros(Float64, final_p_num...) for _ in 1:nthreads]
         else
-            zeros(ComplexF64, tuple(final_p_num...,nthreads))
+            [zeros(ComplexF64, final_p_num...) for _ in 1:nthreads]
         end
     # classical prob
     classical_prob = zeros(Float64, nthreads)
@@ -326,6 +327,7 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob, batch_id::Integer)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
     threadid = Threads.threadid()
+    spec_collect_current = spec_collect[threadid]
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 4 : 5 # x,y,px,py[,phase]
@@ -353,18 +355,18 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob, batch_id::Integer)
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i].u[end][5])
         prob = init[6,i]
-        if traj_phase_method == :SCTS
-            phase += Ip * init[5,i] # Ip*tr
-            # asymptotic Coulomb phase correction term in SCTS
-            sqrtb = (2Ip)^(-0.5)
-            g = sqrt(1+2Ip*(x*py-y*px)^2)
-            phase -= px0*x0+py0*y0 + nucl_charge*sqrtb*(log(g)+asinh((x*px+y*py)/(g*sqrtb)))
-        end
         E_inf = (px^2+py^2)/2 + targetP(x,y,0.0)
         r_vec = [x, y, 0.0]
         p_vec = [px,py,0.0]
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
+        if E_inf > 0 && traj_phase_method == :SCTS
+            phase += Ip * init[5,i] # Ip*tr
+            # asymptotic Coulomb phase correction term in SCTS
+            sqrtb = (2E_inf)^(-0.5)
+            g = sqrt(1+2E_inf*L2)
+            phase -= nucl_charge*sqrtb*(log(g)+asinh((x*px+y*py)/(g*sqrtb)))
+        end
         if E_inf ≥ 0    # finally ionized.
             classical_prob[threadid] += prob
             p_inf = sqrt(2E_inf)
@@ -380,11 +382,11 @@ function launch_and_collect_2D!(job::TrajectorySimulationJob, batch_id::Integer)
             else
                 pyIdx = 1
             end
-            if checkbounds(Bool, spec_collect, pxIdx,pyIdx, threadid)
+            if checkbounds(Bool, spec_collect_current, pxIdx,pyIdx)
                 if traj_phase_method == :CTMC
-                    spec_collect[pxIdx,pyIdx, threadid] += prob # prob
+                    spec_collect_current[pxIdx,pyIdx] += prob # prob
                 else
-                    spec_collect[pxIdx,pyIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
+                    spec_collect_current[pxIdx,pyIdx] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
                 classical_prob_uncollected[threadid] += prob
@@ -420,6 +422,7 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob, batch_id::Integer)
     warn_num = 0    # number of warnings of anomalous electrons.
     max_warn_num = 5
     threadid = Threads.threadid()
+    spec_collect_current = spec_collect[threadid]
 
     # create ODE problem and solve the ensemble.
     prob_dim = (traj_phase_method == :CTMC) ? 6 : 7 # x,y,z,px,py,pz[,phase]
@@ -447,18 +450,18 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob, batch_id::Integer)
         end
         phase = (traj_phase_method == :CTMC) ? (0.) : (sol.u[i].u[end][7])
         prob = init[8,i]
-        if traj_phase_method == :SCTS
-            phase += Ip * init[7,i] # Ip*tr
-            # asymptotic Coulomb phase correction term in SCTS
-            sqrtb = (2Ip)^(-0.5)
-            g = sqrt(1+2Ip*((y*pz-z*py)^2+(z*px-x*pz)^2+(x*py-y*px)^2))
-            phase -= nucl_charge*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
-        end
         E_inf = (px^2+py^2+pz^2)/2 + targetP(x,y,z)
         r_vec = [x, y, z ]
         p_vec = [px,py,pz]
         L_vec = r_vec × p_vec
         L2    = sum(abs2.(L_vec))
+        if E_inf > 0 && traj_phase_method == :SCTS
+            phase += Ip * init[7,i] # Ip*tr
+            # asymptotic Coulomb phase correction term in SCTS
+            sqrtb = (2E_inf)^(-0.5)
+            g = sqrt(1+2E_inf*L2)
+            phase -= nucl_charge*sqrtb*(log(g)+asinh((x*py+y*py+z*pz)/(g*sqrtb)))
+        end
         if E_inf ≥ 0    # finally ionized.
             classical_prob[threadid] += prob
             p_inf = sqrt(2E_inf)
@@ -479,11 +482,11 @@ function launch_and_collect_3D!(job::TrajectorySimulationJob, batch_id::Integer)
             else
                 pzIdx = 1
             end
-            if checkbounds(Bool, spec_collect, pxIdx,pyIdx,pzIdx, threadid)
+            if checkbounds(Bool, spec_collect_current, pxIdx,pyIdx,pzIdx)
                 if traj_phase_method == :CTMC
-                    spec_collect[pxIdx,pyIdx,pzIdx, threadid] += prob # prob
+                    spec_collect_current[pxIdx,pyIdx,pzIdx] += prob # prob
                 else
-                    spec_collect[pxIdx,pyIdx,pzIdx, threadid] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
+                    spec_collect_current[pxIdx,pyIdx,pzIdx] += sqrt(prob)*exp(1im*phase) # sqrt(prob)*phase_factor
                 end
             else
                 classical_prob_uncollected[threadid] += prob
@@ -515,7 +518,7 @@ function write_output!(job::TrajectorySimulationJob)
     if job.dimension == 3
         file["pz"] = job.pz
     end
-    ion_prob_final = sum(job.spec_collect, dims=ndims(job.spec_collect))
+    ion_prob_final = sum(job.spec_collect)
     if job.traj_phase_method == :CTMC
         fmt == :jld2 && write(file, "momentum_spec", ion_prob_final; compress=job.output_compress)
         if fmt == :h5

@@ -1,4 +1,4 @@
-# Step-by-step Tutorial of Installation
+# Step-by-step Tutorial
 
 *-- For beginners in julia*
 
@@ -89,7 +89,7 @@ and then install it in Julia by specifying the directory:
 
 -----------------------
 
-## Configuring Python and PySCF (*Optional*)
+## [Configuring Python and PySCF (*Optional*)](@id config_py)
 
 Currently, the calculation of molecules' asymptotic coefficients (for MO-ADK/MO-SFA) and WFAT coefficients rely on the [`PySCF`](https://github.com/pyscf/pyscf) python package. `eTraj` calls the PySCF using the [`PyCall.jl`](https://github.com/JuliaPy/PyCall.jl) package.
 
@@ -537,3 +537,12 @@ Note that running these scripts also requires additional dependencies such as `C
 After installing these packages, you can run the plot scripts either in a Julia REPL or directly from the command line, see the ["Running Scripts" section](@ref running-scripts).
 If you encounter any issues with plotting, please open an issue in [our GitHub repository](https://github.com/TheStarAlight/eTraj.jl/issues).
 
+!!! note "Guide on Installing the `Plots.jl` & `PyPlot.jl` dependencies"
+    The plotting scripts we attached in the `example/` directory requires additional installation of the `Plots.jl` and `PyPlot.jl` packages.
+    To install the dependencies, first, follow the instructions [here](@ref config_py) to configure the `PyCall.jl` package and install the `matplotlib` python package.
+    Then, install `Plots.jl` and `PyPlot.jl` packages by running the following commands:
+    ```julia
+    using Pkg
+    Pkg.add("Plots")
+    Pkg.add("PyPlot")
+    ```

@@ -625,9 +625,9 @@ function Serialize(t::GenericMolecule)
     charge      = t.charge
     spin        = t.spin
     name        = t.name
-    rot_alp     = t.rot_α
-    rot_bet     = t.rot_β
-    rot_gam     = t.rot_γ
-    @pack! dict = (type, atoms, atom_coords, charge, spin, name, rot_alp, rot_bet, rot_gam)
+    rot_α       = t.rot_α
+    rot_β       = t.rot_β
+    rot_γ       = t.rot_γ
+    @pack! dict = (type, atoms, atom_coords, charge, spin, name, rot_α, rot_β, rot_γ)
     return dict
 end
