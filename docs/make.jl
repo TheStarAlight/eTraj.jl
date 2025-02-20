@@ -17,6 +17,7 @@ makedocs(
             "Sampling & Traj Simulation" => "manual3_sampling_traj_simu.md"
             ],
         "Examples"  => [
+            "Overview"                              => "example_overview.md",
             "Attoclock & Initial Condition Methods" => "example1_attoclock.md",
             "Short LP Pulses & Phase Methods"       => "example2_ShortLP_phase_methods.md",
             "Bichromatic ω-2ω Pulses"               => "example3_bichromatic_pulse.md",
