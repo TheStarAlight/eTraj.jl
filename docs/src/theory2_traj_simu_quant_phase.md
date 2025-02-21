@@ -119,7 +119,7 @@ The SCTS model [^ShvetsovShilovski_2016] improves the quantum phase in the QTMC 
 ```
 Compared to the QTMC phase given by Eq. (4), the SCTS phase from Eq. (10) differs in two key aspects:
 Firstly, there is the initial phase ``-\kk_0\cdot\rr_0``, which results from the tunneling process and is non-zero for non-adiabatic tunneling where ``k_{\parallel} \neq 0``.
-Secondly, the integrand includes the ``\rr\cdot\grad V(\rr)`` term, which is absent in the QTMC formulation.
+Secondly, the integrand includes the ``\rr\cdot\bm{\nabla} V(\rr)`` term, which is absent in the QTMC formulation.
 These differences stem from the distinct theoretical foundations of the two methods; the QTMC phase is derived within the framework of first-order perturbation theory, whereas the SCTS formulation extends beyond this approximation.
 It should be noted that only the trajectory phase component of the SCTS model, represented by ``S_{\rm{traj}}`` in Eq. (10), is adopted here. The tunneling phase ``\Re S_{\rm{tun}}`` is intended to be incorporated during the preparation of initial conditions.
 
@@ -129,13 +129,13 @@ However, the integral of this term can be reduced to an analytical expression in
 \begin{equation}
 \begin{aligned}
     S_{\rm{traj,f}}^{\rm{C}}(\tf)
-    = \int_{\tf}^{\infty} \rr\cdot\bm{\nabla}V(\rr) \dd t
-    = Z \int_{\tf}^{\infty} \frac{\dd t}{r}
-    = - n^* \left[ \ln{g} + \sinh^{-1}\left( \frac{\kappa}{g}\rr_{\rm{f}}\cdot\pp_{\rm{f}} \right) \right],
+    &= \int_{\tf}^{\infty} \rr\cdot\bm{\nabla} V(\rr) \dd t \\
+    &= Z \int_{\tf}^{\infty} \frac{\dd t}{r} \\
+    &= - \frac{Z}{p_\infty} \left[ \ln{g} + \sinh^{-1}\left( \frac{p_\infty}{g}\rr_{\rm{f}}\cdot\pp_{\rm{f}} \right) \right],
 \end{aligned}
 \end{equation}
 ```
-where ``\rr_{\rm{f}}=\rr(\tf)``, ``\pp_{\rm{f}}=\pp(\tf)`` and ``g=\sqrt{1+2\kappa^2 L^2}=\sqrt{1+2\kappa^2 (\rr_{\rm{f}}\times\pp_{\rm{f}})^2}``.
+where ``\rr_{\rm{f}}=\rr(\tf)``, ``\pp_{\rm{f}}=\pp(\tf)`` and ``g=\sqrt{1+ p_\infty^2 L^2}=\sqrt{1+p_\infty^2 (\rr_{\rm{f}}\times\pp_{\rm{f}})^2}``.
 
 In this manner, we derive the expression for the SCTS trajectory phase suitable for numerical implementation:
 ```math

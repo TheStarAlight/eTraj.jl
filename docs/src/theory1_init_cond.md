@@ -108,7 +108,7 @@ Therefore, the ``M_{\pp}`` is now approximated with the integration around the s
 ```
 with ``C_{\ts}`` the integration contour following the steepest-descent path related to ``\ts``.
 
-Further evaluation of the prefactor ``\tilde{\psi}_0(\kk) \rvert_{\kk=\pp+\AA(t)} = \braket{\pp+\AA(t)}{\psi_0}`` (i.e., the momentum-space wavefunction) in the vicinity of the saddle points in Eq. (11) is essential before applying the SPA.
+Further evaluation of the prefactor ``\tilde{\psi}_0(\kk) \rvert_{\kk=\pp+\AA(t)} = \bk{\pp+\AA(t)}{\psi_0}`` (i.e., the momentum-space wavefunction) in the vicinity of the saddle points in Eq. (11) is essential before applying the SPA.
 We assume the field points towards the ``+ z`` axis, for an atom target at the ``(l,m)`` state with ionization potential ``\Ip``, its wavefunction behaves asymptotically as [^Perelomov_1966]
 ```math
 \begin{equation}
@@ -189,7 +189,7 @@ The SFA phase ``\Sp(\ts)`` is determined by evaluating the integral
 ```
 
 where ``S_{\pp,\rm{tun}}`` and ``S_{\pp,\rm{traj}}`` denote the complex phases accumulated during the tunneling process and the subsequent motion in the continuum, respectively.
-The phase ``S_{\pp,\rm{tun}}`` corresponds to an imaginary time interval (from ``\ts`` to ``\tr``), during which the electron traverses the potential barrier with an ``imaginary'' momentum;
+The phase ``S_{\pp,\rm{tun}}`` corresponds to an imaginary time interval (from ``\ts`` to ``\tr``), during which the electron traverses the potential barrier with an "imaginary" momentum;
 its real part signifies the quantum phase, whereas its imaginary part is associated with the ionization probability.
 
 To apply the SFA for preparing initial conditions of photoelectrons, we assume that the electron is emitted at time ``\tr`` from the tunnel exit ``\rr_0`` with momentum ``\kk_0=\kk(\tr)``.
@@ -228,7 +228,6 @@ where the prefactor encompasses all coefficients:
 ```
 
 It should be noted that the ionization probability in Eq. (22) is formulated in terms of the final momentum coordinates ``\pp=(p_x,p_y,p_z)``.
-
 However, in trajectory simulations, initial electrons are sampled in the ``(\tr,\kkt)`` coordinate system, with ``\kkt`` being the initial transverse momentum.
 Consequently, if we sample the initial electrons within such a coordinate system, a Jacobian must be introduced as a prefix to the ionization probability.
 Assuming laser propagation along the ``z`` axis and polarization in the ``xy`` plane, the transformed expression reads
@@ -240,7 +239,7 @@ Assuming laser propagation along the ``z`` axis and polarization in the ``xy`` p
 where ``\kp`` represents the projection of ``\kkt`` onto the polarization plane (i.e., the ``xy`` plane), and the Jacobian is defined as
 ```math
 \begin{equation}
-    J(\tr,\kp) = \abs{\frac{\pd(p_x,p_y)}{\pd(\tr,\kp)}} =
+    J(\tr,\kp) = \begin{vmatrix}\frac{\pd(p_x,p_y)}{\pd(\tr,\kp)}\end{vmatrix} =
     \begin{vmatrix}
         \pd p_x/\pd\tr & \pd p_x/\pd\kp \\
         \pd p_y/\pd\tr & \pd p_y/\pd\kp \\
@@ -260,9 +259,9 @@ SFA-SPANE comes with a closed analytical form, avoiding the necessity to solve t
 
 [^Mao_2022]: X. Mao, H. Ni, X. Gong, J. Burgdörfer, and J. Wu, Subcycle-resolved strong-field tunneling ionization: Identification of magnetic dipole and electric quadrupole effects, *Phys. Rev. A* **106**, 063105 (2022). DOI: [10.1103/PhysRevA.106.063105](https://doi.org/10.1103/PhysRevA.106.063105)
 
-[^Ma_2021]: Y. Ma, J. Zhou, P. Lu, H. Ni, and J. Wu, Influence of nonadiabatic, nondipole and quantum effects on the attoclock signal, J. Phys. B: At. Mol. Opt. Phys. 54, 144001 (2021). DOI: [10.1088/1361-6455/ac0d3e](https://doi.org/10.1088/1361-6455/ac0d3e)
+[^Ma_2021]: Y. Ma, J. Zhou, P. Lu, H. Ni, and J. Wu, Influence of nonadiabatic, nondipole and quantum effects on the attoclock signal, *J. Phys. B: At. Mol. Opt. Phys.* **54**, 144001 (2021). DOI: [10.1088/1361-6455/ac0d3e](https://doi.org/10.1088/1361-6455/ac0d3e)
 
-[^Ma_2024]: Y. Ma, H. Ni, and J. Wu, Attosecond ionization time delays in strong-field physics, Chin. Phys. B 33, 13201 (2024). DOI: [10.1088/1674-1056/ad0e5d](https://doi.org/10.1088/1674-1056/ad0e5d)
+[^Ma_2024]: Y. Ma, H. Ni, and J. Wu, Attosecond ionization time delays in strong-field physics, *Chin. Phys. B* **33**, 13201 (2024). DOI: [10.1088/1674-1056/ad0e5d](https://doi.org/10.1088/1674-1056/ad0e5d)
 
 
 The SFA-SPANE method is applicable when the Keldysh parameter is small, and the non-adiabatic effect is insignificant, which corresponds to the small-``\ti`` case.
@@ -518,15 +517,15 @@ with
 \begin{aligned}
     V_{\rm{nuc}}(\rr) &= - \sum_{A=1}^{N_\rm{atm}} \frac{Z_A}{\abs{\rr-\bm{R}_A}},\\
     V_{\rm{d}}(\rr) &= \quad \sum_{i=1}^N \int \frac{\psi_i^*(\rr') \psi_i(\rr')}{\abs{\rr-\rr'}} \dd \rr', \\
-    \hat{V}_{\rm{ex}} \psi_0(\rr) &= -\sum_{i=1}^N \psi_i(\rr) \int \frac{\psi_i^*(\rr') \psi_0(\rr')}{\abs{\rr-\rr'}} \braket{\sigma_i}{\sigma_0} \dd \rr',
+    \hat{V}_{\rm{ex}} \psi_0(\rr) &= -\sum_{i=1}^N \psi_i(\rr) \int \frac{\psi_i^*(\rr') \psi_0(\rr')}{\abs{\rr-\rr'}} \bk{\sigma_i}{\sigma_0} \dd \rr',
 \end{aligned}
 \end{equation}
 ```
 where ``N`` and ``N_{\rm{atm}}`` denote the number of electrons and atoms, respectively;
-``\psi_i(\rr)`` and ``\sigma_i`` represent the molecular orbital and the spin state of the electron with index ``i``, ``\braket{\sigma_i}{\sigma_j}=1`` for electrons ``i`` and ``j`` with the same spin state, and ``\braket{\sigma_i}{\sigma_j}=0`` otherwise;
+``\psi_i(\rr)`` and ``\sigma_i`` represent the molecular orbital and the spin state of the electron with index ``i``, ``\bk{\sigma_i}{\sigma_j}=1`` for electrons ``i`` and ``j`` with the same spin state, and ``\bk{\sigma_i}{\sigma_j}=0`` otherwise;
 ``Z_A`` and ``\bm{R}_A`` corresponds to the nuclear charge and position of atom with index ``A``.
 
-Representing the rotated reference function in Eq.~\eqref{eq:WFAT_G} with a linear combination of spherical harmonics using the Wigner-``D`` matrix allows for efficient numerical evaluation of the structure factor using the coefficients calculated beforehand:
+Representing the rotated reference function in Eq. (48) with a linear combination of spherical harmonics using the Wigner-``D`` matrix allows for efficient numerical evaluation of the structure factor using the coefficients calculated beforehand:
 ```math
 \begin{equation}
     G_\nu(\theta,\chi) = \ee^{-\kappa\mu_F} \sum_{l=\abs{m}}^{\infty} \sum_{m'=-l}^{l} I_{lm'}^\nu d_{mm'}^l(\theta) \ee^{-\ii m' \chi},

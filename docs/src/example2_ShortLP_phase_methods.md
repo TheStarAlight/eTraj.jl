@@ -12,7 +12,7 @@ This structure is contributed mainly by electrons with an angular momentum close
 The following two pieces of code performs a trajectory simulation which employs an 8-cycle and an ultra-short single-cycle linearly-polarized NIR pulse,
 with the PMD showing up in the two figures below.
 To be faithful to the original work where the ADK initial condition was used with no prefactor included (``\mathcal{P}=1``), we used the ADK-QTMC and ADK-SCTS schemes and set `rate_prefix = :Exp`.
-Comparison between the PMD obtained with the QTMC and SCTS phase methods reveals underestimation of the Coulomb interaction's influence on the phase by the QTMC method, which is observed in the number of nodal lines in the low-energy structures.
+Comparison between the PMD obtained with the QTMC and SCTS phase methods reveals underestimation of the Coulomb interaction's influence on the phase by the QTMC method, which is observed in the number of angular nodes in the low-energy structures.
 
 ```julia
 # examples/test_8cycs_LP.jl

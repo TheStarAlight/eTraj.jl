@@ -26,7 +26,7 @@ This would also install [`juliaup`](https://github.com/JuliaLang/juliaup) which 
 The [`jill`](https://github.com/abelsiqueira/jill) is an alternative to `juliaup` which can be used for installing and managing multiple versions of Julia.
 It would automatically search for the fastest mirror and download the installer and is useful for users with slow internet connections.
 
-For offline installation, an installer is available at [here](https://julialang.org/downloads/#manual_download).
+For offline installation, an installer is available [here](https://julialang.org/downloads/#manual_download).
 Please follow the [instructions](https://julialang.org/downloads/platform/#windows) and make sure that julia is added to the `PATH` environment variable.
 
 ### Linux & macOS
@@ -40,7 +40,7 @@ which would install [`juliaup`](https://github.com/JuliaLang/juliaup) for multip
 The [`jill`](https://github.com/abelsiqueira/jill) is an alternative to `juliaup` which can be used for installing and managing multiple versions of Julia.
 It would automatically search for the fastest mirror and download the installer and is useful for users with slow internet connections.
 
-For offline installation, the binaries are available at [here](https://julialang.org/downloads/#manual_download).
+For offline installation, the binaries are available [here](https://julialang.org/downloads/#manual_download).
 Please follow the instructions for [Linux](https://julialang.org/downloads/platform/#linux_and_freebsd) and [macOS](https://julialang.org/downloads/platform/#macos) and make sure that julia is added to the `PATH` environment variable.
 
 !!! warning "Note"
@@ -95,12 +95,12 @@ Currently, the calculation of molecules' asymptotic coefficients (for MO-ADK/MO-
 
 There are two ways to set up the Python environment used by `PyCall`:
 
-1. using your local Python environment by specifying the path of your Python executable in `ENV["PYTHON"]` and build the PyCall package.
-2. using a private Python environment managed by the [`Conda.jl`](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the `PyCall` package by default;
+1. Using your local Python environment by specifying the path of your Python executable in `ENV["PYTHON"]` and build the PyCall package.
+2. Using a private Python environment managed by the [`Conda.jl`](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the `PyCall` package by default;
 
 ### Using the local Python environment
 
-To correctly set up the configuration of `PyCall`, first, set the `PYTHON` environment variable to the path your Python executable, and build the `PyCall` package:
+To correctly set up the configuration of `PyCall`, first, set the `PYTHON` environment variable to the path of your Python executable, and build the `PyCall` package:
 
 ```julia
 ENV["PYTHON"] = "path/to/python_exec"
@@ -176,8 +176,8 @@ It is suggested to write the simulation task in a julia script, and then run it 
 The following example initializes a 4-cycle linearly polarized 800-nm laser with its peak intensity at 0.1 PW/cm² (1.0×10¹⁴ W/cm²) (See also [`Cos2Laser`](@ref) & [`Cos4Laser`](@ref)):
 ```julia
 using eTraj.Lasers, eTraj.Units
-l = Cos2Laser(                # Cos²-shape in field strength's temporal profile
-    peak_int = 1e14W/cm^2,    # Peak intensity (`0.1PW/cm^2` also works)
+l = Cos2Laser(                # cos²-shape in field strength's temporal profile
+    peak_int = 1e14W/cm^2,    # peak intensity (`0.1PW/cm^2` also works)
     wave_len = 800.0nm,       # wavelength at 800 nm (`0.8μm` also works)
     cyc_num  = 4,             # 10 cycles in duration (possible substitution: `duration = 10.6fs`)
     cep      = 0.0,           # carrier-envelope phase
@@ -187,11 +187,11 @@ l = Cos2Laser(                # Cos²-shape in field strength's temporal profile
 Another example for Gaussian-shaped laser (See also [`GaussianLaser`](@ref)):
 ```julia
 using eTraj.Lasers, eTraj.Units
-l = GaussianLaser(
-    peak_int        = 1.0PW/cm^2,
-    ang_freq        = 40.0eV,
-    FWHM_duration   = 10.0fs,
-    ellip           = 1.0
+l = GaussianLaser(                  # Gaussian-shaped in field strength's temporal profile
+    peak_int        = 1.0PW/cm^2,   # peak intensity
+    ang_freq        = 40.0eV,       # angular frequency specified in single photon energy [`1.47` also works (in default a.u. or Ha)]
+    FWHM_duration   = 10.0fs,       # FWHM duration of the intensity profile
+    ellip           = 1.0           # circular polarization
 )
 ```
 It is also possible to combine two monochromatic lasers to form a [`BichromaticLaser`](@ref):
@@ -393,7 +393,7 @@ For `traj_phase_method`:
 
 The simulation space and the final momentum grid (i.e., the electron detectors) are controlled by:
 
-- `dimension`: Dimension of the simulation (2 or 3). 2D simulations would be carried out in the ``xy`` plane. For most cases, 2D simulation is sufficient as the electron dynamics is mainly confined in the polarization plane.
+- `dimension`: Dimension of the simulation (2 or 3). 2D simulations would be carried out in the ``xy`` plane. For most cases, 2D simulation is sufficient as the electron dynamics are mainly confined in the polarization plane.
 - `final_p_max`: Maximum momentum range in each direction. For 2D simulation, specify as a tuple of 2 values `(px_max, py_max)`. For 3D simulation, use a tuple of 3 values `(px_max, py_max, pz_max)`. Values are in atomic units. The momentum ranges from -`p_max` to `p_max`.
 - `final_p_num`: Grid resolution in each direction. For 2D, specify as `(nx, ny)` where `nx`, `ny` are number of grid points. For 3D, specify as `(nx, ny, nz)`. Higher resolution provides better details but requires more memory.
 
@@ -436,6 +436,7 @@ perform_traj_simulation(
 
 ```julia
 perform_traj_simulation(
+    # ...
     sample_t_intv = (-10.0fs, 10.0fs),  # sampling interval (default in a.u.)
     sample_t_num = 2000,                # number of samples in time domain
     # ...
@@ -451,9 +452,9 @@ Enabling Monte Carlo sampling (`sample_monte_carlo=true`) would generate random 
 perform_traj_simulation(
     # ...
     sample_monte_carlo = false,
-    ss_kd_max = 2.0,    # transverse momentum range
-    ss_kd_num = 200,    # number of kd points
-    ss_kz_max = 2.0,    # longitudinal momentum range (3D only)
+    ss_kd_max = 2.0,    # transverse momentum (k⟂) range
+    ss_kd_num = 200,    # number of k⟂ points
+    ss_kz_max = 2.0,    # longitudinal momentum (kz) range (3D only)
     ss_kz_num = 200,    # number of kz points (3D only)
     # ...
 )
@@ -463,8 +464,8 @@ perform_traj_simulation(
     # ...
     sample_monte_carlo = true,
     mc_kt_num = 100,    # k_t samples per time point
-    mc_kd_max = 2.0,    # transverse momentum range
-    mc_kz_max = 2.0,    # longitudinal range (3D only)
+    mc_kd_max = 2.0,    # transverse momentum (k⟂) range
+    mc_kz_max = 2.0,    # longitudinal momentum (kz) range (3D only)
     # ...
 )
 ```
