@@ -1,9 +1,16 @@
 using Base.Filesystem
+using Base.Sys
 
-version = "v1.0.0-rc5"  # the version number to update
-symlink = "dev"         # the symlink to update
+@assert length(ARGS)==2
+
+version = ARGS[1]  # the version number to update
+symlink = ARGS[2]  # the symlink to update
 
 rm("./$version/", force=true, recursive=true) # remove the current version
 cptree("./docs/build/", "./$version/")
 rm("./$symlink", force=true)
-run(`ln -sf $version $symlink`)
+if iswindows()
+    println("Run the following command:\ncmd -c mklink /D $symlink $version")
+else
+    run(`ln -sf $version $symlink`)
+end
