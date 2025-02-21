@@ -97,8 +97,8 @@ Currently, the calculation of molecules' asymptotic coefficients (for MO-ADK/MO-
 
 There are two ways to set up the Python environment used by `PyCall`:
 
-1. using your local Python environment by specifying the path of your Python executable in `ENV["PYTHON"]` and build the PyCall package.
-2. using a private Python environment managed by the [`Conda.jl`](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the `PyCall` package by default;
+1. Using your local Python environment by specifying the path of your Python executable in `ENV["PYTHON"]` and build the PyCall package.
+2. Using a private Python environment managed by the [`Conda.jl`](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the `PyCall` package by default;
 
 #### Using the local Python environment
 
