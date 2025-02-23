@@ -2,6 +2,10 @@
 
 *Implementation of classical/semiclassical trajectory-based methods in strong-field ionization of atoms and molecules.*
 
+Article available at: [*Comput. Phys. Commun.*, **2025**, 109549](https://doi.org/10.1016/j.cpc.2025.109549)
+
+Preprint available at: [*arXiv*:2411.02133](https://arxiv.org/abs/2411.02133)
+
 ---------------------------
 
 ```@contents

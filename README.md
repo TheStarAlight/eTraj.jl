@@ -16,6 +16,12 @@
 <p align="center">
     • Documentation available at <a href="https://TheStarAlight.github.io/eTraj.jl">https://TheStarAlight.github.io/eTraj.jl</a> •
 </p>
+<p align="center">
+    • Article available at <a href="https://doi.org/10.1016/j.cpc.2025.109549">Comput. Phys. Commun., 2025, 109549</a> •
+</p>
+<p align="center">
+    • Preprint available at <a href="https://arxiv.org/abs/2411.02133">arXiv:2411.02133</a>  •
+</p>
 
 <p align="center">
     <img src="https://img.shields.io/github/v/tag/TheStarAlight/eTraj.jl?include_prereleases&sort=semver&style=for-the-badge&label=latest-version"/>
