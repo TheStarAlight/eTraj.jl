@@ -1,7 +1,7 @@
 # Example: WFAT-CTMC for Molecules
 
-The WFAT provides a precise means of calculating the probability of tunneling ionization of molecules, especially for complex molecular targets.
-In this section we present an example of using the WFAT-CTMC simulation scheme for molecular targets.
+The WFAT framework offers a rigorous approach for computing tunneling ionization probabilities in molecular systems, particularly advantageous for complex molecular structures.
+This section demonstrates the application of the WFAT-CTMC simulation scheme to various molecular targets.
 
 ```julia
 # examples/test_Molecules.jl
@@ -45,24 +45,24 @@ for i in eachindex(t)
 end
 ```
 
-In this code, we set the molecules' orientation such that the ``z``-axis in the MF is parallel to the ``x``-axis in the LF, which can be realized by setting `rot_β=90°` (equivalent to a 90° counterclockwise rotation of the molecule around the ``y``-axis).
-The laser is a circularly polarized 800-nm laser pulse, whose duration is set to 6 cycles to ensure the symmetry of the PMD for an isotropic atom, which facilitates the imaging of the molecules' orbitals through the PMD: a node or a dark curve would show up in the PMD if the laser's electric field vector crosses or scans inside a nodal plane of the orbital's wavefunction.
+The simulation employs a 6-cycle, circularly polarized 800-nm laser pulse. This duration ensures PMD symmetry for isotropic atoms while enabling effective orbital imaging through the PMD structure: nodal planes in the molecular orbital manifest as nodes or dark regions in the PMD when intersected by the laser's electric field vector.
+The molecular orientation is configured to align the molecular frame (MF) ``z``-axis parallel to the laboratory frame (LF) ``x``-axis, achieved through a 90° counterclockwise rotation around the ``y``-axis (specified by `rot_β=90°`).
 
-The PMDs obtained from different molecule's HOMO orbitals are shown below.
-The structures of the PMDs reflect the geometries of the orbitals, which are also mirrored in the orientation-dependent structure factors, which are also shown in the figure.
+The PMDs obtained from the HOMOs of different molecules are presented in the figure below.
+The structures of the PMDs reflect the geometries of the corresponding orbitals, which are further mirrored in the orientation-dependent structure factors, as illustrated in another figure below.
 
-PMD Fig. (a) shows the PMD of the hydrogen molecule's HOMO orbital 1s``\sigma_{\rm{g}}``, which is mainly contributed by the in-phase combination of two 1s orbitals from the two hydrogen atoms.
-The overall shape of the orbital is similar to a sphere, which is consistent with the lowest order [``\nu=(n_\xi,m)=(0,0)``] squared structure factor ``\abs{G_{00}}^2`` shown in the structure factor Fig. (a), and finally leads to the evenly-distributed ring-like shape of the PMD.
+Fig. (a) displays the PMD of the hydrogen molecule's HOMO orbital, ``1\rm{s}\sigma_{\rm{g}}``, which primarily arises from the in-phase combination of the two 1s orbitals of the hydrogen atoms.
+The overall spherical shape of the orbital is consistent with the lowest-order [``\nu=(n_\xi,m)=(0,0)``] squared structure factor ``\abs{G_{00}}^2`` shown in sub figure (a), resulting in the evenly distributed ring-like structure of the PMD.
 
-The carbon monoxide (CO) molecule is a heteronuclear diatomic molecule, whose HOMO orbital is named after 3``\sigma_{\rm{g}}``.
-The 3``\sigma_{\rm{g}}`` orbital of CO molecule is different from a conventional ``\sigma_{\rm{g}}`` orbital of a homonuclear molecule in that the electron density is concentrated more on the carbon atom [see the structure factor Fig. (b)], which results in a dramatic increase in the squared structure factor and ionization probability when the negative electric field points towards the carbon atom.
-Such a localized peak in the ring structure is observed in the PMD of CO molecule in PMD Fig. (b).
+The carbon monoxide (CO) molecule, a heteronuclear diatomic molecule, has a HOMO orbital designated as ``3\sigma_{\rm{g}}``.
+The ``3\sigma_{\rm{g}}`` orbital of the CO molecule differs from a conventional ``\sigma_{\rm{g}}`` orbital of a homonuclear molecule, as the electron density is predominantly localized on the carbon atom. This localization leads to a significant increase in the squared structure factor and ionization probability when the negative electric field is oriented toward the carbon atom.
+This localized peak within the ring structure is evident in the PMD of the CO molecule, as shown in sub figure (b).
 
-The HOMOs of the oxygen (``\rm{O_2}``) and benzene (``\rm{C_6H_6}``) molecules (in MF) are shown in the structure factor Figs. (c) and (d), which are degenerate orbitals of ``\pi`` symmetry.
-The oxygen's "α-HOMO" (one of 2p``\pi_{\rm{u}}``) and the benzene's "HOMO" (2p``\pi_3``), after the given rotation (`rot_β=90°`), have ``x-z`` and ``y-z`` as their nodal planes, hence the rotating electric field in the ``x-y`` plane "sees" a four-lobe structure, which is revealed in the PMDs in Figs. (c1) and (d1).
-Whereas the oxygen's "α-HOMO-1" (another one of 2p``\pi_{\rm{u}}``) and the benzene's "HOMO-1" (2p``\pi_2``), each have a nodal plane on the ``x-y`` plane, which indicates that in the zeroth order (``m=0``), the outgoing electron waves that are contributed by the "``+``" parts and the "``-``" parts of the orbital cancel out each other, leading to a net-zero ionization probability.
-For non-zero-``m`` channels we have ``\mathcal{W}_\nu(F,\kt=0)\equiv 0`` [see Eq. (57) in [WFAT](@ref WFAT)], hence a nodal ring which corresponds to zero initial momenta ``\kt=0`` would appear in the PMDs of Figs. (c2) and (d2).
-Under such circumstance, the ionization gets suppressed, and the first-order channels (``m=\pm 1``) would take dominance in the contribution of ionization probability.
+The HOMOs of the oxygen (``\rm{O_2}``) and benzene (``\rm{C_6H_6}``) molecules, depicted in sub figures (c) and (d), respectively, are degenerate orbitals with ``\pi`` symmetry.
+The oxygen molecule's "α-HOMO" (one of the 2p``\pi_{\rm{u}}`` orbitals) and the benzene molecule's "HOMO" (``2\rm{p}\pi_3``), after a rotation of `rot_β=90°`, exhibit nodal planes along the ``x-z`` and ``y-z`` directions, respectively. Consequently, the rotating electric field in the ``x-y`` plane interacts with a four-lobe structure, as revealed in the PMDs shown in sub figures (c1) and (d1).
+In contrast, the oxygen molecule's "α-HOMO-1" (another ``2\rm{p}\pi_{\rm{u}}`` orbital) and the benzene molecule's "HOMO-1" (``2\rm{p}\pi_2``) each possess a nodal plane in the ``x-y`` plane. This implies that, in the zeroth order (``m=0``), the outgoing electron waves originating from the "``+``" and "``-``" regions of the orbital interfere destructively, resulting in a net-zero ionization probability.
+For non-zero-``m`` channels, ``\mathcal{W}_\nu(F,\kt=0)\equiv 0``, leading to the appearance of a nodal ring corresponding to zero initial momenta (``\kt=0``) in the PMDs of sub figures (c2) and (d2).
+Under these conditions, ionization is suppressed, and the first-order channels (``m=\pm 1``) dominate the contribution to the ionization probability.
 
 ![fig:example_Molecules](assets/figure_Molecules.png)
 ![fig:example_Molecules_G](assets/figure_Molecules_G_orbital.png)

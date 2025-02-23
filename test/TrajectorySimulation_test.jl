@@ -6,6 +6,8 @@ using Test
 
 @info "# Testing TrajectorySimulation ..."
 
+show_prog = !("hide-prog" in ARGS)
+
 @testset verbose=true "TrajectorySimulation" begin
 
     tmpdir = mktempdir()
@@ -30,7 +32,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -56,7 +59,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_Cos2Laser_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -82,7 +86,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_GaussianLaser_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -110,7 +115,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_3D_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -137,7 +143,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_MonteCarlo_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -163,7 +170,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_He_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -190,7 +198,8 @@ using Test
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
                 rate_prefix         = :Full,
-                mol_orbit_ridx      = (1,0)
+                mol_orbit_ridx      = (1,0),
+                show_progress       = show_prog
             )
             true
         end
@@ -218,7 +227,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_Bichromatic_400+800_CP_CR.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = [:Pre, :Jac]
+                rate_prefix         = [:Pre, :Jac],
+                show_progress       = show_prog
             )
             true
         end
@@ -245,7 +255,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_4e14_800nm_2cyc_CP.h5",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -271,7 +282,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_units_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -297,7 +309,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-QTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -323,7 +336,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-SCTS_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -351,7 +365,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-SCTS_Single-cycle_9e13_800nm_1cyc_LP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -377,7 +392,8 @@ using Test
                 output_path         = "$tmpdir/test_SPANE-CTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -403,7 +419,8 @@ using Test
                 output_path         = "$tmpdir/test_SPANE-QTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -429,7 +446,8 @@ using Test
                 output_path         = "$tmpdir/test_SPANE-SCTS_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -455,7 +473,8 @@ using Test
                 output_path         = "$tmpdir/test_SPA-CTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -481,7 +500,8 @@ using Test
                 output_path         = "$tmpdir/test_SPA-QTMC_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -507,7 +527,8 @@ using Test
                 output_path         = "$tmpdir/test_SPA-SCTS_4e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -533,7 +554,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -559,7 +581,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -585,7 +608,8 @@ using Test
                 output_path         = "$tmpdir/test_ADK-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -611,7 +635,8 @@ using Test
                 output_path         = "$tmpdir/test_SPANE-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -637,7 +662,8 @@ using Test
                 output_path         = "$tmpdir/test_SPANE-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -663,7 +689,8 @@ using Test
                 output_path         = "$tmpdir/test_SPANE-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -689,7 +716,8 @@ using Test
                 output_path         = "$tmpdir/test_SPA-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :CTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -715,7 +743,8 @@ using Test
                 output_path         = "$tmpdir/test_SPA-QTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :QTMC,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -741,7 +770,8 @@ using Test
                 output_path         = "$tmpdir/test_SPA-SCTS_Hydrogen_3e14_800nm_2cyc_CP.jld2",
                 traj_phase_method   = :SCTS,
                 traj_rtol           = 1e-6,
-                rate_prefix         = :Full
+                rate_prefix         = :Full,
+                show_progress       = show_prog
             )
             true
         end
@@ -766,7 +796,8 @@ using Test
                 ss_kd_max           = 2.0,
                 ss_kd_num           = 300,
                 output_path         = "$tmpdir/test_WFAT-CTMC_Hydrogen_3e14_800nm_2cyc_CP.jld2",
-                traj_rtol           = 1e-6
+                traj_rtol           = 1e-6,
+                show_progress       = show_prog
             )
             true
         end

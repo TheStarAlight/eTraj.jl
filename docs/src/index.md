@@ -2,6 +2,10 @@
 
 *Implementation of classical/semiclassical trajectory-based methods in strong-field ionization of atoms and molecules.*
 
+Article available at: [*Comput. Phys. Commun.*, **2025**, 109549](https://doi.org/10.1016/j.cpc.2025.109549)
+
+Preprint available at: [*arXiv*:2411.02133](https://arxiv.org/abs/2411.02133)
+
 ---------------------------
 
 ```@contents
@@ -12,34 +16,16 @@ Pages = ["index.md"]
 
 ## Background
 
-The interaction between light and matter has attracted widespread interest since the early days of quantum mechanics.
-With the advent of laser technology, the intensity of light and the precision of spectroscopy has dramatically increased,
-which allows us to explore the physics of light-matter interaction under extreme conditions with unprecedented precision and accuracy.
-At a high laser intensity above TW/cm², the interaction between light and atoms or molecules can no longer be described by the perturbation theory and a series of novel strong-field phenomena emerges, such as the above-threshold ionization (ATI), tunneling ionization, high-harmonic generation (HHG) and non-sequential double ionization (NSDI).
+The interaction between light and matter has been a subject of widespread investigation since the inception of quantum mechanics. The development of laser technology has led to remarkable advances in both light intensity and spectroscopic precision, enabling unprecedented exploration of light-matter interactions under extreme conditions.
 
-Theoretical studies of these non-perturbative phenomena have been extensively investigated in the past decades.
-Usually, in order to obtain a precise result, a time-dependent Schrödinger equation (TDSE) is solved numerically.
-However, solving the TDSE is computationally expensive and resource-demanding, which limits its application to few-dimensional problems.
-Moreover, the TDSE is like a black box, offering limited transparency for interpreting the underlying physics.
-Apart from TDSE, the strong-field approximation (SFA) is also widely applied to study these problems,
-which is based on the assumptions that: (1) the initial state is not affected by the laser field until ionization;
-(2) after ionization, the photoelectron is not influenced by the trapping potential (i.e., assuming a short-range potential).
-These two approximations simplify the problem, which allows one to obtain analytical results and unravel the physical pictures of these phenomena.
-However, such approximations are not always applicable, especially when the Coulomb potential's role becomes significant,
-which may lead to incorrect predictions.
+When laser intensities exceed TW/cm², the light-matter interaction enters a non-perturbative regime where conventional perturbation theory becomes inadequate, giving rise to various novel strong-field phenomena such as above-threshold ionization (ATI), tunneling ionization, high-harmonic generation (HHG) and non-sequential double ionization (NSDI). Theoretical investigations of these non-perturbative phenomena have progressed substantially over recent decades. The most rigorous approach involves numerical solution of the time-dependent Schrödinger equation (TDSE); however, its computational complexity restricts applications primarily to few-dimensional systems. Furthermore, the abstract nature of TDSE calculations often obscures the underlying physical mechanisms. An alternative approach is the strong-field approximation (SFA), which relies on two key assumptions: first, that the initial state remains unperturbed by the laser field until ionization occurs; and second, that the photoelectron's post-ionization dynamics proceed without influence from the binding potential (effectively treating it as short-range). These approximations enable analytical treatment of the problem, thereby providing valuable physical insights into the underlying mechanisms. Nevertheless, the SFA framework exhibits limitations, particularly in scenarios where Coulomb interactions play a significant role, potentially leading to qualitative discrepancies with experimental observations.
 
-To address these limitations, the scheme of *Classical-Trajectory Monte-Carlo* (CTMC) method [^Abrines_1966] [^Olson_1977] can be adopted, where a microcanonical ensemble of classical electrons is prepared and evolved under the laser interaction or charged-particle impact.
-This scheme has been further developed to account for the initial stage of tunneling ionization by setting the initial conditions of the classical electrons at the tunnel exit [^Corkum_1989] [^Corkum_1993] [^Hu_1997].
-The final photoelectron momentum distribution (PMD) is obtained through statistical analysis of the electron trajectories.
-While CTMC relies on purely classical electron trajectories, quantum effects can be largely retained by incorporating a phase into the electron trajectories.
-Examples include  the Trajectory-based Coulomb-SFA (TC-SFA) [^Yan_2010] [^Yan_2012], the Quantum-Trajectory Monte Carlo (QTMC) [^Li_2014] [^Liu_2016], and the Semiclassical Two-Step Model (SCTS) [^ShvetsovShilovski_2016] [^ShvetsovShilovski_2021].
-Another approach, the Coulomb Quantum-orbit SFA (CQSFA) [^Lai_2015] [^Maxwell_2017], addresses the inverse problem by identifying all trajectories that result in the same final momenta.
-These trajectory-based semiclassical methods offer notable advantages over the TDSE and direct SFA methods due to their lower demand on computational resources, as well as the clarity they provide in understanding the physical picture.
+A substitute strategy to overcome these limitations is the Classical-Trajectory Monte-Carlo (CTMC) method [^Abrines_1966] [^Olson_1977], which employs an ensemble of classical electrons evolving under combined laser and Coulomb fields. This methodology has been extended to incorporate tunneling ionization effects by initializing electron trajectories at the tunnel exit coordinate [^Corkum_1989] [^Corkum_1993] [^Hu_1997]. The photoelectron momentum distribution (PMD) is subsequently obtained through statistical analysis of these classical trajectories. Although the CTMC approach is fundamentally classical in nature, quantum mechanical effects can be effectively incorporated through the introduction of trajectory-dependent phases.
+Examples include the Trajectory-based Coulomb-SFA (TC-SFA) [^Yan_2010] [^Yan_2012], the Quantum-Trajectory Monte Carlo (QTMC) [^Li_2014] [^Liu_2016], and the Semiclassical Two-Step Model (SCTS) [^ShvetsovShilovski_2016] [^ShvetsovShilovski_2021]. Another approach, the Coulomb Quantum-orbit SFA (CQSFA) [^Lai_2015] [^Maxwell_2017], addresses the inverse problem by identifying all trajectories that result in the same final momenta. These trajectory-based semiclassical methods offer notable advantages over the TDSE and direct SFA methods due to their lower demand on computational resources, as well as the clarity they provide in understanding the physical picture.
 
-After years of development, various trajectory-based classical/semiclassical methods have emerged, yet a unified theoretical framework remains to be established.
-Besides, developing a library that implements existing methods, which is efficient in calculations and is easy to maintain, would greatly facilitate further research on strong-field ionization.
-With this goal in mind, we introduce `eTraj.jl`, a program package written in the Julia language, which provides a general, efficient, and out-of-the-box solution for performing classical/semiclassical trajectory simulations.
-This library is written in a clear and concise manner, ensuring versatility, extensibility, and usability.
+After years of development, various trajectory-based classical/semiclassical methods have emerged; however, a unified theoretical framework remains to be established. In addition, developing a library that not only implements existing methods but also does so in a way that is both computationally efficient and easy to maintain can significantly enhance research in strong-field ionization.
+To meet these challenges, we introduce `eTraj.jl`, a program package written in Julia. Julia was chosen for its extraordinary balance of performance, ease of use, and simplicity in deployment, which are crucial for scientific computing. It combines Python-like syntax with C-like speed due to its just-in-time (JIT) compilation; offers a user-friendly syntax that simplifies coding and enhances productivity, enabling researchers to focus on the working problem; includes built-in support for parallel computing, allowing efficient multicore utilization without complex setup; what's more, programs written in Julia are easy to deploy across different environments, ensuring accessibility and broad applicability. `eTraj` leverages these features to provide an efficient, versatile, flexible, and out-of-the-box solution for classical/semiclassical trajectory simulations, advancing research in strong-field ionization.
+
 
 [^Abrines_1966]: R. Abrines and I. C. Percival, Classical theory of charge transfer and ionization of hydrogen atoms by protons, *Proc. Phys. Soc.* **88**, 861 (1966). DOI: [10.1088/0370-1328/88/4/306](https://doi.org/10.1088/0370-1328/88/4/306)
 
@@ -76,7 +62,7 @@ This library is written in a clear and concise manner, ensuring versatility, ext
 - *Minimum prerequisites* : Julia ≥ 1.9
 
 - *MO-ADK/MO-SFA and WFAT molecular calculations* :
-    Data for some small molecules are available in the molecule database.
+    Data for some small molecules are available in the molecule database (see the [`get_mol`](@ref) method).
     If the user wants to perform molecular calculations with customized parameters, the platform should be **Linux or macOS**, and having *Python 3* with the [`PySCF`](https://github.com/pyscf/pyscf) python package installed and the [`PyCall.jl`](https://github.com/JuliaPy/PyCall.jl) julia package successfully built.
 
 ### Installing the package
@@ -115,8 +101,8 @@ Currently, the calculation of molecules' asymptotic coefficients (for MO-ADK/MO-
 
 There are two ways to set up the Python environment used by `PyCall`:
 
-1. using your local Python environment by specifying the path of your Python executable in `ENV["PYTHON"]` and build the PyCall package.
-2. using a private Python environment managed by the [`Conda.jl`](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the `PyCall` package by default;
+1. Using your local Python environment by specifying the path of your Python executable in `ENV["PYTHON"]` and build the PyCall package.
+2. Using a private Python environment managed by the [`Conda.jl`](https://github.com/JuliaPy/Conda.jl), which is implicitly installed by the `PyCall` package by default;
 
 #### Using the local Python environment
 
@@ -161,7 +147,7 @@ Conda.pip("install", "pyscf==2.3.0")
 
 ## Contributors
 
-- [Mingyu Zhu](https://github.com/TheStarAlight) @ ECNU
+- [Mingyu Zhu](https://www.researchgate.net/profile/Mingyu-Zhu-8) @ ECNU
 - [Hongcheng Ni](https://faculty.ecnu.edu.cn/_s29/nhc_en/main.psp) @ ECNU
 
 ---------------------------

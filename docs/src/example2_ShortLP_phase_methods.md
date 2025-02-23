@@ -2,19 +2,17 @@
 
 This example is adapted from [[*PRA* **94**, 013415 (2016)](https://doi.org/10.1103/PhysRevA.94.013415)], which introduced the initial SCTS model.
 
-When an atom is exposed to an intense linearly-polarized pulse, the atom might absorb photons more than it requires for the electron to ionize, leading to outer ring-like structures in the PMD, which we refer to as the well-known above-threshold ionization (ATI).
-The ATI is originally interpreted as excessive absorption of photons in the "multi-photon absorption" picture,
-while in the tunneling scenario, the ATI structures also have interpretable physical meanings:
-the intercycle interference of electron wave packets which tunneled through the potential barrier at each peak of the laser field.
+When atoms interact with intense linearly-polarized pulses, they may absorb excess photons beyond the ionization threshold, resulting in characteristic ring-like structures in the PMD known as above-threshold ionization (ATI).
+While ATI was initially understood through the "multi-photon absorption" framework, it can also be interpreted within the tunneling regime as the result of intercycle interference between electron wave packets that tunnel through the potential barrier at successive peaks of the laser field.
 This allows for reproduction of the ATI structures using the semiclassical trajectory-based methods.
 
-Apart from the ATI rings, the low-energy features of the PMD are also of broad interest, which usually exhibit a fan-like structure.
+Beyond ATI rings, the PMD also exhibits intriguing low-energy features characterized by fan-like structures.
 This structure is contributed mainly by electrons with an angular momentum close to a specific value ``L_0`` and are hence predictable theoretically [^Arbo_2006] [^Arbo_2008].
 
 The following two pieces of code performs a trajectory simulation which employs an 8-cycle and an ultra-short single-cycle linearly-polarized NIR pulse,
 with the PMD showing up in the two figures below.
 To be faithful to the original work where the ADK initial condition was used with no prefactor included (``\mathcal{P}=1``), we used the ADK-QTMC and ADK-SCTS schemes and set `rate_prefix = :Exp`.
-Comparison between the PMD obtained with the QTMC and SCTS phase methods reveals underestimation of the Coulomb interaction's influence on the phase by the QTMC method, which is observed in the number of nodal lines in the low-energy structures.
+Comparison between the PMD obtained with the QTMC and SCTS phase methods reveals underestimation of the Coulomb interaction's influence on the phase by the QTMC method, which is observed in the number of angular nodes in the low-energy structures.
 
 ```julia
 # examples/test_8cycs_LP.jl
