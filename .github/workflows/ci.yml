@@ -35,7 +35,6 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
-          arch: 'x64'
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         env:
@@ -70,7 +69,6 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia_version }}
-          arch: 'x64'
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         env:
