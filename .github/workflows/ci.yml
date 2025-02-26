@@ -6,10 +6,16 @@ on:
       - dev
   pull_request : {}
 
+# env:
+  # JULIA_NUM_THREADS: 2  # weird error (seg fault 11) on ubuntu and macOS with this enabled, but works on my own WSL ubuntu.
+
 jobs:
   test_ubuntu_macos:
     name: Test on Julia ${{ matrix.julia-version }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
+      actions: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +35,6 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
-          arch: 'x64'
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         env:
@@ -39,11 +44,14 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         with:
           annotate: true
-      - uses: julia-actions/julia-processcoverage@v1
+          test_args: 'hide-prog'
 
   test_windows:
     name: Test on Julia ${{ matrix.julia_version }} - windows-latest
     runs-on: windows-latest
+    permissions:
+      actions: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -61,7 +69,6 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia_version }}
-          arch: 'x64'
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         env:
@@ -69,5 +76,4 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         with:
           annotate: true
-          test_args: 'no-pyscf'
-      - uses: julia-actions/julia-processcoverage@v1
+          test_args: 'no-pyscf hide-prog'
