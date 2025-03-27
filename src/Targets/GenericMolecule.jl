@@ -44,13 +44,14 @@ end
 
 #* fresh init without data.
 """
-    GenericMolecule(atoms, atom_coords [,charge=0] [,spin=0] [,name] [,rot_α=0.0] [,rot_β=0.0] [,rot_γ=0.0])
+    GenericMolecule({atoms,atom_coords}|xyz_string, [,charge=0] [,spin=0] [,name] [,rot_α=0.0] [,rot_β=0.0] [,rot_γ=0.0])
 
 Initializes a new `GenericMolecule` with given parameters.
 
 ## Parameters
 - `atoms`       : Atoms in the molecule, stored as a `Vector` of `String`.
 - `atom_coords` : Atoms' coordinates in the molecule (numerically in Å or a `Unitful.Quantity`), stored as a N×3 `Matrix`.
+- `xyz_string`  : Geometry of the molecule in XYZ format.
 - `charge`      : Total charge of the molecule (ion) (*optional, default `0`*).
 - `spin`        : Total spin of the molecule (*optional, default `0`*). Note that each unpaired electron contributes 1/2.
 - `name`        : Name of the molecule (*optional*).
@@ -67,9 +68,13 @@ julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0
 [GenericMolecule] Hydrogen, αβγ=(0.0°,90.0°,0.0°)
 ```
 """
-function GenericMolecule(;atoms::Vector,atom_coords::Matrix,charge::Integer=0,spin=0,name::String="[NA]",rot_α=0.,rot_β=0.,rot_γ=0.)
-    @assert eltype(atoms) <: String   "[GenericMolecule] Element type of `atoms` must be String."
-    @assert atom_coords isa Matrix && ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[GenericMolecule] `atom_coords` should be a Matrix of size N×3."
+function GenericMolecule(;atoms::Vector{String}=["NA"],atom_coords::Matrix{Float64}=[0.0;;], xyz_string::String="", charge::Integer=0,spin=0,name::String="[NA]",rot_α=0.,rot_β=0.,rot_γ=0.)
+    if atoms[1] != "NA"
+        @assert eltype(atoms) <: String   "[GenericMolecule] Element type of `atoms` must be String."
+        @assert atom_coords isa Matrix && ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[GenericMolecule] `atom_coords` should be a Matrix of size N×3."
+    else
+        atoms, atom_coords = parse_xyz(xyz_string)
+    end
     @assert spin>=0 "[GenericMolecule] `spin` must be non-negative."
     # unit transformation
     (eltype(atom_coords)<:Quantity) && (atom_coords=map(q->uconvert(u"Å", q).val, atom_coords))
@@ -79,7 +84,7 @@ function GenericMolecule(;atoms::Vector,atom_coords::Matrix,charge::Integer=0,sp
     mol = GenericMolecule(
         nothing,    # mol_calc
         atoms, atom_coords, charge, spin, name,
-        false, Float64[], Float64[],        # energy_data
+        false, Float64[], Float64[],    # energy_data
         false, Set(), Dict(), Dict(),   # wfat_data
         false, Set(), Dict(),           # asymp_coeff
         rot_α,rot_β,rot_γ)
@@ -615,6 +620,28 @@ function _MOstring(orbit_ridx)
     else # open-shell (spin, idx)
         return (orbit_ridx[1]==1 ? "α-" : "β-") * _MOstring(orbit_ridx[2])
     end
+end
+
+"Parses the XYZ string and returns `(atoms, coords)`."
+function parse_xyz(xyz_string::String)
+    lines = split(xyz_string, "\n")
+    if lines[1] == "" # empty line at the beginning of the file
+        lines = lines[2:end]
+    end
+    if lines[end] == "" # empty line at the end of the file
+        lines = lines[1:end-1]
+    end
+    natoms = parse(Int64, lines[1])
+    @assert natoms == length(lines)-2 "[parse_xyz] Number of atoms does not match the number of lines in the XYZ file."
+    atoms = Vector{String}(undef, natoms)
+    coords = zeros(Float64, natoms, 3)
+    for i in 3:natoms+2 # the second line is the comment
+        parts = split(lines[i], (' ', '\t'), keepempty=false)
+        @assert length(parts) == 4 "[parse_xyz] Each line in the XYZ file should have exactly four parts."
+        atoms[i-2] = parts[1]
+        coords[i-2,:] = parse.(Float64, parts[2:end])
+    end
+    return atoms, coords
 end
 
 function Serialize(t::GenericMolecule)

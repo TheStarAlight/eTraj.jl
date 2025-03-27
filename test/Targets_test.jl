@@ -143,6 +143,19 @@ using ForwardDiff
             MolSaveDataAs!(m2, tmp_file, true)
             true
         end
+        # Mar 27, 2025: init with xyz
+        H2O_xyz =
+        """
+        3
+        Water molecule
+        O          0.00000        0.00000        0.11779
+        H          0.00000        0.75545       -0.47116
+        H          0.00000       -0.75545       -0.47116
+        """
+        m3 = GenericMolecule(xyz_string=H2O_xyz, name="Water")
+        @test MolAtoms(m3) == ["O","H","H"]
+        @test size(MolAtomCoords(m3)) == (3,3)
+        @test MolAtomCoords(m3)[1,3] == 0.11779
     end
     @info "Testing Molecule Database ..."
     @testset verbose=true "Molecule Database" begin
