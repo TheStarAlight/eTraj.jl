@@ -68,7 +68,7 @@ julia> m = GenericMolecule(atoms=["H","H"], atom_coords=[0.0 0.0 -0.375; 0.0 0.0
 [GenericMolecule] Hydrogen, αβγ=(0.0°,90.0°,0.0°)
 ```
 """
-function GenericMolecule(;atoms::Vector{String}=["NA"],atom_coords::Matrix{Float64}=[0.0;;], xyz_string::String="", charge::Integer=0,spin=0,name::String="[NA]",rot_α=0.,rot_β=0.,rot_γ=0.)
+function GenericMolecule(;atoms::Vector{String}=["NA"],atom_coords::Matrix=[0.0;;], xyz_string::String="", charge::Integer=0,spin=0,name::String="[NA]",rot_α=0.,rot_β=0.,rot_γ=0.)
     if atoms[1] != "NA"
         @assert eltype(atoms) <: String   "[GenericMolecule] Element type of `atoms` must be String."
         @assert atom_coords isa Matrix && ndims(atom_coords)==2 && size(atom_coords,2)==3 && size(atom_coords,1)==size(atoms,1)   "[GenericMolecule] `atom_coords` should be a Matrix of size N×3."
